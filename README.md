@@ -4,13 +4,13 @@ Genera vídeos verticales de Zyra (1080×1920, 15 s, sin audio) a partir de un g
 
 ## Flujo normal (sin instalar nada)
 1. Copia un archivo de `guiones/` (por ejemplo `alineacion-sugerida.json`), cámbiale el nombre y edita los textos.
-2. Súbelo (commit a `main`). El flujo **Generar vídeos** (pestaña Actions) renderiza todos y deja los MP4 en el artefacto `videos-tiktok`.
+2. Súbelo (commit a `main`). Subir cambios **no** renderiza nada: lanza tú el flujo **Generar vídeos** (Actions → Run workflow) y deja los MP4 en el artefacto `videos-tiktok`.
 3. Descarga el ZIP, sube el MP4 a TikTok y añade música desde su biblioteca.
 
-También se puede lanzar a mano: Actions → Generar vídeos → Run workflow.
+El flujo solo se lanza a mano: Actions → Generar vídeos → Run workflow. El campo `ids` admite los guiones a renderizar separados por espacios (p. ej. `mi-guion meme-x reaccion-y`); vacío = todos.
 
 ## Token de GitHub para descargar los vídeos del CI
-Sin token, la app sube el guion y el CI renderiza, pero no puede descargar el resultado (lo bajas a mano desde Actions → ejecución → Artifacts). Para que lo descargue sola, una de dos:
+Sin token, la app sube el guion, pero no puede descargar el resultado (lo bajas a mano desde Actions → ejecución → Artifacts). Para que lo descargue sola, una de dos:
 - Instala el [CLI de GitHub](https://cli.github.com/) y ejecuta `gh auth login`; la app usa esa sesión.
 - O crea un token en GitHub → Settings → Developer settings → Fine-grained tokens, solo para este repo, con permiso **Actions: Read-only**, y expórtalo como `GITHUB_TOKEN` antes de `npm run app`.
 
@@ -71,7 +71,7 @@ El guion lo escribe Claude de una de estas dos formas:
 - **Con API:** si defines `ANTHROPIC_API_KEY`, usa la API de Claude, que se factura aparte de la suscripción (de pago por uso).
 
 La página es un **chat**: pídele ideas («dame 5 ideas que no hayamos hecho», «busca tendencias», «un meme para capitanes»). Si la idea está lista, la respuesta trae un botón **Crear este vídeo / meme**. Marca «Buscar en la web» para que investigue tendencias (con la suscripción usa las búsquedas del CLI; con API usa la herramienta de búsqueda web de la API, sin probar). Claude conoce lo que ya hay en `guiones/` y `memes/` para no repetirlo. Eliges dónde renderizar:
-- **CI de GitHub:** Claude escribe el guion, la app lo sube con `git push`, el CI renderiza solo ese vídeo y la app descarga el MP4 en `out/`. Hace falta que `git push` funcione en tu equipo.
+- **CI de GitHub:** Claude escribe el guion, la app lo sube con `git push`. El CI ya no se dispara solo: lanza **Generar vídeos** a mano (Actions → Run workflow, con el id del guion) y descarga el artefacto; la espera automática de la app no encontrará ejecución si no lo lanzas. Hace falta que `git push` funcione en tu equipo.
 - **En local:** renderiza en tu ordenador (puede requerir `CHROME=/ruta/a/chrome`).
 
 Claude solo elige entre las capturas de `capturas.json` (con su descripción); para ofrecerle más pantallas, añade la imagen a `public/ui/` y una entrada en ese archivo. Las claves nunca se guardan en el repo.
@@ -174,7 +174,7 @@ El ajuste de tiempos y la música son los mismos que con ElevenLabs. Las frases 
 
 **Voz que no se corta.** Las frases ya no se cortan: cada una se acelera como mucho ×1,3 y, si aun así no cabe en su hueco, se mide cuánto dura y la siguiente espera a que termine (el log avisa si una entra más de 0,8 s tarde). Solo la última se corta con un fundido si no cabe antes del final del vídeo. Con voz, la regla práctica es de unos 8 caracteres por segundo: con 3 subtítulos (cada uno dura unos 3 s) la locución debe ser de 25 caracteres o menos; con 5 subtítulos, de unos 15. Por eso conviene 3 o 4 subtítulos.
 
-**Borrar no vuelve a renderizar.** Si un push solo elimina guiones, memes o reacciones, el CI no renderiza nada (el paso «Qué hay que renderizar» lo marca como `skip`). Se renderiza todo solo cuando cambia la plantilla (`src`, `public`…) o lanzas el workflow a mano con «Run workflow».
+**Borrar no vuelve a renderizar.** Ningún push renderiza: el CI solo se ejecuta cuando lanzas el workflow a mano con «Run workflow».
 
 **Tono de anuncio deportivo (Azure).** Por defecto (`AZURE_SPEECH_PERFIL=natural`) la voz se pide tal cual, que es como mejor entona; `AZURE_SPEECH_PERFIL=deportivo` solo sube la velocidad un `+4%`. Subir tono y velocidad a la vez la hacía sonar a chillido. La voz por defecto es `es-ES-AlvaroNeural` (cámbiala en `AZURE_SPEECH_VOICE`). Además, solo el gancho conserva su «¡…!»: el resto de frases se leen como afirmación, porque todo exclamado sonaba a grito plano. `AZURE_SPEECH_RATE` y `AZURE_SPEECH_PITCH` mandan sobre el perfil. Las voces HD deciden solas el tono. Si Azure rechaza el estilo o los ajustes para una voz, el script lo avisa y reintenta sin ellos.
 
