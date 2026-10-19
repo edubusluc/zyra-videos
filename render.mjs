@@ -14,7 +14,9 @@ writeFileSync('src/memes.json', JSON.stringify(memes, null, 2));
 writeFileSync('src/reacciones.json', JSON.stringify(reacciones, null, 2));
 mkdirSync('out', {recursive: true});
 const browser = process.env.CHROME ? [`--browser-executable=${process.env.CHROME}`, '--chrome-mode=chrome-for-testing'] : [];
+// Se llama al CLI de Remotion con node directamente: `npx` no se puede lanzar sin shell en Windows.
+const remotion = (args) => execFileSync(process.execPath, ['node_modules/@remotion/cli/remotion-cli.js', ...args], {stdio: 'inherit'});
 const quiere = (id) => !ids.length || ids.includes(id);
-for (const {id} of videos) if (quiere(id)) execFileSync('npx', ['remotion', 'render', id, `out/${id}.mp4`, '--codec=h264', ...browser], {stdio: 'inherit'});
-for (const {id} of reacciones) if (quiere(`reaccion-${id}`)) execFileSync('npx', ['remotion', 'render', `reaccion-${id}`, `out/reaccion-${id}.mp4`, '--codec=h264', '--image-format=png', ...browser], {stdio: 'inherit'});
-for (const {id} of memes) if (quiere(`meme-${id}`)) execFileSync('npx', ['remotion', 'still', `meme-${id}`, `out/meme-${id}.png`, ...browser], {stdio: 'inherit'});
+for (const {id} of videos) if (quiere(id)) remotion(['render', id, `out/${id}.mp4`, '--codec=h264', ...browser]);
+for (const {id} of reacciones) if (quiere(`reaccion-${id}`)) remotion(['render', `reaccion-${id}`, `out/reaccion-${id}.mp4`, '--codec=h264', '--image-format=png', ...browser]);
+for (const {id} of memes) if (quiere(`meme-${id}`)) remotion(['still', `meme-${id}`, `out/meme-${id}.png`, ...browser]);
