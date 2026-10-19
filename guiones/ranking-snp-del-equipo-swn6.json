@@ -1,0 +1,27 @@
+{
+  "hook": [
+    "TODOS SE CREEN",
+    "EL CRACK"
+  ],
+  "title": "RANKING SNP DEL EQUIPO",
+  "src": "ui/jugadores.png",
+  "imgW": 780,
+  "scroll": [
+    124,
+    1238
+  ],
+  "subs": [
+    "Ordena la plantilla por SNP",
+    "Cada uno con sus puntos",
+    "Posición, mano y puntos SNP",
+    "Se acabó el «yo soy el 1»"
+  ],
+  "locucion": [
+    "¡tu ranking en un clic!",
+    "¡cada uno con sus puntos!",
+    "¿posición y mano? ¡también!",
+    "¡se acabó el yo soy el uno!"
+  ],
+  "cta": "Tu ranking en zyrapadel.com",
+  "voz": true
+}
