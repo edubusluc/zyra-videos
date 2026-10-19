@@ -161,20 +161,28 @@ const sintetizar = async (texto) => {
 };
 
 const MARGEN = 0.15; // aire al final de cada tramo
-const MAX_ATEMPO = 1.35; // más rápido suena a ardilla; si no cabe, se avisa
+const HUECO_MIN = 0.8;
+const MAX_ATEMPO = 1.3; // más rápido suena a ardilla
+const MAX_ATEMPO_FINAL = 1.5; // solo el último tramo, que no puede pasar del final del vídeo
 const clips = [];
 const total = duracion(video);
+let libre = 0; // hasta cuándo está ocupada la voz: una frase nunca se corta, la siguiente espera a que acabe
 for (const [k, x] of tramos.entries()) {
   const mp3 = await sintetizar(paraVoz(x.txt)).catch(async (e) => { console.error(`✖ ${e.message}`); await salir(1); });
   const d = duracion(mp3);
+  const ini = Math.max(x.a, libre);
+  const ultimo = k + 1 >= tramos.length;
   // La frase puede ocupar hasta donde empieza la siguiente que se lee (los tramos «solo en pantalla» no cuentan).
-  const hasta = k + 1 < tramos.length ? tramos[k + 1].a : total - 0.3;
-  const hueco = Math.max(0.8, Math.max(x.b, hasta) - x.a - MARGEN);
-  const factor = d > hueco ? d / hueco : 1;
-  const recorta = factor > MAX_ATEMPO;
-  if (recorta) console.warn(`⚠ «${x.txt}» dura ${d.toFixed(1)} s y el hueco es de ${hueco.toFixed(1)} s: se acelera ×${MAX_ATEMPO} y se corta el final; acorta el texto.`);
-  clips.push({mp3, ini: x.a, atempo: Math.min(Math.max(factor, 1), MAX_ATEMPO), dur: hueco, recorta});
-  console.log(`✓ ${x.a.toFixed(1)} s · ${d.toFixed(1)} s${factor > 1 ? ` (×${Math.min(factor, MAX_ATEMPO).toFixed(2)})` : ''} · ${x.txt}`);
+  const tope = ultimo ? total - 0.1 : tramos[k + 1].a;
+  const hueco = Math.max(HUECO_MIN, tope - ini - (ultimo ? 0 : MARGEN));
+  const atempo = Math.min(Math.max(d / hueco, 1), ultimo ? MAX_ATEMPO_FINAL : MAX_ATEMPO);
+  const dur = d / atempo;
+  const recorta = ini + dur > total - 0.05; // solo si ni así cabe en el vídeo
+  if (recorta) console.warn(`⚠ «${x.txt}» no cabe antes del final del vídeo: se corta con un fundido; acorta el texto.`);
+  if (ini - x.a > 0.8) console.warn(`⚠ «${x.txt}» entra ${(ini - x.a).toFixed(1)} s más tarde que su subtítulo porque la frase anterior es larga; acórtala (locución).`);
+  clips.push({mp3, ini, atempo, dur: recorta ? Math.max(0.3, total - 0.05 - ini) : dur + 0.05, recorta});
+  libre = ini + dur + 0.12;
+  console.log(`✓ ${ini.toFixed(1)} s · ${d.toFixed(1)} s${atempo > 1.001 ? ` (×${atempo.toFixed(2)})` : ''} · ${x.txt}`);
 }
 
 // Música: --musica, o la primera de public/musica/. Sin música si no hay o con --sin-musica.

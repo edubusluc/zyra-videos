@@ -48,7 +48,7 @@ export function validar(g, cat) {
   else g.subs.forEach((s, i) => { const m = txt(s, LIMITES.sub, `subs[${i}]`); if (m) e.push(m); });
   if (g.locucion !== undefined) { // opcional: lo que se DICE en voz alta, uno por subtítulo
     if (!Array.isArray(g.locucion) || g.locucion.length !== (g.subs || []).length) e.push('locucion: una frase por cada subtítulo');
-    else g.locucion.forEach((l, i) => { const m = txt(l, 60, `locucion[${i}]`); if (m) e.push(m); });
+    else g.locucion.forEach((l, i) => { const m = txt(l, 45, `locucion[${i}]`); if (m) e.push(m); });
   }
   if (!cat.some((c) => c.src === g.src)) e.push(`src: debe ser una de ${cat.map((c) => c.src).join(', ')}`);
   return e;
@@ -131,7 +131,7 @@ ${hechos.join('\n') || '(nada todavía)'}
 Capturas de la app disponibles para vídeos:
 ${cat.map((c) => `- ${c.src}: ${c.descripcion}`).join('\n')}
 Cuando propongas una pieza concreta lista para producir, añade AL FINAL de tu respuesta un único bloque \`\`\`json con uno de estos formatos (el usuario lo convertirá con un botón):
-vídeo: {"tipo":"video","hook":["MÁX 16 CARACTERES","MÁX 16 CARACTERES"],"title":"MÁX 23, MAYÚSCULAS","src":"<una captura>","subs":["máx 30","máx 30","máx 30 (de 3 a 5 en total; cortos: se leen en voz alta en ~2 s cada uno)"],"locucion":["lo que se DIRÍA en voz alta para cada subtítulo, en el mismo orden y cantidad: frase hablada natural, con coma, ¡! o ¿? donde dé entonación, máx 45 caracteres, sin MAYÚSCULAS ni emojis"],"cta":"máx 28"}
+vídeo: {"tipo":"video","hook":["MÁX 16 CARACTERES","MÁX 16 CARACTERES"],"title":"MÁX 23, MAYÚSCULAS","src":"<una captura>","subs":["máx 30","máx 30","máx 30 (de 3 a 5 en total; mejor 3 o 4 si el vídeo lleva voz, porque cada uno dura 2 o 3 s)"],"locucion":["lo que se DIRÍA en voz alta para cada subtítulo, en el mismo orden y cantidad: frase hablada natural, con coma, ¡! o ¿? donde dé entonación, MÁX 28 caracteres (la voz dice unos 8 caracteres por segundo y cada subtítulo dura 2 o 3 s: si es más larga se corta o se acelera), sin MAYÚSCULAS ni emojis"],"cta":"máx 28"}
 meme antes/después: {"tipo":"meme","beforeLabel":"ANTES","before":"máx 70 caracteres","afterLabel":"CON ZYRA","after":"máx 70 caracteres"}
 meme de reacción (texto tipo «Tu compañero cuando…» sobre fondo y recorte): {"tipo":"reaccion","plantilla":"<id de plantilla o null>","caption":"máx 90 caracteres","emojis":"🎾😂"}  (sin plantilla, fondo y recorte: null usa la pista de Zyra sin personaje, o uno de los medios disponibles)
 varios memes con la misma plantilla de una vez: {"tipo":"lote","plantilla":"<id>","captions":["máx 90","máx 90", … hasta 8]}
