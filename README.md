@@ -45,6 +45,10 @@ Genera `referencias/<nombre>.md` (formato, estructura, por qué funciona, cómo 
 ## Plantillas propias y lotes
 **Desde la app:** abre el panel «Plantillas (recortes y fondos)», sube el recorte (PNG con transparencia, WebM con alfa o MP4) y, si quieres, un fondo; ponle un nombre y una descripción de cuándo usarla y pulsa «Guardar plantilla». Con «Subir al repo» marcado se sube a GitHub para que el CI también la use (el repo es público: solo material propio o con licencia). El chat las conoce y las usa en reacciones y lotes. Un PNG recortado es una imagen fija; para movimiento usa WebM con alfa (ver `scripts/recortar.sh`).
 
+**Cómo sabe el chat qué plantilla usar:** cada plantilla lleva una `descripcion` («qué se ve y cuándo usarla») y `etiquetas` (emoción, situación). El chat las recibe en cada petición y elige la que encaje con el chiste; si ninguna encaja, usa `pista-zyra`. Para que esa descripción sea buena:
+    node scripts/plantilla-desde-clip.mjs mi-clip.mp4 risa-companero --como fondo
+Claude mira unos fotogramas y la escribe él (puedes retocarla en `plantillas/<id>.json`). Con `PEXELS_API_KEY=… node scripts/pexels.mjs "padel court" 3 --plantilla` baja clips libres y los deja ya registrados como plantillas.
+
 **A mano:**
 Una plantilla (`plantillas/<id>.json`) guarda un fondo, un recorte, la duración y la posición del texto para reutilizarlos. El chat las conoce, elige la que encaje y puede crear **varios memes de una vez** («Lote de memes»: hasta 8 textos con la misma plantilla).
     node scripts/nueva-plantilla.mjs doble-cristal --desc "compañero que se come el cristal" --recorte medios/doble-cristal.webm --fondo medios/pista.mp4 --pos arriba

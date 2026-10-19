@@ -1,10 +1,14 @@
 // Descarga clips verticales gratuitos de Pexels a public/medios/ y apunta el crédito.
-// Uso: PEXELS_API_KEY=... node scripts/pexels.mjs "padel court" [cuántos=3]
+// Uso: PEXELS_API_KEY=... node scripts/pexels.mjs "padel court" [cuántos=3] [--plantilla]
+// Con --plantilla, cada clip queda además registrado como plantilla (fondo) con descripción escrita por Claude.
 // Clave gratuita en https://www.pexels.com/api/. La licencia de Pexels permite uso comercial sin atribución
 // (no se pueden vender copias sin modificar, ni sugerir que personas o marcas respaldan Zyra).
+import {execFileSync} from 'node:child_process';
 import {appendFileSync, mkdirSync, writeFileSync} from 'node:fs';
 
-const [consulta, n = '3'] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const plantilla = args.includes('--plantilla'); // crea además una plantilla (con descripción de Claude) del primer clip
+const [consulta, n = '3'] = args.filter((a) => a !== '--plantilla');
 const key = process.env.PEXELS_API_KEY;
 if (!consulta || !key) { console.error('Uso: PEXELS_API_KEY=... node scripts/pexels.mjs "consulta" [n]'); process.exit(1); }
 const r = await fetch(`https://api.pexels.com/videos/search?query=${encodeURIComponent(consulta)}&orientation=portrait&per_page=${n}`, {headers: {Authorization: key}});
@@ -17,5 +21,9 @@ for (const v of videos) {
   writeFileSync(out, Buffer.from(await (await fetch(f.link)).arrayBuffer()));
   appendFileSync('public/medios/CREDITOS.md', `- medios/pexels-${v.id}.mp4 — ${v.user?.name ?? '?'} (${v.url}), licencia Pexels\n`);
   console.log(`${out}  ${f.width}x${f.height}  ${v.url}`);
+  if (plantilla) {
+    const id = `pexels-${v.id}`;
+    execFileSync(process.execPath, ['scripts/plantilla-desde-clip.mjs', out, id, '--como', 'fondo', '--silencio'], {stdio: 'inherit'});
+  }
 }
 if (!videos.length) console.log('Sin resultados.');
