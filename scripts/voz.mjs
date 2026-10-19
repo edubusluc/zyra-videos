@@ -9,11 +9,14 @@ import {join} from 'node:path';
 
 const args = process.argv.slice(2);
 const opt = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : undefined);
+const avisoPermisos = (estado, cuerpo) => (/missing_permissions/.test(cuerpo)
+  ? `ElevenLabs ${estado}: tu clave API no tiene todos los permisos. En elevenlabs.io → Developers → API Keys, edita la clave y activa «Text to Speech» y «Voices: Read» (o crea una clave nueva sin restricciones).`
+  : `ElevenLabs ${estado}: ${cuerpo.slice(0, 300)}`);
 if (args.includes('--voces')) { // lista las voces de tu cuenta (las «premade» valen en el plan gratuito por API)
   const k = process.env.ELEVENLABS_API_KEY;
   if (!k) { console.error('Falta ELEVENLABS_API_KEY.'); process.exit(1); }
   const r = await fetch((process.env.ELEVENLABS_BASE_URL || 'https://api.elevenlabs.io') + '/v1/voices', {headers: {'xi-api-key': k}});
-  if (!r.ok) { console.error(`ElevenLabs ${r.status}: ${(await r.text()).slice(0, 300)}`); process.exit(1); }
+  if (!r.ok) { console.error(avisoPermisos(r.status, await r.text())); process.exit(1); }
   for (const v of (await r.json()).voices) console.log(`${v.category === 'premade' ? '★ premade ' : '          '} ${v.voice_id}  ${v.name}${v.labels?.language ? ' · ' + v.labels.language : ''}${v.labels?.accent ? ' · ' + v.labels.accent : ''}${v.labels?.gender ? ' · ' + v.labels.gender : ''}`);
   console.log('\nCopia el ID de una voz premade en ELEVENLABS_VOICE_ID (.env).');
   process.exit(0);
@@ -60,7 +63,7 @@ const sintetizar = async (texto) => {
   if (!r.ok) {
     const cuerpo = await r.text();
     if (r.status === 402) throw new Error('ElevenLabs 402: tu plan gratuito no puede usar voces de la biblioteca por API. Usa una voz «premade» (node scripts/voz.mjs --voces) o pasa a un plan de pago.');
-    if (r.status === 401) throw new Error('ElevenLabs 401: la clave ELEVENLABS_API_KEY no es válida.');
+    if (r.status === 401) throw new Error(avisoPermisos(401, cuerpo).replace(/^ElevenLabs 401: /, 'ElevenLabs 401: ') + (/missing_permissions/.test(cuerpo) ? '' : ' Revisa ELEVENLABS_API_KEY.'));
     throw new Error(`ElevenLabs ${r.status}: ${cuerpo.slice(0, 300)}`);
   }
   writeFileSync(f, Buffer.from(await r.arrayBuffer()));
