@@ -2,7 +2,7 @@
 // Uso: npm run app  ->  http://localhost:4173   (ver README para las variables de entorno)
 import '../scripts/env.mjs';
 import {createServer} from 'node:http';
-import {execFile, execFileSync} from 'node:child_process';
+import {execFile, execFileSync, spawn} from 'node:child_process';
 import {readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {dirname, join} from 'node:path';
@@ -15,6 +15,21 @@ const catalogo = () => JSON.parse(readFileSync(join(ROOT, 'capturas.json'), 'utf
 const jobs = new Map();
 
 const sh = (cmd, args) => new Promise((res, rej) => execFile(cmd, args, {cwd: ROOT}, (e, out, err) => (e ? rej(new Error((err || e.message).trim())) : res(out.trim()))));
+/** Como sh, pero emite cada línea de salida (render.mjs / Remotion / voz.mjs) para poder mostrar el progreso. */
+const shLineas = (cmd, args, onLinea) => new Promise((res, rej) => {
+  const p = spawn(cmd, args, {cwd: ROOT});
+  let resto = '', cola = '';
+  const alimentar = (d) => {
+    resto += d.toString();
+    const partes = resto.split(/\r|\n/);
+    resto = partes.pop();
+    for (const l of partes) if (l.trim()) { onLinea(l.trim()); cola = (cola + '\n' + l.trim()).slice(-600); }
+  };
+  p.stdout.on('data', alimentar);
+  p.stderr.on('data', alimentar);
+  p.on('error', rej);
+  p.on('close', (code) => (code === 0 ? res() : rej(new Error(cola.trim() || `${cmd} terminó con código ${code}`))));
+});
 const slug = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'video';
 
 /** Ancho en px de un PNG, leído de su cabecera. */
@@ -215,8 +230,29 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
     log(`Guardado: ${items.map((i) => i.archivo).join(', ')}`);
     if (modo === 'local') {
       log('Renderizando en local…');
-      await sh('node', ['render.mjs', ...items.map((i) => i.id)]);
-      if (voz) for (const i of items) { log(`Voz y música: ${i.id}…`); await sh('node', ['scripts/voz.mjs', i.id]); }
+      // Progreso: el render ocupa hasta el 80 % (o el 100 % sin voz); cada vídeo con voz suma su parte del resto.
+      const n = items.length, parteRender = voz ? 0.8 : 1;
+      let hechos = 0, fase = 'Preparando…';
+      const poner = (frac) => { job.progreso = {pct: Math.min(99, Math.round(100 * frac)), fase}; };
+      poner(0);
+      await shLineas(process.execPath, ['render.mjs', ...items.map((i) => i.id)], (l) => {
+        const m = /(Rendered|Encoded)\s+(\d+)\/(\d+)/.exec(l);
+        if (m) {
+          const f = +m[2] / +m[3];
+          fase = `${m[1] === 'Rendered' ? 'Renderizando fotogramas' : 'Codificando vídeo'} (${items.length > 1 ? `vídeo ${Math.min(hechos + 1, n)} de ${n}, ` : ''}${m[2]}/${m[3]}${/remaining: ([^,]+)/.exec(l) ? `, quedan ${/remaining: ([^,]+)/.exec(l)[1]}` : ''})`;
+          poner(((hechos + (m[1] === 'Rendered' ? 0.7 * f : 0.7 + 0.3 * f)) / n) * parteRender);
+          if (m[1] === 'Encoded' && +m[2] === +m[3]) hechos++;
+        } else if (/Bundling|Webpack/i.test(l)) { fase = 'Preparando el proyecto…'; poner(0); }
+      });
+      if (voz) {
+        let k = 0;
+        for (const i of items) {
+          fase = `Voz y música (${k + 1} de ${n})…`; poner(0.8 + (0.2 * k) / n); log(`Voz y música: ${i.id}…`);
+          await shLineas(process.execPath, ['scripts/voz.mjs', i.id], (l) => { if (/^[✓⚠]/.test(l)) log(l); });
+          k++;
+        }
+      }
+      job.progreso = {pct: 100, fase: 'Listo'};
       job.resultado = items.map((i) => i.resultado).join(', ');
     } else {
       await sh('git', ['add', ...items.map((i) => i.archivo)]);

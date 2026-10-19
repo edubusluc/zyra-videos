@@ -9,6 +9,15 @@ import {join} from 'node:path';
 
 const args = process.argv.slice(2);
 const opt = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : undefined);
+if (args.includes('--voces')) { // lista las voces de tu cuenta (las «premade» valen en el plan gratuito por API)
+  const k = process.env.ELEVENLABS_API_KEY;
+  if (!k) { console.error('Falta ELEVENLABS_API_KEY.'); process.exit(1); }
+  const r = await fetch((process.env.ELEVENLABS_BASE_URL || 'https://api.elevenlabs.io') + '/v1/voices', {headers: {'xi-api-key': k}});
+  if (!r.ok) { console.error(`ElevenLabs ${r.status}: ${(await r.text()).slice(0, 300)}`); process.exit(1); }
+  for (const v of (await r.json()).voices) console.log(`${v.category === 'premade' ? '★ premade ' : '          '} ${v.voice_id}  ${v.name}${v.labels?.language ? ' · ' + v.labels.language : ''}${v.labels?.accent ? ' · ' + v.labels.accent : ''}${v.labels?.gender ? ' · ' + v.labels.gender : ''}`);
+  console.log('\nCopia el ID de una voz premade en ELEVENLABS_VOICE_ID (.env).');
+  process.exit(0);
+}
 const id = args.find((a, i) => !a.startsWith('--') && !(i && ['--musica', '--voz'].includes(args[i - 1])));
 if (!id) { console.error('Uso: node scripts/voz.mjs <id> [--musica ruta.mp3] [--voz <voice_id>] [--sin-musica]'); process.exit(1); }
 const key = process.env.ELEVENLABS_API_KEY;
@@ -48,7 +57,12 @@ const sintetizar = async (texto) => {
   const f = `out/.voz-cache/${hash}.mp3`; // misma frase + misma voz = sin gastar caracteres otra vez
   if (existsSync(f)) return f;
   const r = await fetch(`${base}/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {method: 'POST', headers: {'xi-api-key': key, 'content-type': 'application/json'}, body: JSON.stringify({text: texto, model_id: modelo, language_code: 'es', ...(Object.keys(ajustes).length ? {voice_settings: ajustes} : {})})});
-  if (!r.ok) throw new Error(`ElevenLabs ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  if (!r.ok) {
+    const cuerpo = await r.text();
+    if (r.status === 402) throw new Error('ElevenLabs 402: tu plan gratuito no puede usar voces de la biblioteca por API. Usa una voz «premade» (node scripts/voz.mjs --voces) o pasa a un plan de pago.');
+    if (r.status === 401) throw new Error('ElevenLabs 401: la clave ELEVENLABS_API_KEY no es válida.');
+    throw new Error(`ElevenLabs ${r.status}: ${cuerpo.slice(0, 300)}`);
+  }
   writeFileSync(f, Buffer.from(await r.arrayBuffer()));
   return f;
 };

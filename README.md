@@ -132,3 +132,9 @@ python scripts/capturar-app.py --zyra C:\ruta\a\Zyra
 ```
 
 Sin tocar tu base de datos ni el repo de Zyra: crea una SQLite temporal, carga `populate_db.py`, la **anonimiza** (club «ZYRA CLUB», jugadores «JUGADOR n», rivales «EQUIPO RIVAL n», sin escudos ni lugares), arranca el servidor en local, entra como capitán y hace una captura de móvil (390 px ×2) de unas 19 pantallas: inicio, jugadores, ficha, plantilla, equipos, enfrentamientos (borrador y cerrado), las cuatro estadísticas, miembros y perfil. Deja los PNG en `capturas-app/` (ignorado por git) y en `public/ui/`, con su descripción en `capturas.json`. Cuando cambie la interfaz, vuelve a ejecutarlo. Si añades una pantalla nueva a la app, añádela a la lista `PAGINAS` y a `DESCRIPCIONES` del script. En pantallas largas solo se recorre el principio para que el vídeo no vaya a toda velocidad.
+
+### Error 402 de ElevenLabs y progreso del render
+
+**Error 402 «paid_plan_required»:** el plan gratuito de ElevenLabs no puede usar por API las voces de la biblioteca. Lista las de tu cuenta con `node scripts/voz.mjs --voces` y copia el ID de una marcada como `★ premade` en `ELEVENLABS_VOICE_ID` (o pasa a un plan de pago para usar cualquier voz). Comprueba también que la licencia de la voz permita el uso que le des.
+
+**Progreso:** al renderizar en local, la app muestra una barra con el porcentaje, la fase (fotogramas, codificación, voz y música) y el tiempo restante.
