@@ -46,6 +46,10 @@ export function validar(g, cat) {
   [txt(g.title, LIMITES.title, 'title'), txt(g.cta, LIMITES.cta, 'cta')].forEach((m) => m && e.push(m));
   if (!Array.isArray(g.subs) || g.subs.length < 3 || g.subs.length > 5) e.push(`subs: de 3 a 5 subtítulos (traía ${Array.isArray(g.subs) ? g.subs.length : 'ninguno'})`);
   else g.subs.forEach((s, i) => { const m = txt(s, LIMITES.sub, `subs[${i}]`); if (m) e.push(m); });
+  if (g.locucion !== undefined) { // opcional: lo que se DICE en voz alta, uno por subtítulo
+    if (!Array.isArray(g.locucion) || g.locucion.length !== (g.subs || []).length) e.push('locucion: una frase por cada subtítulo');
+    else g.locucion.forEach((l, i) => { const m = txt(l, 60, `locucion[${i}]`); if (m) e.push(m); });
+  }
   if (!cat.some((c) => c.src === g.src)) e.push(`src: debe ser una de ${cat.map((c) => c.src).join(', ')}`);
   return e;
 }
@@ -127,7 +131,7 @@ ${hechos.join('\n') || '(nada todavía)'}
 Capturas de la app disponibles para vídeos:
 ${cat.map((c) => `- ${c.src}: ${c.descripcion}`).join('\n')}
 Cuando propongas una pieza concreta lista para producir, añade AL FINAL de tu respuesta un único bloque \`\`\`json con uno de estos formatos (el usuario lo convertirá con un botón):
-vídeo: {"tipo":"video","hook":["MÁX 16 CARACTERES","MÁX 16 CARACTERES"],"title":"MÁX 23, MAYÚSCULAS","src":"<una captura>","subs":["máx 30","máx 30","máx 30 (de 3 a 5 en total; cortos: se leen en voz alta en ~2 s cada uno)"],"cta":"máx 28"}
+vídeo: {"tipo":"video","hook":["MÁX 16 CARACTERES","MÁX 16 CARACTERES"],"title":"MÁX 23, MAYÚSCULAS","src":"<una captura>","subs":["máx 30","máx 30","máx 30 (de 3 a 5 en total; cortos: se leen en voz alta en ~2 s cada uno)"],"locucion":["lo que se DIRÍA en voz alta para cada subtítulo, en el mismo orden y cantidad: frase hablada natural, con coma, ¡! o ¿? donde dé entonación, máx 45 caracteres, sin MAYÚSCULAS ni emojis"],"cta":"máx 28"}
 meme antes/después: {"tipo":"meme","beforeLabel":"ANTES","before":"máx 70 caracteres","afterLabel":"CON ZYRA","after":"máx 70 caracteres"}
 meme de reacción (texto tipo «Tu compañero cuando…» sobre fondo y recorte): {"tipo":"reaccion","plantilla":"<id de plantilla o null>","caption":"máx 90 caracteres","emojis":"🎾😂"}  (sin plantilla, fondo y recorte: null usa la pista de Zyra sin personaje, o uno de los medios disponibles)
 varios memes con la misma plantilla de una vez: {"tipo":"lote","plantilla":"<id>","captions":["máx 90","máx 90", … hasta 8]}
@@ -290,7 +294,7 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       const errores = validar(g, cat);
       if (errores.length) throw new Error(`Guion no válido: ${errores.join('; ')}`);
       const c = cat.find((x) => x.src === g.src);
-      job.guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, cta: g.cta, ...sin};
+      job.guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin};
       guardar('guiones', g.title, job.guion, '', 'mp4');
     }
     log(tipo === 'regenerar' ? `Regenerando: ${items[0].archivo}` : `Guardado: ${items.map((i) => i.archivo).join(', ')}`);

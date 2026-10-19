@@ -29,7 +29,7 @@ for (const v of videos) if (quiere(v.id)) {
   if (v.subtitulos === false || v.voz) {
     // Mismo reparto que src/Feature.tsx: los subtítulos van de 86 a 360 fotogramas a partes iguales.
     const ini = v.subs.map((_, i) => Math.round(86 + (i * 274) / v.subs.length) / 30);
-    guionVoz(v.id, [linea(0.1, 2.3, `${v.hook[0]} ${v.hook[1]}`), linea(2.3, 2.9, `(título en pantalla: ${v.title})`, false), ...v.subs.map((x, i) => linea(ini[i], ini[i + 1] ?? 12, x)), linea(12, 15, v.cta)]);
+    guionVoz(v.id, [linea(0.1, 2.3, `${v.hook[0]} ${v.hook[1]}`), linea(2.3, 2.9, `(título en pantalla: ${v.title})`, false), ...v.subs.map((x, i) => linea(ini[i], ini[i + 1] ?? 12, v.locucion?.[i] || x)), linea(12, 15, v.cta)]);
   }
 }
 for (const r of reacciones) if (quiere(`reaccion-${r.id}`)) {
