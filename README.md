@@ -196,3 +196,13 @@ Con `"voz": true`, `render.mjs` pide **antes de renderizar** todo el guion habla
 - si no caben en 15 s, **alarga el vídeo** hasta 18 s en vez de apretar más la voz (avisa si tampoco cabe: acorta la `locucion`).
 
 El vídeo usa esos tiempos (`tiempos` en `src/data.ts`) para el fin del gancho, la entrada de cada subtítulo y el cierre, y los efectos de sonido caen en esos mismos cortes. Sin credenciales o si algo falla, vuelve al sistema anterior (tiempos fijos y una voz por frase). El CI pasa ahora las variables de voz también al paso de renderizado.
+
+## Tipografía y efectos: los de la web de Zyra
+
+Los vídeos usan el sistema de diseño de la web (`static/style.css` del repo Zyra), resumido en `src/styles/brand.ts`:
+
+- **Títulos** (gancho, título sobre el móvil, palabra clave): Syncopate Bold **cursiva en mayúsculas**, como los `h1` y la portada. La primera línea del gancho y el ZYRA del cierre llevan el degradado blanco → gris de `.z-hero-title`.
+- **Tildes:** Syncopate pinta mal las mayúsculas con tilde y la Ñ (el acento sale despegado). Igual que la web, esas letras se dibujan con Archivo ExtraBold al 112 % (`src/components/fonts.tsx`).
+- **Antetítulos y botón:** Archivo en mayúsculas espaciadas (`.z-eyebrow`, `.btn`). El cierre reproduce la portada: «Sube el nivel de tu equipo», ZYRA, «Gestión de equipos de pádel», botón lima y la URL.
+- **Colores y brillos:** solo los de la web (fondos `--z-bg`/`--z-surface`, lima, `--z-danger`) y el resplandor contenido `--z-glow`; sin verdes de otra paleta ni neón a pantalla completa. Curva de animación `--z-ease`.
+- La palabra clave de las tarjetas se ajusta sola al ancho de pantalla y se le quitan comillas y signos.

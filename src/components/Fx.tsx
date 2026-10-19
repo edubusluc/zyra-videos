@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {Img, staticFile} from 'remotion';
-import {C} from '../styles/brand';
+import {C, FONT, limeA, PAGE_BG} from '../styles/brand';
 
 /** Fondo vivo: degradado, rejilla de pista en movimiento, luces que flotan y partículas que suben. */
 export const LiveBg: React.FC = () => {
@@ -13,7 +13,7 @@ export const LiveBg: React.FC = () => {
     return <div key={i} style={{position: 'absolute', left: x, top: y, width: 6 + (i % 3) * 4, height: 6 + (i % 3) * 4, borderRadius: '50%', background: C.lime, opacity: 0.12 + (i % 4) * 0.06, filter: 'blur(1px)'}} />;
   });
   return (
-    <AbsoluteFill style={{background: `radial-gradient(110% 60% at 50% 55%, ${C.forest} 0%, ${C.bg} 72%)`}}>
+    <AbsoluteFill style={{background: PAGE_BG}}>
       <AbsoluteFill
         style={{
           opacity: 0.35,
@@ -41,7 +41,8 @@ export const Wipe: React.FC<{at: number; dur?: number}> = ({at, dur = 26}) => {
   const x = interpolate(p, [0, 1], [-1700, 1500]);
   return (
     <AbsoluteFill style={{pointerEvents: 'none'}}>
-      <div style={{position: 'absolute', top: -200, bottom: -200, left: 0, width: 1500, transform: `translateX(${x}px) skewX(-12deg)`, background: `linear-gradient(90deg, ${C.forestDeep}, ${C.forest} 85%, #1d4a22)`, borderRight: `10px solid ${C.lime}`, boxShadow: `30px 0 80px ${C.lime}44`}} />
+      <div style={{position: 'absolute', top: -200, bottom: -200, left: 0, width: 1500, transform: `translateX(${x}px) skewX(-12deg)`, background: `linear-gradient(90deg, ${C.bg}, ${C.surface2} 80%, ${C.surface3})`, borderRight: `12px solid ${C.lime}`, boxShadow: `24px 0 60px -10px ${limeA(0.45)}`}} />
+      <div style={{position: 'absolute', top: -200, bottom: -200, left: 0, width: 40, transform: `translateX(${x + 1500 + 34}px) skewX(-12deg)`, background: limeA(0.35)}} />
     </AbsoluteFill>
   );
 };
@@ -79,6 +80,9 @@ export const BlurBg: React.FC<{src: string}> = ({src}) => {
   );
 };
 
+/** Ajusta el cuerpo de una palabra en Syncopate (muy ancha) para que quepa en `ancho` px. */
+export const cabe = (word: string, max: number, ancho = 900) => Math.min(max, Math.floor(ancho / Math.max(1, word.length * 0.98)));
+
 /** Tarjeta a pantalla completa con una palabra clave enorme: entra y sale con un círculo que se abre y se cierra. `dur` en fotogramas. */
 export const KeywordCard: React.FC<{at: number; word: string; variant: number; dur?: number}> = ({at, word, variant, dur = 28}) => {
   const f = useCurrentFrame() - at;
@@ -87,14 +91,18 @@ export const KeywordCard: React.FC<{at: number; word: string; variant: number; d
   const close = interpolate(f, [dur - 8, dur], [1, 0], {easing: Easing.in(Easing.cubic), extrapolateLeft: 'clamp'});
   const r = Math.min(open, close) * 1500;
   const lime = variant % 2 === 0;
-  const size = word.length <= 6 ? 190 : word.length <= 9 ? 140 : 100;
+  const size = cabe(word, 190);
   const pop = interpolate(f, [4, 14], [0.7, 1], {easing: Easing.out(Easing.back(1.6)), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  // Lima: el botón principal de la web (hover → lima → pulsado). Oscura: el fondo de página de la web con su halo lima.
+  const fondo = lime
+    ? `radial-gradient(70% 45% at 50% 50%, ${C.limeHover} 0%, ${C.lime} 60%, ${C.limePress} 100%)`
+    : `radial-gradient(60% 40% at 50% 50%, ${limeA(0.16)} 0%, ${limeA(0)} 100%), radial-gradient(120% 70% at 50% 0%, ${C.bgTop} 0%, ${C.bg} 75%)`;
   return (
-    <AbsoluteFill style={{clipPath: `circle(${r}px at 50% 52%)`, background: lime ? `linear-gradient(160deg, ${C.limeHover}, ${C.lime} 55%, #7fae00)` : `linear-gradient(160deg, #1d4a22, ${C.forest} 55%, ${C.forestDeep})`, alignItems: 'center', justifyContent: 'center', zIndex: 6}}>
-      <div style={{position: 'absolute', inset: 0, opacity: 0.22}}>
+    <AbsoluteFill style={{clipPath: `circle(${r}px at 50% 52%)`, background: fondo, alignItems: 'center', justifyContent: 'center', zIndex: 6}}>
+      <div style={{position: 'absolute', inset: 0, opacity: lime ? 0.16 : 0.22}}>
         <svg width="1080" height="1920" viewBox="-540 -960 1080 1920"><g transform={`rotate(${f * 0.6 - 8}) scale(1.35)`} fill="none" stroke={lime ? C.ink : C.lime} strokeWidth={6}><rect x={-300} y={-600} width={600} height={1200} /><line x1={-300} y1={0} x2={300} y2={0} /><line x1={-300} y1={-370} x2={300} y2={-370} /><line x1={-300} y1={370} x2={300} y2={370} /><line x1={0} y1={-370} x2={0} y2={370} /></g></svg>
       </div>
-      <div style={{fontFamily: "'Syncopate', 'Archivo', sans-serif", fontWeight: 700, fontStyle: 'italic', fontSize: size, lineHeight: 1, color: lime ? C.ink : C.lime, textTransform: 'uppercase', textAlign: 'center', padding: '0 60px', transform: `scale(${pop}) rotate(${(variant % 2 ? 1 : -1) * 3}deg)`, textShadow: lime ? 'none' : `0 0 60px ${C.lime}66`}}>{word}</div>
+      <div style={{fontFamily: FONT.display, fontWeight: 700, fontStyle: 'italic', fontSize: size, lineHeight: 1, letterSpacing: '.02em', color: lime ? C.ink : C.lime, textTransform: 'uppercase', textAlign: 'center', whiteSpace: 'nowrap', transform: `scale(${pop}) rotate(${(variant % 2 ? 1 : -1) * 3}deg)`, textShadow: lime ? 'none' : `0 10px 40px ${limeA(0.35)}`}}>{word}</div>
     </AbsoluteFill>
   );
 };
