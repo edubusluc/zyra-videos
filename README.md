@@ -164,7 +164,7 @@ ElevenLabs no ofrece voces con acento peninsular en el plan gratuito. Azure Spee
 
 1. En [portal.azure.com](https://portal.azure.com) crea un recurso **Speech** (nivel F0, gratuito) y copia la **clave** y la **región** (p. ej. `westeurope`).
 2. En local, en `.env`: `AZURE_SPEECH_KEY=…` y `AZURE_SPEECH_REGION=westeurope`. Si hay `AZURE_SPEECH_KEY` se usa Azure (aunque también haya clave de ElevenLabs); para volver a ElevenLabs, `VOZ_PROVEEDOR=elevenlabs`.
-3. En el CI: secreto `AZURE_SPEECH_KEY` y la región `AZURE_SPEECH_REGION` (vale como secreto o como variable), opcionalmente `AZURE_SPEECH_VOICE`, `AZURE_SPEECH_RATE` (p. ej. `+5%`), `AZURE_SPEECH_PITCH` y `AZURE_SPEECH_STYLE` (solo si la voz admite estilos). Con `AZURE_SPEECH_KEY` puesta, el CI usa Azure aunque también tenga clave de ElevenLabs.
+3. En el CI: secreto `AZURE_SPEECH_KEY` y la región `AZURE_SPEECH_REGION` (todas las variables `AZURE_SPEECH_*` y `VOZ_PROVEEDOR` valen como secreto o como variable), opcionalmente `AZURE_SPEECH_VOICE`, `AZURE_SPEECH_RATE` (p. ej. `+5%`), `AZURE_SPEECH_PITCH` y `AZURE_SPEECH_STYLE` (solo si la voz admite estilos). Con `AZURE_SPEECH_KEY` puesta, el CI usa Azure aunque también tenga clave de ElevenLabs.
 
 El ajuste de tiempos y la música son los mismos que con ElevenLabs. Las frases ya generadas se guardan en `out/.voz-cache`.
 
