@@ -55,12 +55,13 @@ if (args.includes('--disenar') || args.includes('--guardar-voz')) {
 }
 const id = args.find((a, i) => !a.startsWith('--') && !(i && ['--musica', '--voz'].includes(args[i - 1])));
 if (!id) { console.error('Uso: node scripts/voz.mjs <id> [--musica ruta.mp3] [--voz <voice_id>] [--sin-musica]'); await salir(1); }
-// Proveedor de voz: VOZ_PROVEEDOR=azure | elevenlabs. Sin indicarlo, Azure si hay AZURE_SPEECH_KEY y no hay clave de ElevenLabs.
-const proveedor = process.env.VOZ_PROVEEDOR || (process.env.AZURE_SPEECH_KEY && !process.env.ELEVENLABS_API_KEY ? 'azure' : 'elevenlabs');
+// Proveedor de voz: VOZ_PROVEEDOR=azure | elevenlabs. Sin indicarlo, Azure si hay AZURE_SPEECH_KEY (aunque también haya clave de ElevenLabs).
+const proveedor = process.env.VOZ_PROVEEDOR || (process.env.AZURE_SPEECH_KEY ? 'azure' : 'elevenlabs');
 const azure = proveedor === 'azure';
 const key = azure ? process.env.AZURE_SPEECH_KEY : process.env.ELEVENLABS_API_KEY;
 if (!key) { console.error(azure ? 'Falta AZURE_SPEECH_KEY (portal.azure.com → tu recurso Speech → Claves y punto de conexión).' : 'Falta ELEVENLABS_API_KEY (tu clave de elevenlabs.io → Profile → API Keys).'); await salir(1); }
 const region = process.env.AZURE_SPEECH_REGION || 'westeurope';
+if (azure && !process.env.AZURE_SPEECH_REGION) console.warn('⚠ AZURE_SPEECH_REGION sin definir: se usa westeurope. Pon la región de tu recurso (p. ej. francecentral) o dará 401/403.');
 // Voces de España (es-ES): ElviraNeural (mujer), AlvaroNeural (hombre), XimenaNeural, AbrilNeural, DarioNeural, EliasNeural, LaiaNeural…
 const voice = opt('--voz') || (azure ? process.env.AZURE_SPEECH_VOICE || 'es-ES-ElviraNeural' : process.env.ELEVENLABS_VOICE_ID);
 if (!voice) { console.error('Falta el id de la voz: ELEVENLABS_VOICE_ID o --voz <id> (en elevenlabs.io → Voices → copiar ID).'); await salir(1); }
@@ -113,6 +114,7 @@ export const paraVoz = (txt) => {
   return /[.!?…]$/.test(t) ? t : `${t}.`;
 };
 
+console.log(`Voz: ${azure ? `Azure Speech · ${voice} · ${region}` : `ElevenLabs · ${voice}`}`);
 mkdirSync('out/.voz-cache', {recursive: true});
 const escXml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // Azure Speech (REST): SSML con velocidad y tono (AZURE_SPEECH_RATE p. ej. +5%, AZURE_SPEECH_PITCH p. ej. +2st) y estilo opcional (AZURE_SPEECH_STYLE, solo si la voz lo admite).

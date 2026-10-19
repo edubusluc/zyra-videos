@@ -163,7 +163,7 @@ El panel **Mis vídeos (eliminar o volver a generar)** lista los vídeos, reacci
 ElevenLabs no ofrece voces con acento peninsular en el plan gratuito. Azure Speech tiene voces neuronales nativas de España (`es-ES-ElviraNeural` mujer, `es-ES-AlvaroNeural` hombre, `XimenaNeural`, `AbrilNeural`…) y un plan gratuito de unos 500.000 caracteres al mes (compruébalo en tu cuenta), de sobra para estos vídeos.
 
 1. En [portal.azure.com](https://portal.azure.com) crea un recurso **Speech** (nivel F0, gratuito) y copia la **clave** y la **región** (p. ej. `westeurope`).
-2. En local, en `.env`: `AZURE_SPEECH_KEY=…` y `AZURE_SPEECH_REGION=westeurope`. Si no hay clave de ElevenLabs se usa Azure; para forzarlo, `VOZ_PROVEEDOR=azure`.
-3. En el CI: secreto `AZURE_SPEECH_KEY` y, en Variables, `AZURE_SPEECH_REGION`, opcionalmente `AZURE_SPEECH_VOICE`, `AZURE_SPEECH_RATE` (p. ej. `+5%`), `AZURE_SPEECH_PITCH` y `AZURE_SPEECH_STYLE` (solo si la voz admite estilos). Si en el CI hay también clave de ElevenLabs, pon la variable `VOZ_PROVEEDOR=azure`.
+2. En local, en `.env`: `AZURE_SPEECH_KEY=…` y `AZURE_SPEECH_REGION=westeurope`. Si hay `AZURE_SPEECH_KEY` se usa Azure (aunque también haya clave de ElevenLabs); para volver a ElevenLabs, `VOZ_PROVEEDOR=elevenlabs`.
+3. En el CI: secreto `AZURE_SPEECH_KEY` y, en Variables, `AZURE_SPEECH_REGION`, opcionalmente `AZURE_SPEECH_VOICE`, `AZURE_SPEECH_RATE` (p. ej. `+5%`), `AZURE_SPEECH_PITCH` y `AZURE_SPEECH_STYLE` (solo si la voz admite estilos). Con `AZURE_SPEECH_KEY` puesta, el CI usa Azure aunque también tenga clave de ElevenLabs.
 
 El ajuste de tiempos y la música son los mismos que con ElevenLabs. Las frases ya generadas se guardan en `out/.voz-cache`.
