@@ -1,0 +1,22 @@
+name: Generar vídeos
+on:
+  push:
+    paths: ['guiones/**', 'src/**', 'public/**']
+  workflow_dispatch:
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx remotion browser ensure
+      - run: node render.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: videos-tiktok
+          path: out/*.mp4
