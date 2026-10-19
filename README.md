@@ -109,3 +109,7 @@ Cómo encaja: `render.mjs` deja `out/<id>.voz.json` con los tramos y sus segundo
 ### Dónde van las claves
 
 En un archivo `.env` en la raíz del proyecto (copia `.env.example`), una por línea: `ELEVENLABS_API_KEY=…` y `ELEVENLABS_VOICE_ID=…`. Lo leen la app y `npm run voz`; está en `.gitignore`, así que no se sube. Las variables de entorno del sistema tienen prioridad sobre el `.env`.
+
+### Ajustar la voz
+
+Opcional, en el mismo `.env` (ver `.env.example`): `ELEVENLABS_STABILITY`, `ELEVENLABS_SIMILARITY`, `ELEVENLABS_STYLE`, `ELEVENLABS_SPEED` (0,7–1,2), `ELEVENLABS_SPEAKER_BOOST` y `ELEVENLABS_MODEL`. Al cambiarlos se regeneran las frases (la caché los tiene en cuenta). La voz en sí se cambia con `ELEVENLABS_VOICE_ID` o `--voz <id>`; la música, con `--musica` o `--sin-musica`.

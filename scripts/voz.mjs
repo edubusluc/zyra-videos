@@ -16,6 +16,9 @@ if (!key) { console.error('Falta ELEVENLABS_API_KEY (tu clave de elevenlabs.io �
 const voice = opt('--voz') || process.env.ELEVENLABS_VOICE_ID;
 if (!voice) { console.error('Falta el id de la voz: ELEVENLABS_VOICE_ID o --voz <id> (en elevenlabs.io → Voices → copiar ID).'); process.exit(1); }
 const base = process.env.ELEVENLABS_BASE_URL || 'https://api.elevenlabs.io';
+// Ajustes de la voz (opcionales; si no se definen, ElevenLabs usa los de la voz).
+const num = (n) => (process.env[n] !== undefined && process.env[n] !== '' ? Number(process.env[n]) : undefined);
+const ajustes = Object.fromEntries(Object.entries({stability: num('ELEVENLABS_STABILITY'), similarity_boost: num('ELEVENLABS_SIMILARITY'), style: num('ELEVENLABS_STYLE'), speed: num('ELEVENLABS_SPEED'), use_speaker_boost: process.env.ELEVENLABS_SPEAKER_BOOST ? process.env.ELEVENLABS_SPEAKER_BOOST !== 'false' : undefined}).filter(([, v]) => v !== undefined && v === v));
 const modelo = process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2';
 
 const video = `out/${id}.mp4`;
@@ -41,10 +44,10 @@ const duracion = (f) => {
 
 mkdirSync('out/.voz-cache', {recursive: true});
 const sintetizar = async (texto) => {
-  const hash = createHash('sha1').update(`${voice}|${modelo}|${texto}`).digest('hex').slice(0, 16);
+  const hash = createHash('sha1').update(`${voice}|${modelo}|${JSON.stringify(ajustes)}|${texto}`).digest('hex').slice(0, 16);
   const f = `out/.voz-cache/${hash}.mp3`; // misma frase + misma voz = sin gastar caracteres otra vez
   if (existsSync(f)) return f;
-  const r = await fetch(`${base}/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {method: 'POST', headers: {'xi-api-key': key, 'content-type': 'application/json'}, body: JSON.stringify({text: texto, model_id: modelo, language_code: 'es'})});
+  const r = await fetch(`${base}/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {method: 'POST', headers: {'xi-api-key': key, 'content-type': 'application/json'}, body: JSON.stringify({text: texto, model_id: modelo, language_code: 'es', ...(Object.keys(ajustes).length ? {voice_settings: ajustes} : {})})});
   if (!r.ok) throw new Error(`ElevenLabs ${r.status}: ${(await r.text()).slice(0, 300)}`);
   writeFileSync(f, Buffer.from(await r.arrayBuffer()));
   return f;
