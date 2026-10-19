@@ -213,7 +213,12 @@ async function trabajo(job, {peticion, modo, borrador}) {
     } else {
       await sh('git', ['add', ...items.map((i) => i.archivo)]);
       await sh('git', ['commit', '-m', `${tipo}: ${items.map((i) => i.id).join(', ')}`.slice(0, 120)]);
-      await sh('git', ['push']);
+      // Si el remoto tiene cambios nuevos (otro equipo, mis actualizaciones…), los integramos y reintentamos.
+      try { await sh('git', ['push']); } catch {
+        log('El remoto tiene cambios nuevos; los integro y reintento…');
+        await sh('git', ['pull', '--rebase', '--autostash']);
+        await sh('git', ['push']);
+      }
       log('Subido; el CI empieza a renderizar.');
       job.resultado = await esperarCI(await sh('git', ['rev-parse', 'HEAD']), log);
     }
