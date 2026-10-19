@@ -120,32 +120,49 @@ export const paraVoz = (txt) => {
   if (letras.length > 3 && letras === letras.toUpperCase()) {
     t = t.toLowerCase().replace(/[a-záéíóúüñ]+/gi, (w) => (SIGLAS.has(w.toUpperCase()) ? w.toUpperCase() : w));
   }
+  t = t.replace(/\p{Extended_Pictographic}|\uFE0F/gu, '').replace(/\.{3,}/g, '…'); // sin emojis (algunas voces los leen) ni puntos suspensivos sueltos
+  t = t.replace(/(^|\s)[.,;:·•\-–—]+(?=\s|$)/g, '$1').replace(/\s+/g, ' ').trim(); // signos sueltos: una voz puede deletrearlos («punto»)
+  t = t.replace(/\b([a-z0-9-]+)\.(com|es|org|net)\b/gi, (_, a, b) => `${a.replace(/(zyra)(padel)/i, '$1 pádel')} punto ${b}`); // la web se dice, no se deletrea
   t = t.replace(/(^|[.!?]\s+|[¿¡])([a-záéíóúüñ])/g, (_, a, b) => a + b.toUpperCase()); // mayúscula al empezar frase
-  return /[.!?…]$/.test(t) ? t : `${t}.`;
+  if (/[.!?…]$/.test(t)) return t;
+  return /\d$/.test(t) ? `${t}!` : `${t}.`; // «…10.» se lee «diez punto»: tras un número se cierra con «!»
 };
 
 console.log(`Voz: ${azure ? `Azure Speech · ${voice} · ${region}` : `ElevenLabs · ${voice}`}`);
 mkdirSync('out/.voz-cache', {recursive: true});
 const escXml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // Azure Speech (REST): SSML con velocidad y tono (AZURE_SPEECH_RATE p. ej. +5%, AZURE_SPEECH_PITCH p. ej. +2st) y estilo opcional (AZURE_SPEECH_STYLE, solo si la voz lo admite).
-const ssmlAzure = (texto) => {
-  const estilo = /DragonHD/i.test(voice) ? undefined : process.env.AZURE_SPEECH_STYLE;
-  const hd = /DragonHD/i.test(voice); // las voces HD deciden solas el tono y la emoción: sin prosody salvo que lo pidas
-  const rate = process.env.AZURE_SPEECH_RATE, pitch = process.env.AZURE_SPEECH_PITCH;
-  const cuerpo = hd && !rate && !pitch ? escXml(texto) : `<prosody rate="${rate || '+0%'}" pitch="${pitch || '+0st'}">${escXml(texto)}</prosody>`;
-  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-ES"><voice name="${voice}">${estilo ? `<mstts:express-as style="${escXml(estilo)}"${process.env.AZURE_SPEECH_STYLE_DEGREE ? ` styledegree="${escXml(process.env.AZURE_SPEECH_STYLE_DEGREE)}"` : ''}>${cuerpo}</mstts:express-as>` : cuerpo}</voice></speak>`;
+// Perfil de entrega de Azure: «deportivo» (por defecto: algo más rápido y agudo, tono de anuncio) o «neutro» (sin tocar). Las voces HD deciden solas el tono:
+// con ellas solo se aplica lo que pidas tú. AZURE_SPEECH_RATE / PITCH / STYLE mandan sobre el perfil. El mismo ajuste en todas las frases da un tono continuo.
+const hd = /DragonHD/i.test(voice);
+const perfilAz = process.env.AZURE_SPEECH_PERFIL || 'deportivo';
+const rate = process.env.AZURE_SPEECH_RATE || (!hd && perfilAz === 'deportivo' ? '+7%' : '');
+const pitch = process.env.AZURE_SPEECH_PITCH || (!hd && perfilAz === 'deportivo' ? '+1st' : '');
+const estiloAz = hd ? '' : process.env.AZURE_SPEECH_STYLE || '';
+// nivel 0: estilo + velocidad/tono; 1: solo velocidad/tono; 2: texto plano (por si la voz rechaza el SSML)
+const ssmlAzure = (texto, nivel = 0) => {
+  const prosodia = nivel < 2 && (rate || pitch);
+  const cuerpo = prosodia ? `<prosody${rate ? ` rate="${escXml(rate)}"` : ''}${pitch ? ` pitch="${escXml(pitch)}"` : ''}>${escXml(texto)}</prosody>` : escXml(texto);
+  const estilo = nivel === 0 && estiloAz;
+  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-ES"><voice name="${voice}">${estilo ? `<mstts:express-as style="${escXml(estiloAz)}"${process.env.AZURE_SPEECH_STYLE_DEGREE ? ` styledegree="${escXml(process.env.AZURE_SPEECH_STYLE_DEGREE)}"` : ''}>${cuerpo}</mstts:express-as>` : cuerpo}</voice></speak>`;
 };
+let nivelAz = 0; // baja una vez si Azure rechaza el SSML y se mantiene para el resto de frases
 const sintetizarAzure = async (texto) => {
-  const r = await fetch(process.env.AZURE_SPEECH_URL || `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {method: 'POST', headers: {'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-96kbitrate-mono-mp3', 'User-Agent': 'zyra-videos'}, body: ssmlAzure(texto)});
-  if (!r.ok) {
+  for (;;) {
+    const r = await fetch(process.env.AZURE_SPEECH_URL || `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {method: 'POST', headers: {'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-96kbitrate-mono-mp3', 'User-Agent': 'zyra-videos'}, body: ssmlAzure(texto, nivelAz)});
+    if (r.ok) return Buffer.from(await r.arrayBuffer());
     const cuerpo = await r.text();
     if (r.status === 401 || r.status === 403) throw new Error(`Azure Speech ${r.status}: clave o región incorrectas. Revisa AZURE_SPEECH_KEY y AZURE_SPEECH_REGION (la región de tu recurso, p. ej. westeurope).`);
+    if (r.status === 400 && nivelAz < 2 && (nivelAz === 0 ? (estiloAz || rate || pitch) : (rate || pitch))) {
+      nivelAz = nivelAz === 0 && estiloAz ? 1 : 2;
+      console.warn(`⚠ Azure rechazó el SSML de la voz ${voice} (${cuerpo.slice(0, 120)}): se prueba ${nivelAz === 1 ? 'sin estilo' : 'sin estilo ni ajustes de velocidad/tono'}.`);
+      continue;
+    }
     throw new Error(`Azure Speech ${r.status}: ${cuerpo.slice(0, 300)}`);
   }
-  return Buffer.from(await r.arrayBuffer());
 };
 const sintetizar = async (texto) => {
-  const hash = createHash('sha1').update(azure ? `azure|${voice}|${process.env.AZURE_SPEECH_RATE}|${process.env.AZURE_SPEECH_PITCH}|${process.env.AZURE_SPEECH_STYLE}|${process.env.AZURE_SPEECH_STYLE_DEGREE}|${texto}` : `${voice}|${modelo}|${JSON.stringify(ajustes)}|${texto}`).digest('hex').slice(0, 16);
+  const hash = createHash('sha1').update(azure ? `azure|${voice}|${rate}|${pitch}|${estiloAz}|${process.env.AZURE_SPEECH_STYLE_DEGREE}|${nivelAz}|${texto}` : `${voice}|${modelo}|${JSON.stringify(ajustes)}|${texto}`).digest('hex').slice(0, 16);
   const f = `out/.voz-cache/${hash}.mp3`; // misma frase + misma voz = sin gastar caracteres otra vez
   if (existsSync(f)) return f;
   if (azure) { writeFileSync(f, await sintetizarAzure(texto)); return f; }
