@@ -15,6 +15,7 @@ button{background:var(--lime);color:#0A0A0A;font-weight:700;border-color:var(--l
 <h1>Zyra Vídeos</h1><p class="sub">Habla con Claude para sacar ideas y conviértelas en vídeo o meme con un botón.</p>
 <div class="ideas">
  <button class="sec" data-q="Dame 5 ideas de vídeos de TikTok que aún no hayamos hecho, distintas entre sí.">5 ideas nuevas</button>
+ <button class="sec" data-q="Propón 2 memes de reacción tipo «Tu compañero cuando…» para capitanes y jugadores de pádel y déjame crear el mejor." class="sec">Reacciones</button>
  <button class="sec" data-q="Propón 3 memes antes/después para capitanes de pádel y déjame crear el mejor.">Memes</button>
  <button class="sec" data-q="Busca tendencias actuales de TikTok de pádel que podamos aprovechar para Zyra.">Tendencias</button>
  <button class="sec" data-q="Dame un guion para el vídeo de la alineación sugerida con un enfoque distinto al que hicimos.">Otro guion</button>
@@ -34,7 +35,7 @@ async function enviar(texto){
   try{
     const r=await fetch('/api/chat',{method:'POST',body:JSON.stringify({mensajes:hist,web:$('web').checked})});const j=await r.json();if(!r.ok)throw new Error(j.error);
     hist.push({role:'assistant',content:j.respuesta});const d=add('a',j.respuesta);const b=bloque(j.respuesta);
-    if(b&&(b.tipo==='video'||b.tipo==='meme')){const bt=document.createElement('button');bt.textContent=b.tipo==='meme'?'Crear este meme':'Crear este vídeo';bt.style.marginTop='10px';bt.onclick=()=>crear(b,bt);d.appendChild(document.createElement('br'));d.appendChild(bt)}
+    if(b&&(b.tipo==='video'||b.tipo==='meme'||b.tipo==='reaccion')){const bt=document.createElement('button');bt.textContent=b.tipo==='meme'?'Crear este meme':b.tipo==='reaccion'?'Crear esta reacción':'Crear este vídeo';bt.style.marginTop='10px';bt.onclick=()=>crear(b,bt);d.appendChild(document.createElement('br'));d.appendChild(bt)}
     $('log').textContent='';
   }catch(e){$('log').className='log err';$('log').textContent=e.message}$('send').disabled=false}
 async function crear(b,bt){

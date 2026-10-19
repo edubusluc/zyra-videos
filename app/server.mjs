@@ -66,6 +66,16 @@ export function validarMeme(g) {
   return e;
 }
 
+const medios = () => (existsSync(join(ROOT, 'public/medios')) ? readdirSync(join(ROOT, 'public/medios')).filter((f) => /\.(png|jpe?g|mp4|webm|mov)$/i.test(f)).map((f) => `medios/${f}`) : []);
+/** Valida una reacción: texto con el gancho del meme y, opcionalmente, fondo/recorte que existan en public/medios. */
+export function validarReaccion(g, disponibles = medios()) {
+  const e = [];
+  if (typeof g.caption !== 'string' || !g.caption.trim() || g.caption.length > 90) e.push('caption: obligatorio y de máx. 90 caracteres');
+  if (g.emojis != null && (typeof g.emojis !== 'string' || g.emojis.length > 12)) e.push('emojis: máx. 12 caracteres');
+  for (const k of ['fondo', 'recorte']) if (g[k] != null && !disponibles.includes(g[k])) e.push(`${k}: debe ser null o uno de ${disponibles.join(', ') || '(no hay medios)'}`);
+  return e;
+}
+
 const listar = (dir) => (existsSync(join(ROOT, dir)) ? readdirSync(join(ROOT, dir)).filter((f) => f.endsWith('.json')) : []).map((f) => JSON.parse(readFileSync(join(ROOT, dir, f), 'utf8')));
 
 /** Respuesta del chat de ideas: conoce lo ya creado y las capturas disponibles. */
@@ -80,6 +90,8 @@ ${cat.map((c) => `- ${c.src}: ${c.descripcion}`).join('\n')}
 Cuando propongas una pieza concreta lista para producir, añade AL FINAL de tu respuesta un único bloque \`\`\`json con uno de estos formatos (el usuario lo convertirá con un botón):
 vídeo: {"tipo":"video","hook":["MÁX 16 CARACTERES","MÁX 16 CARACTERES"],"title":"MÁX 23, MAYÚSCULAS","src":"<una captura>","subs":["máx 42","máx 42","máx 42"],"cta":"máx 28"}
 meme antes/después: {"tipo":"meme","beforeLabel":"ANTES","before":"máx 70 caracteres","afterLabel":"CON ZYRA","after":"máx 70 caracteres"}
+meme de reacción (texto tipo «Tu compañero cuando…» sobre fondo y recorte): {"tipo":"reaccion","caption":"máx 90 caracteres","emojis":"🎾😂","fondo":null,"recorte":null}  (fondo y recorte: null para usar la pista de Zyra sin personaje, o uno de los medios disponibles)
+Medios disponibles en public/medios: ${medios().join(', ') || 'ninguno (usa null)'}.
 Para ideas sueltas no hace falta bloque. No inventes funciones que Zyra no tenga. Los memes son originales con la marca de Zyra; no uses plantillas ni imágenes con derechos de terceros. ${web ? 'Puedes buscar en la web tendencias o ideas si ayuda; cita de dónde sale lo que encuentres.' : ''}`;
   return llamar(sistema, mensajes, {web, max: 1500});
 }
@@ -135,8 +147,20 @@ async function trabajo(job, {peticion, modo, borrador}) {
   try {
     const cat = catalogo();
     const meme = borrador?.tipo === 'meme';
+    const reaccion = borrador?.tipo === 'reaccion';
     let archivo, id, resultado;
-    if (meme) {
+    if (reaccion) {
+      const errores = validarReaccion(borrador);
+      if (errores.length) throw new Error(`Reacción no válida: ${errores.join('; ')}`);
+      const guion = {caption: borrador.caption, emojis: borrador.emojis || '', fondo: borrador.fondo ?? null, recorte: borrador.recorte ?? null, seg: 7};
+      id = slug(borrador.caption) + '-' + Date.now().toString(36).slice(-4);
+      mkdirSync(join(ROOT, 'reacciones'), {recursive: true});
+      archivo = `reacciones/${id}.json`;
+      writeFileSync(join(ROOT, archivo), JSON.stringify(guion, null, 2) + '\n');
+      job.guion = guion;
+      resultado = `out/reaccion-${id}.mp4`;
+      id = `reaccion-${id}`;
+    } else if (meme) {
       const errores = validarMeme(borrador);
       if (errores.length) throw new Error(`Meme no válido: ${errores.join('; ')}`);
       const guion = Object.fromEntries(['beforeLabel', 'before', 'afterLabel', 'after'].map((k) => [k, borrador[k]]));
@@ -166,7 +190,7 @@ async function trabajo(job, {peticion, modo, borrador}) {
       job.resultado = resultado;
     } else {
       await sh('git', ['add', archivo]);
-      await sh('git', ['commit', '-m', `${meme ? 'Meme' : 'Guion'}: ${id}`]);
+      await sh('git', ['commit', '-m', `${meme ? 'Meme' : reaccion ? 'Reacción' : 'Guion'}: ${id}`]);
       await sh('git', ['push']);
       log('Subido; el CI empieza a renderizar.');
       job.resultado = await esperarCI(await sh('git', ['rev-parse', 'HEAD']), log);

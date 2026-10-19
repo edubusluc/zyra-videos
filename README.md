@@ -25,6 +25,13 @@ Capturas nuevas: solo con datos de demostración (JUGADOR 1…), nunca nombres r
 ## Memes
 Formato «antes / después» con la marca (imagen 1080×1350, `memes/<id>.json`: `beforeLabel`, `before`, `afterLabel`, `after`; textos de máx. 70 caracteres). El CI los deja como PNG junto a los vídeos. Son originales de Zyra: no se usan plantillas ni fotos con derechos de terceros. Generar imágenes con IA (fotos, ilustraciones) exigiría un modelo de imagen externo, normalmente de pago, y no está incluido.
 
+## Memes de reacción (como los de @AdictosPadel)
+Formato: un fondo (foto o vídeo de pista), un recorte opcional de una persona reaccionando y un texto con borde: «Tu compañero cuando…». Se genera con `reacciones/<id>.json` (`caption`, `emojis`, `fondo`, `recorte`, `seg`) y sale como MP4 vertical; sin fondo ni recorte usa la pista de Zyra.
+- **Fondos libres:** `PEXELS_API_KEY=… node scripts/pexels.mjs "padel court"` baja clips verticales gratuitos de Pexels (clave gratis; licencia de uso comercial sin atribución) y apunta el crédito en `public/medios/CREDITOS.md`.
+- **Recortes:** lo mejor es grabar a tu equipo reaccionando; `scripts/recortar.sh clip.mp4 public/medios/recorte.webm` quita el fondo en local con [backgroundremover](https://github.com/albertbj/backgroundremover) (MIT).
+- **No uses** clips de otras cuentas (p. ej. el vídeo viral de referencia): llevan derechos de imagen y de autor de terceros. Copiar el formato es libre; copiar el clip, no.
+- Audio: si el recorte trae sonido se mantiene; si no, pon un sonido desde la biblioteca de TikTok al subirlo.
+
 ## En local
     npm install
     npm run render [id]       # CHROME=/ruta/a/chrome si Remotion no descarga navegador
