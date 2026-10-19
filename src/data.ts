@@ -22,8 +22,8 @@ export type VideoData = {
   subtitulos?: boolean;
   /** Estilo visual: «base» (por defecto) o «creador» (fondo desenfocado, tarjetas de palabra clave, blanco y negro → color, subtítulos con palabra destacada). En `subs`, *así* marca la palabra a destacar. */
   estilo?: 'base' | 'creador';
-  /** Fotogramas (30 fps) en que acaba el gancho, entra cada subtítulo entra el cierre y duración total; los pone render.mjs a partir de la locución única (out/<id>.tiempos.json). Sin esto, reparto fijo. */
-  tiempos?: {hookEnd: number; subs: number[]; cta: number; frames: number};
+  /** Fotogramas (30 fps) en que acaba el gancho (y hookB, entra su segunda línea, sincronizada con la voz), entra cada subtítulo entra el cierre y duración total; los pone render.mjs a partir de la locución única (out/<id>.tiempos.json). Sin esto, reparto fijo. */
+  tiempos?: {hookEnd: number; hookB?: number; subs: number[]; cta: number; frames: number};
 };
 
 export const VIDEOS = scripts as VideoData[];

@@ -197,6 +197,9 @@ const sintetizar = async (texto, xml = false) => {
 // Todo el guion hablado se pide de una sola vez (la entonación fluye de una frase a otra, como un locutor), con pausas marcadas entre frases;
 // luego se localizan las frases en ese audio y se colocan en la línea de tiempo con huecos cortos y un único ajuste de velocidad para todas.
 // Los tiempos resultantes (out/<id>.tiempos.json) los usa render.mjs para que subtítulos y cortes sigan a la voz, y este script para mezclar.
+const PAUSA_GANCHO = 350; // ms entre las dos frases del gancho: respiro corto, sin cortar la locución
+const partesGancho = (t) => t.split(/(?<=[.!?…])\s+/).filter(Boolean); // «Yo gano siempre. Tu ficha opina.» -> 2 frases
+const ssmlGancho = (t) => partesGancho(t).map(escXml).join(`<break time="${PAUSA_GANCHO}ms"/>`); // el gancho es UN bloque SSML con pausa corta, no dos tomas
 const PAUSA_AZ = 900; // ms entre frases dentro de la locución única (se recortan después)
 const pcmMono = (f) => {
   const b = spawnSync(FF, ['-v', 'error', '-i', f, '-vn', '-ac', '1', '-ar', '16000', '-f', 'wav', '-'], {maxBuffer: 1 << 28}).stdout;
@@ -262,16 +265,25 @@ const limitesPorSilencio = (mp3, n, frases) => {
     if (dentro.length < n - 1) continue;
     // Las pausas no son siempre las n-1 más largas (una coma o un respiro dentro de una frase puede ser más largo que el hueco): se eligen las que dejan
     // cada frase con una duración proporcional a su texto, y si ni así encaja se descarta (se usará una voz por frase) en vez de cortar a media frase.
-    const pausas = elegirPausas(dentro.sort((p, q) => p[0] - q[0]), n - 1, frases, ini, fin);
+    // Las pausas largas (la de PAUSA_AZ) mandan: la pausa corta interna del gancho no debe confundirse con el corte entre frases.
+    dentro.sort((p, q) => p[0] - q[0]);
+    const largas = dentro.filter(([s, e]) => e - s >= (PAUSA_AZ / 1000) * 0.6);
+    const pausas = (largas.length >= n - 1 && elegirPausas(largas, n - 1, frases, ini, fin)) || elegirPausas(dentro, n - 1, frases, ini, fin);
     if (!pausas) continue;
     const cortes = [ini, ...pausas.flat(), fin];
-    return Array.from({length: n}, (_, i) => ({s: Math.max(0, cortes[2 * i] - 0.03), e: cortes[2 * i + 1] + 0.05}));
+    const r = Array.from({length: n}, (_, i) => ({s: Math.max(0, cortes[2 * i] - 0.03), e: cortes[2 * i + 1] + 0.05}));
+    // pausa interna más larga dentro de la primera frase (entre las dos del gancho), en segundos desde el inicio del clip
+    const interna = dentro.filter((p) => p[0] >= cortes[0] && p[1] <= cortes[1]).sort((p, q) => (q[1] - q[0]) - (p[1] - p[0]))[0];
+    if (interna) r[0].interno = (interna[0] + interna[1]) / 2 - r[0].s;
+    return r;
   }
   return null;
 };
 /** ElevenLabs con marcas de tiempo por carácter: las frases se localizan exactamente, sin buscar silencios. */
 const sintetizarElevenUnico = async (frases) => {
-  const texto = frases.join(modelo.includes('v3') ? '\n\n' : ' <break time="0.6s" /> ');
+  const brk = modelo.includes('v3') ? '\n\n' : ' <break time="0.6s" /> ';
+  const enviar = frases.map((f, i) => (i === 0 && tramos[0]?.gancho && !modelo.includes('v3') ? partesGancho(f).join(` <break time="${PAUSA_GANCHO / 1000}s" /> `) : f));
+  const texto = enviar.join(brk);
   const hash = createHash('sha1').update(`eleven-unico|${voice}|${modelo}|${JSON.stringify(ajustes)}|${texto}`).digest('hex').slice(0, 16);
   const f = `out/.voz-cache/${hash}.mp3`, fj = `${f}.json`;
   if (!existsSync(fj) || !existsSync(f)) {
@@ -286,11 +298,18 @@ const sintetizarElevenUnico = async (frases) => {
   const txt = al.characters.join('');
   let pos = 0;
   const seg = [];
-  for (const fr of frases) {
-    const i = txt.indexOf(fr, pos);
+  for (const [k, fr] of frases.entries()) {
+    const partes = k === 0 && tramos[0]?.gancho ? partesGancho(fr) : [fr];
+    const i = txt.indexOf(partes[0], pos);
     if (i < 0) return {mp3: f, seg: null};
-    const j = i + fr.length - 1;
-    seg.push({s: Math.max(0, al.character_start_times_seconds[i] - 0.03), e: al.character_end_times_seconds[j] + 0.05});
+    let j = i + partes[0].length - 1, i2 = -1;
+    if (partes.length > 1) {
+      i2 = txt.indexOf(partes.at(-1), j + 1);
+      if (i2 < 0) return {mp3: f, seg: null};
+      j = i2 + partes.at(-1).length - 1;
+    }
+    const s0 = Math.max(0, al.character_start_times_seconds[i] - 0.03);
+    seg.push({s: s0, e: al.character_end_times_seconds[j] + 0.05, ...(i2 >= 0 ? {interno: al.character_start_times_seconds[i2] - s0} : {})});
     pos = j + 1;
   }
   return {mp3: f, seg};
@@ -299,7 +318,7 @@ if (narracion) {
   const frases = entonar(tramos.map((x) => paraVoz(x.txt)));
   let mp3, seg;
   try {
-    if (azure) { mp3 = await sintetizar(frases.map(escXml).join(`<break time="${PAUSA_AZ}ms"/>`), true); seg = limitesPorSilencio(mp3, frases.length, frases); }
+    if (azure) { mp3 = await sintetizar(frases.map((f, i) => (i === 0 && tramos[0]?.gancho ? ssmlGancho(f) : escXml(f))).join(`<break time="${PAUSA_AZ}ms"/>`), true); seg = limitesPorSilencio(mp3, frases.length, frases); }
     else ({mp3, seg} = await sintetizarElevenUnico(frases));
   } catch (e) { console.error(`✖ ${e.message}`); await salir(2); }
   if (!seg) { console.warn('⚠ No pude localizar las frases en la locución única: se usará una voz por frase con los tiempos fijos.'); await salir(2); }
@@ -321,11 +340,13 @@ if (narracion) {
   // Fotogramas (30 fps) para src/Feature.tsx: fin del gancho, entrada de cada subtítulo (3 fotogramas antes de la voz) y entrada del cierre.
   const f30 = (t) => Math.round(t * 30);
   const hookEnd = Math.max(84, Math.ceil((ini[0] + seg[0].dur / factor + 0.12) * 30));
+  // Segunda línea del gancho: entra cuando la voz empieza su segunda frase (3 fotogramas antes); sin dato, el valor fijo de Feature.tsx.
+  const hookB = seg[0].interno !== undefined ? Math.min(hookEnd - 20, Math.max(12, f30(ini[0] + seg[0].interno / factor) - 3)) : undefined;
   const subs = [];
   for (let i = 1; i < seg.length - 1; i++) subs.push(Math.max(i === 1 ? hookEnd + 24 : subs[i - 2] + 36, f30(ini[i]) - 3));
   const cta = Math.min(frames - 75, Math.max(subs.at(-1) + 36, f30(ini.at(-1)) - 4));
   seg.forEach((x, i) => { x.ini = +ini[i].toFixed(3); });
-  writeFileSync(`out/${id}.tiempos.json`, JSON.stringify({mp3, factor: +factor.toFixed(4), frases: seg, hookEnd, subs, cta, frames, fin: +fin.toFixed(2)}, null, 2));
+  writeFileSync(`out/${id}.tiempos.json`, JSON.stringify({mp3, factor: +factor.toFixed(4), frases: seg, hookEnd, ...(hookB !== undefined ? {hookB} : {}), subs, cta, frames, fin: +fin.toFixed(2)}, null, 2));
   seg.forEach((x) => console.log(`✓ ${x.ini.toFixed(1)} s · ${(x.dur / factor).toFixed(1)} s · ${x.txt}`));
   console.log(`Locución única: ${fin.toFixed(1)} s${factor > 1.001 ? ` (×${factor.toFixed(2)} en todas las frases)` : ''} → gancho ${hookEnd}, subtítulos ${subs.join('/')}, cierre ${cta}, vídeo de ${frames} (fotogramas)`);
   await salir(0);
@@ -345,7 +366,7 @@ if (tiempos && existsSync(tiempos.mp3)) {
 } else {
 let libre = 0; // hasta cuándo está ocupada la voz: una frase nunca se corta, la siguiente espera a que acabe
 for (const [k, x] of tramos.entries()) {
-  const mp3 = await sintetizar(paraVoz(x.txt)).catch(async (e) => { console.error(`✖ ${e.message}`); await salir(1); });
+  const mp3 = await (azure && x.gancho ? sintetizar(ssmlGancho(paraVoz(x.txt)), true) : sintetizar(paraVoz(x.txt))).catch(async (e) => { console.error(`✖ ${e.message}`); await salir(1); });
   const d = duracion(mp3);
   const ini = Math.max(x.a, libre);
   const ultimo = k + 1 >= tramos.length;

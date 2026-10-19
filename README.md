@@ -189,7 +189,7 @@ Es el estilo **por defecto** de todos los vídeos con captura (para usar el clá
 
 ## Locución única (la voz manda, el vídeo la sigue)
 
-Con `"voz": true`, `render.mjs` pide **antes de renderizar** todo el guion hablado (gancho, locución de cada subtítulo y cierre) **en una sola toma**, con una pausa entre frases. Así la entonación fluye como la de un locutor, en vez de sonar como audios sueltos. Después `scripts/voz.mjs --narracion`:
+Con `"voz": true`, `render.mjs` pide **antes de renderizar** todo el guion hablado (gancho, locución de cada subtítulo y cierre) **en una sola toma**, con una pausa entre frases. El gancho (de dos frases, p. ej. «Yo gano siempre. Tu ficha opina.») es un único bloque con una pausa corta (350 ms) entre ellas y se coloca como un solo clip; su segunda línea en pantalla entra cuando la voz empieza la segunda frase. Así la entonación fluye como la de un locutor, en vez de sonar como audios sueltos. Después `scripts/voz.mjs --narracion`:
 
 - localiza cada frase en el audio (Azure: por los silencios; ElevenLabs: por las marcas de tiempo por carácter) y guarda `out/<id>.tiempos.json`;
 - coloca las frases con huecos cortos y **una única velocidad común** (máx. ×1,12), sin acelerar frases sueltas ni cortarlas;
