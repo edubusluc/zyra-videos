@@ -182,17 +182,18 @@ if (musica) {
   const duck = clips.map(rampa).reduce((acc, e) => (acc ? `max(${acc},${e})` : e), '');
   const base = 0.3, bajo = 0.08;
   const ganancia = `(${base}-${(base - bajo).toFixed(3)}*(${duck || '0'}))*clip(t/1,0,1)*clip((${total.toFixed(2)}-t)/1.5,0,1)`;
-  filtros.push(`[${m}:a]volume='${ganancia}':eval=frame[mus]`, `[voz][mus]amix=inputs=2:normalize=0:duration=first[a]`);
-} else filtros.push('[voz]anull[a]');
-execFileSync(FF, ['-y', '-loglevel', 'error', ...entradas, '-filter_complex', filtros.join(';'), '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-t', total.toFixed(3), `out/${id}.final.mp4`], {stdio: 'inherit'});
+  filtros.push(`[${m}:a]volume='${ganancia}':eval=frame[mus]`, `[voz][mus]amix=inputs=2:normalize=0:duration=longest[a]`);
+} else filtros.push(`[voz]apad=whole_dur=${total.toFixed(3)}[a]`); // relleno acotado: el audio dura lo que el vídeo (apad sin límite no termina en el ffmpeg de Remotion)
+execFileSync(FF, ['-y', '-loglevel', 'error', ...entradas, '-filter_complex', filtros.join(';'), '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', `out/${id}.final.mp4`], {stdio: 'inherit'});
 const tieneAudio = /Audio:/.test(spawnSync(FF, ['-i', `out/${id}.final.mp4`], {encoding: 'utf8'}).stderr || '');
 if (!tieneAudio) { console.error('✖ El vídeo final no tiene pista de audio: algo falló al mezclar.'); await salir(1); }
 // Mide el nivel real del audio (PCM decodificado, sin filtros que falten en el ffmpeg de Remotion): una pista muda también cuenta como fallo.
 {
-  const pcm = spawnSync(FF, ['-v', 'error', '-i', `out/${id}.final.mp4`, '-vn', '-ac', '1', '-ar', '8000', '-f', 's16le', '-'], {maxBuffer: 1 << 28}).stdout;
+  const pcm = spawnSync(FF, ['-v', 'error', '-i', `out/${id}.final.mp4`, '-vn', '-ac', '1', '-ar', '8000', '-f', 'wav', '-'], {maxBuffer: 1 << 28}).stdout; // wav: es el único formato PCM que trae el ffmpeg de Remotion
+  const ini = pcm ? pcm.indexOf('data') + 8 : 0; // tras la cabecera del WAV
   let suma = 0, pico = 0;
-  const n = Math.floor((pcm?.length || 0) / 2);
-  for (let i = 0; i < n; i++) { const v = pcm.readInt16LE(i * 2) / 32768; suma += v * v; pico = Math.max(pico, Math.abs(v)); }
+  const n = ini >= 8 ? Math.floor((pcm.length - ini) / 2) : 0;
+  for (let i = 0; i < n; i++) { const v = pcm.readInt16LE(ini + i * 2) / 32768; suma += v * v; pico = Math.max(pico, Math.abs(v)); }
   const db = (x) => (x > 0 ? (20 * Math.log10(x)).toFixed(1) : '-inf');
   console.log(`Nivel del audio final: medio ${db(Math.sqrt(suma / (n || 1)))} dBFS, pico ${db(pico)} dBFS`);
   if (!n || pico < 0.003) { console.error('✖ El audio del vídeo final está en silencio: algo falló al mezclar.'); await salir(1); }
