@@ -1,0 +1,33 @@
+{
+  "hook": [
+    "1 DE LA MAÑANA",
+    "Y SIN ALINEACIÓN"
+  ],
+  "title": "ALINEACIÓN EN 1 CLIC",
+  "src": "ui/alineacion.png",
+  "imgW": 780,
+  "scroll": [
+    60,
+    330
+  ],
+  "box": [
+    58,
+    478,
+    420,
+    84
+  ],
+  "subs": [
+    "16 convocados, 5 partidos",
+    "Pulsa «Alineación sugerida»",
+    "Parejas y orden al momento",
+    "Con su probabilidad de ganar"
+  ],
+  "locucion": [
+    "¡lista a reventar de gente!",
+    "¡pulsa alineación sugerida!",
+    "¡parejas y orden al momento!",
+    "¡y con opciones de victoria!"
+  ],
+  "cta": "Gratis en zyrapadel.com",
+  "voz": true
+}
