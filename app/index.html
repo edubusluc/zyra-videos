@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Zyra Vídeos</title>
+<style>
+:root{--bg:#0A0B09;--s:#141512;--b:#30322D;--t:#F4F5F1;--m:#A4A79E;--lime:#B4F100}
+body{margin:0;background:var(--bg);color:var(--t);font:16px/1.5 system-ui,sans-serif;display:grid;place-items:start center;padding:32px 16px}
+main{width:min(680px,100%)}h1{font-size:22px;margin:0 0 4px}p{color:var(--m);margin:0 0 20px}
+textarea{width:100%;box-sizing:border-box;min-height:120px;background:var(--s);color:var(--t);border:1px solid var(--b);border-radius:12px;padding:12px;font:inherit}
+.row{display:flex;gap:12px;align-items:center;margin:12px 0;flex-wrap:wrap}select,button{font:inherit;border-radius:10px;border:1px solid var(--b);background:var(--s);color:var(--t);padding:10px 14px}
+button{background:var(--lime);color:#0A0A0A;font-weight:700;border-color:var(--lime);cursor:pointer}button:disabled{opacity:.5;cursor:wait}
+pre{background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px;white-space:pre-wrap;min-height:48px}.err{color:#ff7b7b}
+</style></head><body><main>
+<h1>Zyra Vídeos</h1><p>Describe el vídeo; Claude escribe el guion y se renderiza (en el CI de GitHub o en este ordenador).</p>
+<textarea id="p" placeholder="Ej.: un vídeo para mostrar cómo la alineación sugerida ayuda al capitán a elegir parejas"></textarea>
+<div class="row"><select id="m"><option value="ci">Renderizar en el CI de GitHub</option><option value="local">Renderizar en local</option></select><button id="go">Generar vídeo</button></div>
+<pre id="log">Esperando…</pre>
+<script>
+const $=(i)=>document.getElementById(i);
+$('go').onclick=async()=>{
+  $('go').disabled=true;$('log').className='';$('log').textContent='Enviando…';
+  const r=await fetch('/api/generar',{method:'POST',body:JSON.stringify({peticion:$('p').value,modo:$('m').value})});
+  const j=await r.json(); if(!r.ok){$('log').className='err';$('log').textContent=j.error;$('go').disabled=false;return;}
+  const t=setInterval(async()=>{
+    const s=await (await fetch('/api/job/'+j.id)).json();
+    let txt=s.log.join('\n'); if(s.guion) txt+='\n\n'+JSON.stringify(s.guion,null,2);
+    if(s.estado==='hecho'){clearInterval(t);txt+='\n\n✔ Hecho: '+s.resultado;$('go').disabled=false}
+    if(s.estado==='error'){clearInterval(t);$('log').className='err';txt+='\n\n✖ '+s.error;$('go').disabled=false}
+    $('log').textContent=txt;
+  },1500);
+};
+</script></main></body></html>

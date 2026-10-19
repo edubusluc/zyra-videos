@@ -9,13 +9,20 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npx remotion browser ensure
-      - run: node render.mjs
+      - name: Renderizar (solo los guiones nuevos o cambiados; todos si cambia la plantilla)
+        run: |
+          changed=$(git diff --name-only --diff-filter=AM HEAD~1 HEAD 2>/dev/null || true)
+          if echo "$changed" | grep -qvE '^guiones/'; then ids=""; else ids=$(echo "$changed" | sed -E 's#guiones/(.*)\.json#\1#' | tr '\n' ' '); fi
+          echo "ids: '$ids'"
+          node render.mjs $ids
       - uses: actions/upload-artifact@v4
         with:
           name: videos-tiktok

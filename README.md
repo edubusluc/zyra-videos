@@ -27,7 +27,16 @@ Capturas nuevas: solo con datos de demostración (JUGADOR 1…), nunca nombres r
     npm run render [id]       # CHROME=/ruta/a/chrome si Remotion no descarga navegador
     npm run studio            # previsualizar
 
-## Opcional: guion libre -> JSON con IA
-Aún no incluido. Se puede añadir un paso que llame a la API de Claude para convertir un texto libre en este JSON (necesita un secreto `ANTHROPIC_API_KEY` y tiene coste por uso).
+## App local: «genera un vídeo para mostrar…»
+    git clone https://github.com/edubusluc/zyra-videos && cd zyra-videos && npm install
+    export ANTHROPIC_API_KEY=...   # clave de la API de Claude (de pago por uso, unos céntimos por guion)
+    export GITHUB_TOKEN=...        # token con permiso de lectura de Actions en este repo (solo para el modo CI)
+    npm run app                    # abre http://localhost:4173
+
+Escribes qué vídeo quieres y eliges dónde renderizar:
+- **CI de GitHub:** Claude escribe el guion, la app lo sube con `git push`, el CI renderiza solo ese vídeo y la app descarga el MP4 en `out/`. Hace falta que `git push` funcione en tu equipo.
+- **En local:** renderiza en tu ordenador (puede requerir `CHROME=/ruta/a/chrome`).
+
+Claude solo elige entre las capturas de `capturas.json` (con su descripción); para ofrecerle más pantallas, añade la imagen a `public/ui/` y una entrada en ese archivo. Las claves nunca se guardan en el repo.
 
 Licencias: fuentes Archivo y Syncopate bajo OFL (`public/fonts`). Logo y capturas de Zyra.

@@ -1,0 +1,5 @@
+[
+  {"src": "ui/alineacion.png", "descripcion": "Pantalla de crear partidos con el botón «Alineación sugerida», su explicación y las probabilidades de victoria", "scroll": [60, 330], "box": [58, 478, 420, 84]},
+  {"src": "ui/primeros-pasos.png", "descripcion": "Inicio del club con la lista «Primeros pasos»: añadir equipo, invitar jugadores y enlace de invitación", "scroll": [120, 420], "box": [28, 640, 722, 150]},
+  {"src": "ui/partidos-sets.png", "descripcion": "Estadísticas de victorias por número de partido (1 a 5) con barras de porcentaje, mejor y peor partido", "scroll": [80, 440]}
+]
