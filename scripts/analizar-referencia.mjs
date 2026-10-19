@@ -9,7 +9,8 @@ import {basename, extname, resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 
 const [archivo, nombreArg, nota = ''] = process.argv.slice(2);
-if (!archivo || !existsSync(archivo)) { console.error('Uso: node scripts/analizar-referencia.mjs <archivo> [nombre] ["nota"]'); process.exit(1); }
+if (!archivo) { console.error('Uso: node scripts/analizar-referencia.mjs <archivo> [nombre] ["nota"]'); process.exit(1); }
+if (!existsSync(archivo)) { console.error(`No encuentro el archivo: ${archivo}\nUsa la ruta real de tu vídeo (con una sola barra \\ en Windows). Truco: escribe el comando hasta "analizar-referencia.mjs " y arrastra el archivo a la terminal para pegar su ruta.`); process.exit(1); }
 const id = (nombreArg || basename(archivo, extname(archivo))).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
 mkdirSync('referencias/.cache', {recursive: true});
 const hoja = resolve(`referencias/.cache/${id}.jpg`);
