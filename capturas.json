@@ -1,5 +1,24 @@
 [
-  {"src": "ui/alineacion.png", "descripcion": "Pantalla de crear partidos con el botón «Alineación sugerida», su explicación y las probabilidades de victoria", "scroll": [60, 330], "box": [58, 478, 420, 84]},
-  {"src": "ui/primeros-pasos.png", "descripcion": "Inicio del club con la lista «Primeros pasos»: añadir equipo, invitar jugadores y enlace de invitación", "scroll": [120, 420], "box": [28, 640, 722, 150]},
-  {"src": "ui/partidos-sets.png", "descripcion": "Estadísticas de victorias por número de partido (1 a 5) con barras de porcentaje, mejor y peor partido", "scroll": [80, 440]}
+  {"src":"ui/alineacion.png","descripcion":"Pantalla de crear partidos con el botón «Alineación sugerida», su explicación y las probabilidades de victoria","scroll":[60,330],"box":[58,478,420,84]},
+  {"src":"ui/primeros-pasos.png","descripcion":"Inicio del club con la lista «Primeros pasos»: añadir equipo, invitar jugadores y enlace de invitación","scroll":[120,420],"box":[28,640,722,150]},
+  {"src":"ui/partidos-sets.png","descripcion":"Estadísticas de victorias por número de partido (1 a 5) con barras de porcentaje, mejor y peor partido","scroll":[80,440]},
+  {"src":"ui/inicio-club.png","descripcion":"Inicio del club ZYRA CLUB: tarjetas de miembros e invitaciones, Mi equipo y Rivales, con botones para invitar, añadir jugador, crear rival y crear enfrentamiento","scroll":[124,1238]},
+  {"src":"ui/jugadores.png","descripcion":"Lista de jugadores del club con buscador, orden por nombre o puntos SNP, y botones Gestionar plantilla y Nuevo jugador; cada tarjeta muestra posición, mano y puntos SNP","scroll":[124,1238]},
+  {"src":"ui/ficha-jugador.png","descripcion":"Perfil de un jugador: puntos SNP, forma reciente (V/D) y últimos partidos, con pestañas Resumen y Estadísticas","scroll":[124,1238]},
+  {"src":"ui/plantilla.png","descripcion":"Gestionar plantilla: lista de jugadores con interruptor para activar o desactivar los que están en el equipo, filtros Todos/En el equipo/Fuera y botón Guardar cambios","scroll":[124,1238]},
+  {"src":"ui/nuevo-jugador.png","descripcion":"Formulario Crear jugador: nombre, apellidos, posición, mano hábil, temporada en que se unió al equipo y foto","scroll":[104,1040]},
+  {"src":"ui/equipos.png","descripcion":"Rivales: lista de equipos rivales con botones Gestionar equipos y Nuevo rival, e interruptor para ver solo los de mi grupo","scroll":[124,1238]},
+  {"src":"ui/nuevo-equipo.png","descripcion":"Formulario Crear equipo rival: nombre, localización, si está en el grupo, categoría, nacionalidad, división y foto","scroll":[116,1162]},
+  {"src":"ui/gestionar-equipos.png","descripcion":"Gestionar equipos: cambiar categoría, nacionalidad, división y grupo de varios rivales a la vez y guardar los cambios","scroll":[124,1238]},
+  {"src":"ui/nuevo-enfrentamiento.png","descripcion":"Formulario Crear enfrentamiento: tipo, equipo rival, si juega en casa o fuera, fecha, hora y lugar","scroll":[124,1238]},
+  {"src":"ui/enfrentamientos.png","descripcion":"Lista de enfrentamientos como tarjetas, con filtro por temporada y tipo (competitivos o amistosos), contadores de jugados, ganados, empatados y perdidos, y el resultado de cada uno","scroll":[124,1238]},
+  {"src":"ui/enfrentamiento-borrador.png","descripcion":"Enfrentamiento en borrador con los 4 pasos Convocatoria, Parejas, Resultados y Acta, y el botón Siguiente: crear convocatoria","scroll":[124,1238]},
+  {"src":"ui/enfrentamiento-cerrado.png","descripcion":"Enfrentamiento cerrado con acta: resultado 9-3 y victoria, los 4 pasos completados, botones Compartir resultado y Ver estadísticas, y la convocatoria de 10 jugadores agrupados por posición","scroll":[124,1238]},
+  {"src":"ui/estadisticas-equipo.png","descripcion":"Estadísticas del equipo en una temporada: balance de victorias, empates y derrotas, porcentaje de enfrentamientos ganados, juegos como local y visitante, y pestañas Resumen, Top 5, Partidos y sets, Récords","scroll":[124,1238]},
+  {"src":"ui/estadisticas-jugador.png","descripcion":"Estadísticas de jugadores: buscador y lista de jugadores para abrir la ficha de estadísticas de uno","scroll":[124,1238]},
+  {"src":"ui/estadisticas-jugador-ficha.png","descripcion":"Estadísticas de un jugador en la temporada: partidos jugados, porcentaje de victorias, racha actual y rendimiento","scroll":[124,1238]},
+  {"src":"ui/estadisticas-pareja.png","descripcion":"Estadísticas por parejas: se eligen dos jugadores para ver cómo rinden juntos y aparece el listado de parejas destacadas","scroll":[124,1238]},
+  {"src":"ui/estadisticas-pareja-ficha.png","descripcion":"Estadísticas de una pareja concreta: partidos juntos, porcentaje de victorias y opción de ver las mejores y peores parejas","scroll":[124,1238]},
+  {"src":"ui/miembros.png","descripcion":"Miembros del club: tu cuenta de capitán, explicación de roles e invitaciones de jugadores por email o con enlace","scroll":[124,1238]},
+  {"src":"ui/mi-perfil.png","descripcion":"Mi perfil: cuenta (email, nombre de perfil, acceso con Google) y preferencias del informe PDF de la convocatoria","scroll":[124,1238]}
 ]

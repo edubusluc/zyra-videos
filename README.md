@@ -122,3 +122,13 @@ Opcional, en el mismo `.env` (ver `.env.example`): `ELEVENLABS_STABILITY`, `ELEV
 4. Opcional: en `capturas.json` ajusta `scroll` y añade `box` `[x, y, ancho, alto]` para resaltar un elemento.
 
 Para el chat basta con reiniciar `npm run app`.
+
+### Capturar todas las pantallas automáticamente
+
+`scripts/capturar-app.py` recorre la app de Zyra con datos de demostración y añade cada pantalla al catálogo. Se ejecuta con el Python del proyecto Zyra (el que tiene Django y Playwright; si falta el navegador: `playwright install chromium`):
+
+```
+python scripts/capturar-app.py --zyra C:\ruta\a\Zyra
+```
+
+Sin tocar tu base de datos ni el repo de Zyra: crea una SQLite temporal, carga `populate_db.py`, la **anonimiza** (club «ZYRA CLUB», jugadores «JUGADOR n», rivales «EQUIPO RIVAL n», sin escudos ni lugares), arranca el servidor en local, entra como capitán y hace una captura de móvil (390 px ×2) de unas 19 pantallas: inicio, jugadores, ficha, plantilla, equipos, enfrentamientos (borrador y cerrado), las cuatro estadísticas, miembros y perfil. Deja los PNG en `capturas-app/` (ignorado por git) y en `public/ui/`, con su descripción en `capturas.json`. Cuando cambie la interfaz, vuelve a ejecutarlo. Si añades una pantalla nueva a la app, añádela a la lista `PAGINAS` y a `DESCRIPCIONES` del script. En pantallas largas solo se recorre el principio para que el vídeo no vaya a toda velocidad.
