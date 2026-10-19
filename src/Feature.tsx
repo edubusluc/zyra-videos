@@ -18,6 +18,7 @@ const PH_H = 900;
 /** Plantilla «función en 15 s»: gancho → móvil con captura real y subtítulos → cierre con logo y URL. */
 export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, box, subs, cta, subtitulos = true, estilo = 'creador', tiempos}) => {
   const HOOK_END = tiempos?.hookEnd ?? HOOK_END_FIJO;
+  const HOOK_B = tiempos?.hookB ?? 26; // la 2.ª línea del gancho entra con la 2.ª frase de la voz (que es un solo clip)
   const CTA_FROM = tiempos?.cta ?? CTA_FROM_FIJO;
   const creador = estilo === 'creador';
   useBrandFonts();
@@ -57,8 +58,8 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
       {/* Gancho */}
       <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: 700, opacity: 1 - hookOut, transform: `scale(${0.85 + 0.15 * hookPop})`, transformOrigin: '0 50%'}}>
         <Line text={hook[0]} at={2} out={HOOK_END} size={64} from="left" extra={{...TYPE.title, ...HERO_FILL, letterSpacing: '.03em'}} />
-        <div style={{height: 10, width: `${prog(f, 20, 22) * 100}%`, background: C.lime, borderRadius: 5, margin: '14px 0 22px', boxShadow: GLOW}} />
-        <Line text={hook[1]} at={26} out={HOOK_END} size={64} color={C.lime} from="right" extra={{...TYPE.title, letterSpacing: '.03em'}} />
+        <div style={{height: 10, width: `${prog(f, HOOK_B - 6, 22) * 100}%`, background: C.lime, borderRadius: 5, margin: '14px 0 22px', boxShadow: GLOW}} />
+        <Line text={hook[1]} at={HOOK_B} out={HOOK_END} size={64} color={C.lime} from="right" extra={{...TYPE.title, letterSpacing: '.03em'}} />
       </div>
       {/* Cuerpo */}
       <div style={{position: 'absolute', inset: 0, opacity: f < CTA_FROM ? main : 1 - ctaIn}}>

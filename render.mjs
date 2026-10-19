@@ -29,15 +29,15 @@ for (const v of videos) if (quiere(v.id)) {
   if (conVoz) {
     // Mismo reparto que src/Feature.tsx (sin locución única): los subtítulos van de 104 a 450 fotogramas a partes iguales.
     const ini = v.subs.map((_, i) => Math.round(104 + (i * 346) / v.subs.length) / 30);
-    guionVoz(v.id, [linea(0.1, 2.3, v.hook.map((h, i) => (i < v.hook.length - 1 && !/[.!?…,:]$/.test(h) ? `${h}.` : h)).join(' ')) /* sin punto, «LISTA LLENA ¿Y AHORA QUIÉN?» se leía de corrido */, linea(2.3, 2.9, `(título en pantalla: ${v.title})`, false), ...v.subs.map((x, i) => linea(ini[i], ini[i + 1] ?? 15, (v.locucion?.[i] || x))), linea(15, 18, v.cta)]);
+    guionVoz(v.id, [{...linea(0.1, 2.3, v.hook.map((h, i) => (i < v.hook.length - 1 && !/[.!?…,:]$/.test(h) ? `${h}.` : h)).join(' ') /* sin punto, «LISTA LLENA ¿Y AHORA QUIÉN?» se leía de corrido */), gancho: true} /* una sola locución: voz.mjs la sintetiza de una vez, con pausa corta entre las frases */, linea(2.3, 2.9, `(título en pantalla: ${v.title})`, false), ...v.subs.map((x, i) => linea(ini[i], ini[i + 1] ?? 15, (v.locucion?.[i] || x))), linea(15, 18, v.cta)]);
   }
   if (v.voz) {
     // Con voz: primero la locución única; los subtítulos y cortes del vídeo siguen a la voz. Si no hay credenciales o falla, tiempos fijos y una voz por frase (scripts/voz.mjs).
     rmSync(`out/${v.id}.tiempos.json`, {force: true});
     spawnSync(process.execPath, ['scripts/voz.mjs', v.id, '--narracion'], {stdio: 'inherit'});
     if (existsSync(`out/${v.id}.tiempos.json`)) {
-      const {hookEnd, subs, cta, frames} = JSON.parse(readFileSync(`out/${v.id}.tiempos.json`, 'utf8'));
-      v.tiempos = {hookEnd, subs, cta, frames};
+      const {hookEnd, hookB, subs, cta, frames} = JSON.parse(readFileSync(`out/${v.id}.tiempos.json`, 'utf8'));
+      v.tiempos = {hookEnd, ...(hookB !== undefined ? {hookB} : {}), subs, cta, frames};
     } else delete v.tiempos;
     writeFileSync('src/scripts.json', JSON.stringify(videos, null, 2));
   }
