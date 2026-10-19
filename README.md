@@ -37,6 +37,11 @@ Formato: un fondo (foto o vídeo de pista), un recorte opcional de una persona r
 - **No uses** clips de otras cuentas (p. ej. el vídeo viral de referencia): llevan derechos de imagen y de autor de terceros. Copiar el formato es libre; copiar el clip, no.
 - Audio: si el recorte trae sonido se mantiene; si no, pon un sonido desde la biblioteca de TikTok al subirlo.
 
+## Biblioteca de referencias (memes que funcionan)
+No se «entrena» a Claude: se le da contexto. Cuando veas un meme que funciona en redes, analízalo:
+    node scripts/analizar-referencia.mjs ruta/al/meme.mp4 nombre "nota: por qué crees que funciona / alcance"
+Genera `referencias/<nombre>.md` (formato, estructura, por qué funciona, cómo reproducirlo con tus medios y qué no copiar). El chat lee esas fichas y propone memes del mismo patrón. Los fotogramas se quedan en `referencias/.cache` (no se suben): el repo es público, así que no se guarda material de terceros, solo el análisis. Añade también tus propias métricas en la nota (visitas, guardados) para que el chat aprenda qué rinde en vuestra cuenta.
+
 ## Plantillas propias y lotes
 Una plantilla (`plantillas/<id>.json`) guarda un fondo, un recorte, la duración y la posición del texto para reutilizarlos. El chat las conoce, elige la que encaje y puede crear **varios memes de una vez** («Lote de memes»: hasta 8 textos con la misma plantilla).
     node scripts/nueva-plantilla.mjs doble-cristal --desc "compañero que se come el cristal" --recorte medios/doble-cristal.webm --fondo medios/pista.mp4 --pos arriba

@@ -98,6 +98,9 @@ export function validarReaccion(g, disponibles = medios()) {
 
 const listar = (dir) => (existsSync(join(ROOT, dir)) ? readdirSync(join(ROOT, dir)).filter((f) => f.endsWith('.json')) : []).map((f) => JSON.parse(readFileSync(join(ROOT, dir, f), 'utf8')));
 
+/** Fichas de referencias/*.md: formatos de memes que funcionan, analizados con scripts/analizar-referencia.mjs. */
+const referencias = () => (existsSync(join(ROOT, 'referencias')) ? readdirSync(join(ROOT, 'referencias')).filter((f) => f.endsWith('.md')).slice(0, 8) : []).map((f) => readFileSync(join(ROOT, 'referencias', f), 'utf8').slice(0, 1800)).join('\n---\n');
+
 /** Respuesta del chat de ideas: conoce lo ya creado y las capturas disponibles. */
 async function chatear(mensajes, web) {
   const cat = catalogo();
@@ -114,7 +117,7 @@ meme de reacción (texto tipo «Tu compañero cuando…» sobre fondo y recorte)
 varios memes con la misma plantilla de una vez: {"tipo":"lote","plantilla":"<id>","captions":["máx 90","máx 90", … hasta 8]}
 Plantillas disponibles (elígelas por su id según cuándo encajan): ${plantillas().map((t) => `${t.id}: ${t.descripcion || t.nombre}`).join(' | ') || 'ninguna'}.
 Medios disponibles en public/medios: ${medios().join(', ') || 'ninguno (usa null)'}.
-Para ideas sueltas no hace falta bloque. No inventes funciones que Zyra no tenga. Los memes son originales con la marca de Zyra; no uses plantillas ni imágenes con derechos de terceros. ${web ? 'Puedes buscar en la web tendencias o ideas si ayuda; cita de dónde sale lo que encuentres.' : ''}`;
+Formatos de referencia que funcionan en redes (fichas analizadas; inspírate en el formato, nunca copies el material de terceros):\n${referencias() || '(ninguno todavía)'}\nPara ideas sueltas no hace falta bloque. No inventes funciones que Zyra no tenga. Los memes son originales con la marca de Zyra; no uses plantillas ni imágenes con derechos de terceros. ${web ? 'Puedes buscar en la web tendencias o ideas si ayuda; cita de dónde sale lo que encuentres.' : ''}`;
   return llamar(sistema, mensajes, {web, max: 1500});
 }
 
