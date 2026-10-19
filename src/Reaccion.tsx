@@ -4,7 +4,7 @@ import {Court} from './components/Court';
 import {useBrandFonts} from './components/fonts';
 import {C, FONT} from './styles/brand';
 
-export type ReaccionData = {id: string; caption: string; emojis?: string; fondo?: string | null; recorte?: string | null; seg?: number; sonido?: boolean};
+export type ReaccionData = {id: string; caption: string; emojis?: string; fondo?: string | null; recorte?: string | null; seg?: number; sonido?: boolean; pos?: 'arriba' | 'abajo'};
 export const REACCION_FPS = 30;
 
 const esVideo = (s: string) => /\.(mp4|mov|webm)$/i.test(s);
@@ -13,7 +13,7 @@ const esVideo = (s: string) => /\.(mp4|mov|webm)$/i.test(s);
  * Meme de reacción: fondo (foto o vídeo propio / libre de derechos, o la pista de Zyra si no hay), un recorte opcional
  * (vídeo con transparencia en .webm, o un vídeo normal) y texto con borde al estilo TikTok. Archivos en public/medios/.
  */
-export const Reaccion: React.FC<ReaccionData> = ({caption, emojis, fondo, recorte, sonido = true}) => {
+export const Reaccion: React.FC<ReaccionData> = ({caption, emojis, fondo, recorte, sonido = true, pos = 'arriba'}) => {
   useBrandFonts();
   return (
     <AbsoluteFill style={{background: `radial-gradient(120% 70% at 50% 0%, ${C.forest} 0%, ${C.bg} 70%)`}}>
@@ -34,7 +34,7 @@ export const Reaccion: React.FC<ReaccionData> = ({caption, emojis, fondo, recort
           style={{position: 'absolute', left: 0, bottom: 150, width: '100%', height: 1100, objectFit: 'contain', objectPosition: '50% 100%'}}
         />
       ) : null}
-      <div style={{position: 'absolute', left: 64, right: 64, top: 330, textAlign: 'center'}}>
+      <div style={{position: 'absolute', left: 64, right: 64, textAlign: 'center', ...(pos === 'abajo' ? {bottom: 300} : {top: 330})}}>
         <div
           style={{
             fontFamily: FONT.body,

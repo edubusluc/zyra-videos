@@ -32,6 +32,13 @@ Formato: un fondo (foto o vídeo de pista), un recorte opcional de una persona r
 - **No uses** clips de otras cuentas (p. ej. el vídeo viral de referencia): llevan derechos de imagen y de autor de terceros. Copiar el formato es libre; copiar el clip, no.
 - Audio: si el recorte trae sonido se mantiene; si no, pon un sonido desde la biblioteca de TikTok al subirlo.
 
+## Plantillas propias y lotes
+Una plantilla (`plantillas/<id>.json`) guarda un fondo, un recorte, la duración y la posición del texto para reutilizarlos. El chat las conoce, elige la que encaje y puede crear **varios memes de una vez** («Lote de memes»: hasta 8 textos con la misma plantilla).
+    node scripts/nueva-plantilla.mjs doble-cristal --desc "compañero que se come el cristal" --recorte medios/doble-cristal.webm --fondo medios/pista.mp4 --pos arriba
+Antes copia los archivos a `public/medios/`.
+
+**Plantillas de CapCut:** no se pueden importar (son proyectos propietarios que solo abre CapCut, sin API ni formato abierto). Lo que sí sirve: monta en CapCut el fondo o la animación **sin texto**, expórtala en MP4/WebM, ponla en `public/medios/` y regístrala como plantilla; el texto lo pone esta app y así sale cada variante automáticamente. Usa solo material propio o con licencia: las plantillas de memes virales (imágenes y clips de terceros) llevan derechos de autor y de imagen.
+
 ## En local
     npm install
     npm run render [id]       # CHROME=/ruta/a/chrome si Remotion no descarga navegador
