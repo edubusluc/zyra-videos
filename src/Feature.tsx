@@ -15,7 +15,7 @@ const PH_W = 680;
 const PH_H = 900;
 
 /** Plantilla «función en 15 s»: gancho → móvil con captura real y subtítulos → cierre con logo y URL. */
-export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, box, subs, cta}) => {
+export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, box, subs, cta, subtitulos = true}) => {
   useBrandFonts();
   const f = useCurrentFrame();
   const hookOut = prog(f, HOOK_END, 14);
@@ -49,11 +49,11 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
             </Screen>
           </PhoneFrame>
         </div>
-        <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: 1370, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center'}}>
+        {subtitulos ? <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: 1370, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center'}}>
           <div key={subIdx} style={{fontFamily: FONT.body, fontWeight: 800, fontSize: 46, lineHeight: 1.15, color: C.text, opacity: prog(f, subAt, 10), transform: `translateY(${(1 - prog(f, subAt, 12)) * 30}px)`}}>
             {subs[subIdx]}
           </div>
-        </div>
+        </div> : null}
       </div>
       {/* Cierre */}
       <AbsoluteFill style={{opacity: ctaIn, alignItems: 'center', justifyContent: 'center'}}>

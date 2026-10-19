@@ -29,3 +29,4 @@ jobs:
           path: |
             out/*.mp4
             out/*.png
+            out/*.voz.txt

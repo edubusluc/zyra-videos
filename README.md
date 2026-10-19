@@ -77,3 +77,16 @@ La página es un **chat**: pídele ideas («dame 5 ideas que no hayamos hecho»,
 Claude solo elige entre las capturas de `capturas.json` (con su descripción); para ofrecerle más pantallas, añade la imagen a `public/ui/` y una entrada en ese archivo. Las claves nunca se guardan en el repo.
 
 Licencias: fuentes Archivo y Syncopate bajo OFL (`public/fonts`). Logo y capturas de Zyra.
+
+## Con o sin subtítulos (voz en off)
+
+En el chat hay una casilla **Con subtítulos** (marcada por defecto). Si la desmarcas, el vídeo se genera sin los 3 textos
+bajo el móvil (guion) ni el texto/emojis (reacción); el gancho, el título y la llamada final se mantienen.
+Además se crea `out/<id>.voz.txt` con una línea por tramo y sus segundos, por ejemplo:
+
+```
+[0:02,9 – 0:05,5]  Un botón y Zyra propone la alineación
+```
+
+A mano: añade `"subtitulos": false` al JSON del guion o la reacción y ejecuta `npm run render`.
+En el CI el `.voz.txt` va dentro del artefacto `videos-tiktok`.

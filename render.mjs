@@ -16,7 +16,17 @@ mkdirSync('out', {recursive: true});
 const browser = process.env.CHROME ? [`--browser-executable=${process.env.CHROME}`, '--chrome-mode=chrome-for-testing'] : [];
 // Se llama al CLI de Remotion con node directamente: `npx` no se puede lanzar sin shell en Windows.
 const remotion = (args) => execFileSync(process.execPath, ['node_modules/@remotion/cli/remotion-cli.js', ...args], {stdio: 'inherit'});
+// Sin subtítulos: deja out/<id>.voz.txt con el texto y los segundos para grabar la voz en off.
+const t = (s) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0').replace('.', ',')}`;
+const linea = (a, b, txt) => `[${t(a)} – ${t(b)}]  ${txt}`;
+const guionVoz = (nombre, lineas) => writeFileSync(`out/${nombre}.voz.txt`, `GUION PARA VOZ EN OFF · ${nombre}\nTiempos [min:seg,décimas]. Una frase por tramo; ajusta el ritmo para que quepa.\n\n${lineas.join('\n')}\n`);
 const quiere = (id) => !ids.length || ids.includes(id);
-for (const {id} of videos) if (quiere(id)) remotion(['render', id, `out/${id}.mp4`, '--codec=h264', ...browser]);
-for (const {id} of reacciones) if (quiere(`reaccion-${id}`)) remotion(['render', `reaccion-${id}`, `out/reaccion-${id}.mp4`, '--codec=h264', '--image-format=png', ...browser]);
+for (const v of videos) if (quiere(v.id)) {
+  remotion(['render', v.id, `out/${v.id}.mp4`, '--codec=h264', ...browser]);
+  if (v.subtitulos === false) guionVoz(v.id, [linea(0.1, 2.3, `${v.hook[0]} ${v.hook[1]}`), linea(2.3, 2.9, `(título en pantalla: ${v.title})`), linea(2.9, 5.5, v.subs[0]), linea(5.5, 8.2, v.subs[1]), linea(8.2, 12, v.subs[2]), linea(12, 15, v.cta)]);
+}
+for (const r of reacciones) if (quiere(`reaccion-${r.id}`)) {
+  remotion(['render', `reaccion-${r.id}`, `out/reaccion-${r.id}.mp4`, '--codec=h264', '--image-format=png', ...browser]);
+  if (r.subtitulos === false) guionVoz(`reaccion-${r.id}`, [linea(0, r.seg ?? 6, r.caption)]);
+}
 for (const {id} of memes) if (quiere(`meme-${id}`)) remotion(['still', `meme-${id}`, `out/meme-${id}.png`, ...browser]);

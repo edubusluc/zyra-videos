@@ -37,6 +37,7 @@ button{background:var(--lime);color:#0A0A0A;font-weight:700;border-color:var(--l
 <textarea id="p" placeholder="Ej.: dame ideas de guion para mostrar las estadísticas de pareja…"></textarea>
 <div class="row"><button id="send">Enviar</button>
  <label><input type="checkbox" id="web"> Buscar en la web</label>
+ <label title="Sin subtítulos se crea out/&lt;id&gt;.voz.txt con el texto y los segundos para la voz en off"><input type="checkbox" id="subt" checked> Con subtítulos</label>
  <label>Render: <select id="m"><option value="ci">CI de GitHub</option><option value="local">En local</option></select></label></div>
 <div class="log" id="log"></div>
 <script>
@@ -53,7 +54,7 @@ async function enviar(texto){
   }catch(e){$('log').className='log err';$('log').textContent=e.message}$('send').disabled=false}
 async function crear(b,bt){
   bt.disabled=true;$('log').className='log';$('log').textContent='Enviando…';
-  const r=await fetch('/api/generar',{method:'POST',body:JSON.stringify({borrador:b,modo:$('m').value})});const j=await r.json();if(!r.ok){$('log').className='log err';$('log').textContent=j.error;bt.disabled=false;return}
+  const r=await fetch('/api/generar',{method:'POST',body:JSON.stringify({borrador:b,modo:$('m').value,subtitulos:$('subt').checked})});const j=await r.json();if(!r.ok){$('log').className='log err';$('log').textContent=j.error;bt.disabled=false;return}
   const t=setInterval(async()=>{const s=await (await fetch('/api/job/'+j.id)).json();$('log').textContent=s.log.join('\n');
     if(s.estado==='hecho'){clearInterval(t);$('log').textContent+='\n✔ Hecho: '+s.resultado;bt.disabled=false}
     if(s.estado==='error'){clearInterval(t);$('log').className='log err';$('log').textContent+='\n✖ '+s.error;bt.disabled=false}},1500)}

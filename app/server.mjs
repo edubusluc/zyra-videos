@@ -168,18 +168,19 @@ async function esperarCI(sha, log) {
   throw new Error('El CI tardó más de 20 minutos; mira la pestaña Actions.');
 }
 
-async function trabajo(job, {peticion, modo, borrador}) {
+async function trabajo(job, {peticion, modo, borrador, subtitulos = true}) {
   const log = (m) => job.log.push(m);
   try {
     const cat = catalogo();
     const tipo = borrador?.tipo || 'video';
     const items = []; // {archivo, id, resultado}
+    const sin = subtitulos === false || borrador?.subtitulos === false ? {subtitulos: false} : {}; // sin subtítulos → render.mjs deja out/<id>.voz.txt
     const guardar = (dir, base, obj, prefijo, ext) => {
       const id = slug(base) + '-' + Date.now().toString(36).slice(-4) + (items.length || '');
       mkdirSync(join(ROOT, dir), {recursive: true});
       const archivo = `${dir}/${id}.json`;
       writeFileSync(join(ROOT, archivo), JSON.stringify(obj, null, 2) + '\n');
-      items.push({archivo, id: `${prefijo}${id}`, resultado: `out/${prefijo}${id}.${ext}`});
+      items.push({archivo, id: `${prefijo}${id}`, resultado: `out/${prefijo}${id}.${ext}` + (obj.subtitulos === false ? `, out/${prefijo}${id}.voz.txt` : '')});
     };
     if (tipo === 'lote') {
       const caps = Array.isArray(borrador.captions) ? borrador.captions.slice(0, 8) : [];
@@ -188,13 +189,13 @@ async function trabajo(job, {peticion, modo, borrador}) {
         const g = {...borrador, tipo: 'reaccion', caption: c};
         const errores = validarReaccion(g);
         if (errores.length) throw new Error(`Reacción no válida («${c}»): ${errores.join('; ')}`);
-        guardar('reacciones', c, resolverReaccion(g), 'reaccion-', 'mp4');
+        guardar('reacciones', c, {...resolverReaccion(g), ...sin}, 'reaccion-', 'mp4');
       }
       job.guion = {lote: caps.length, plantilla: borrador.plantilla || null};
     } else if (tipo === 'reaccion') {
       const errores = validarReaccion(borrador);
       if (errores.length) throw new Error(`Reacción no válida: ${errores.join('; ')}`);
-      job.guion = resolverReaccion(borrador);
+      job.guion = {...resolverReaccion(borrador), ...sin};
       guardar('reacciones', borrador.caption, job.guion, 'reaccion-', 'mp4');
     } else if (tipo === 'meme') {
       const errores = validarMeme(borrador);
@@ -206,7 +207,7 @@ async function trabajo(job, {peticion, modo, borrador}) {
       const errores = validar(g, cat);
       if (errores.length) throw new Error(`Guion no válido: ${errores.join('; ')}`);
       const c = cat.find((x) => x.src === g.src);
-      job.guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, cta: g.cta};
+      job.guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, cta: g.cta, ...sin};
       guardar('guiones', g.title, job.guion, '', 'mp4');
     }
     log(`Guardado: ${items.map((i) => i.archivo).join(', ')}`);
@@ -290,12 +291,12 @@ export const server = createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/api/generar') {
     let body = '';
     for await (const c of req) body += c;
-    const {peticion, modo = 'ci', borrador} = JSON.parse(body || '{}');
+    const {peticion, modo = 'ci', borrador, subtitulos} = JSON.parse(body || '{}');
     if (!borrador && !String(peticion || '').trim()) return json(res, 400, {error: 'Escribe qué vídeo quieres.'});
     const id = Math.random().toString(36).slice(2, 10);
     const job = {estado: 'en curso', log: []};
     jobs.set(id, job);
-    trabajo(job, {peticion, modo, borrador});
+    trabajo(job, {peticion, modo, borrador, subtitulos});
     return json(res, 200, {id});
   }
   json(res, 404, {error: 'no encontrado'});

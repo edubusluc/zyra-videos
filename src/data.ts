@@ -15,6 +15,8 @@ export type VideoData = {
   box?: [number, number, number, number];
   subs: [string, string, string];
   cta: string;
+  /** false = sin subtítulos (los 3 textos bajo el móvil); render.mjs deja entonces out/<id>.voz.txt con los tiempos para la voz en off. */
+  subtitulos?: boolean;
 };
 
 export const VIDEOS = scripts as VideoData[];
