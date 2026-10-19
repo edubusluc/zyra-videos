@@ -1,0 +1,25 @@
+{
+  "hook": [
+    "PRIMERA JORNADA",
+    "¿QUIÉN VIENE?"
+  ],
+  "title": "ARRANCA LA TEMPORADA",
+  "src": "ui/primeros-pasos.png",
+  "imgW": 780,
+  "scroll": [
+    120,
+    420
+  ],
+  "box": [
+    28,
+    640,
+    722,
+    150
+  ],
+  "subs": [
+    "Crea tu equipo en Zyra",
+    "Pasa el enlace de invitación al grupo",
+    "Y cada jugador se une desde el enlace"
+  ],
+  "cta": "Gratis en zyrapadel.com"
+}
