@@ -23,8 +23,15 @@ jobs:
           if echo "$changed" | grep -qvE '^(guiones|memes|reacciones)/'; then ids=""; else ids=$(echo "$changed" | sed -E 's#guiones/(.*)\.json#\1#; s#memes/(.*)\.json#meme-\1#; s#reacciones/(.*)\.json#reaccion-\1#' | tr '\n' ' '); fi
           echo "ids: '$ids'"
           node render.mjs $ids
-      - name: 'Voz en off (ElevenLabs) y música para los que piden voz'
+      - name: 'Voz en off (Azure Speech o ElevenLabs) y música para los que piden voz'
         env:
+          VOZ_PROVEEDOR: ${{ vars.VOZ_PROVEEDOR }}
+          AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
+          AZURE_SPEECH_REGION: ${{ vars.AZURE_SPEECH_REGION }}
+          AZURE_SPEECH_VOICE: ${{ vars.AZURE_SPEECH_VOICE }}
+          AZURE_SPEECH_RATE: ${{ vars.AZURE_SPEECH_RATE }}
+          AZURE_SPEECH_PITCH: ${{ vars.AZURE_SPEECH_PITCH }}
+          AZURE_SPEECH_STYLE: ${{ vars.AZURE_SPEECH_STYLE }}
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
           ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
           ELEVENLABS_MODEL: ${{ vars.ELEVENLABS_MODEL }}

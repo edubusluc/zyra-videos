@@ -1,5 +1,5 @@
 // Añade voz y música a todos los vídeos de out/ cuyo guion o reacción tenga "voz": true (lo usa el CI).
-// Sin ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID avisa y deja esos vídeos sin voz.
+// Proveedor: Azure Speech (AZURE_SPEECH_KEY) o ElevenLabs (ELEVENLABS_API_KEY + ELEVENLABS_VOICE_ID). Sin credenciales avisa y deja esos vídeos sin voz.
 import './env.mjs';
 import {execFileSync} from 'node:child_process';
 import {existsSync, mkdirSync, readFileSync, readdirSync, renameSync} from 'node:fs';
@@ -9,8 +9,9 @@ let fallos = 0;
 for (const id of ids) {
   const json = id.startsWith('reaccion-') ? `reacciones/${id.slice(9)}.json` : `guiones/${id}.json`;
   if (!existsSync(json) || !JSON.parse(readFileSync(json, 'utf8')).voz) continue;
-  if (!process.env.ELEVENLABS_API_KEY || !process.env.ELEVENLABS_VOICE_ID) {
-    console.log(`::warning::Faltan los secretos ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID: ${id} queda sin voz`);
+  const azure = (process.env.VOZ_PROVEEDOR || (process.env.AZURE_SPEECH_KEY && !process.env.ELEVENLABS_API_KEY ? 'azure' : 'elevenlabs')) === 'azure';
+  if (azure ? !process.env.AZURE_SPEECH_KEY : !process.env.ELEVENLABS_API_KEY || !process.env.ELEVENLABS_VOICE_ID) {
+    console.log(`::warning::Faltan los secretos ${azure ? 'AZURE_SPEECH_KEY / AZURE_SPEECH_REGION' : 'ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID'}: ${id} queda sin voz`);
     continue;
   }
   try {

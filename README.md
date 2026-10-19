@@ -157,3 +157,13 @@ El panel **Mis vídeos (eliminar o volver a generar)** lista los vídeos, reacci
 - **Perfil expresivo (por defecto):** estabilidad 0,3, estilo 0,55 y speaker boost, para que la entonación suba y baje en vez de sonar plana (`ELEVENLABS_PERFIL=natural` la contiene algo; cualquier `ELEVENLABS_*` suelto manda sobre el perfil). **Quita del `.env` los ajustes sueltos que pusiste antes** o no se aplicará el perfil.
 - **Texto para hablar:** los titulares en MAYÚSCULAS se leen como frase normal (conservando siglas como SNP) y con puntuación de cierre; así suenan menos planos y deletreados.
 - **Acento:** las voces `premade` gratuitas son inglesas y conservan acento al hablar español; eso no se arregla con ajustes. Opciones: una voz nativa de la biblioteca (plan de pago) o **diseñar una**: `node scripts/voz.mjs --disenar "mujer joven, español neutro latinoamericano, cercana y expresiva"` crea candidatas en `out/voces-diseno/` (escúchalas) y `node scripts/voz.mjs --guardar-voz <id> --nombre "Voz Zyra"` guarda la elegida y te da el `ELEVENLABS_VOICE_ID`. El diseño de voz puede requerir un plan de pago y no he podido probarlo contra la API real.
+
+## Voz de España con Azure Speech (gratis)
+
+ElevenLabs no ofrece voces con acento peninsular en el plan gratuito. Azure Speech tiene voces neuronales nativas de España (`es-ES-ElviraNeural` mujer, `es-ES-AlvaroNeural` hombre, `XimenaNeural`, `AbrilNeural`…) y un plan gratuito de unos 500.000 caracteres al mes (compruébalo en tu cuenta), de sobra para estos vídeos.
+
+1. En [portal.azure.com](https://portal.azure.com) crea un recurso **Speech** (nivel F0, gratuito) y copia la **clave** y la **región** (p. ej. `westeurope`).
+2. En local, en `.env`: `AZURE_SPEECH_KEY=…` y `AZURE_SPEECH_REGION=westeurope`. Si no hay clave de ElevenLabs se usa Azure; para forzarlo, `VOZ_PROVEEDOR=azure`.
+3. En el CI: secreto `AZURE_SPEECH_KEY` y, en Variables, `AZURE_SPEECH_REGION`, opcionalmente `AZURE_SPEECH_VOICE`, `AZURE_SPEECH_RATE` (p. ej. `+5%`), `AZURE_SPEECH_PITCH` y `AZURE_SPEECH_STYLE` (solo si la voz admite estilos). Si en el CI hay también clave de ElevenLabs, pon la variable `VOZ_PROVEEDOR=azure`.
+
+El ajuste de tiempos y la música son los mismos que con ElevenLabs. Las frases ya generadas se guardan en `out/.voz-cache`.

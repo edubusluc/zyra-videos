@@ -1,5 +1,6 @@
-// Pone voz en off (ElevenLabs) y música de fondo a un vídeo ya renderizado: out/<id>.mp4 + out/<id>.voz.json -> out/<id>.final.mp4
+// Pone voz en off (ElevenLabs o Azure Speech) y música de fondo a un vídeo ya renderizado: out/<id>.mp4 + out/<id>.voz.json -> out/<id>.final.mp4
 // Uso: node scripts/voz.mjs <id> [--musica ruta.mp3] [--voz <voice_id>] [--sin-musica]
+// Variables Azure: AZURE_SPEECH_KEY, AZURE_SPEECH_REGION (westeurope), AZURE_SPEECH_VOICE (es-ES-ElviraNeural), AZURE_SPEECH_RATE/PITCH/STYLE.
 // Variables: ELEVENLABS_API_KEY (obligatoria), ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL (por defecto eleven_multilingual_v2), ELEVENLABS_BASE_URL (para pruebas).
 import './env.mjs';
 import {execFileSync, spawnSync} from 'node:child_process';
@@ -9,33 +10,33 @@ import {join} from 'node:path';
 
 const args = process.argv.slice(2);
 const opt = (n) => (args.includes(n) ? args[args.indexOf(n) + 1] : undefined);
+const salir = async (c) => { await new Promise((r) => setTimeout(r, 300)); process.exit(c); }; // deja cerrar las conexiones: en Windows, salir de golpe tras fetch provoca «Assertion failed … async.c»
 const avisoPermisos = (estado, cuerpo) => (/missing_permissions/.test(cuerpo)
   ? `ElevenLabs ${estado}: tu clave API no tiene todos los permisos. En elevenlabs.io → Developers → API Keys, edita la clave y activa «Text to Speech» y «Voices: Read» (o crea una clave nueva sin restricciones).`
   : `ElevenLabs ${estado}: ${cuerpo.slice(0, 300)}`);
 if (args.includes('--voces')) { // lista las voces de tu cuenta (las «premade» valen en el plan gratuito por API)
   const k = process.env.ELEVENLABS_API_KEY;
-  if (!k) { console.error('Falta ELEVENLABS_API_KEY.'); process.exit(1); }
+  if (!k) { console.error('Falta ELEVENLABS_API_KEY.'); await salir(1); }
   const r = await fetch((process.env.ELEVENLABS_BASE_URL || 'https://api.elevenlabs.io') + '/v1/voices', {headers: {'xi-api-key': k}});
-  if (!r.ok) { console.error(avisoPermisos(r.status, await r.text())); process.exit(1); }
+  if (!r.ok) { console.error(avisoPermisos(r.status, await r.text())); await salir(1); }
   for (const v of (await r.json()).voices) console.log(`${v.category === 'premade' ? '★ premade ' : '          '} ${v.voice_id}  ${v.name}${v.labels?.language ? ' · ' + v.labels.language : ''}${v.labels?.accent ? ' · ' + v.labels.accent : ''}${v.labels?.gender ? ' · ' + v.labels.gender : ''}`);
   console.log('\nCopia el ID de una voz premade en ELEVENLABS_VOICE_ID (.env).');
-  await new Promise((r) => setTimeout(r, 300)); // evita el «Assertion failed» de Node en Windows al salir con conexiones abiertas
-  process.exit(0);
+  await salir(0);
 }
 if (args.includes('--disenar') || args.includes('--guardar-voz')) {
   // Diseño de voz (puede requerir un plan de pago): crea candidatas desde una descripción y guarda la que te guste.
   const k = process.env.ELEVENLABS_API_KEY;
-  if (!k) { console.error('Falta ELEVENLABS_API_KEY.'); process.exit(1); }
+  if (!k) { console.error('Falta ELEVENLABS_API_KEY.'); await salir(1); }
   const base = process.env.ELEVENLABS_BASE_URL || 'https://api.elevenlabs.io';
   const llamar = async (ruta, cuerpo) => {
     const r = await fetch(base + ruta, {method: 'POST', headers: {'xi-api-key': k, 'content-type': 'application/json'}, body: JSON.stringify(cuerpo)});
     const t = await r.text();
-    if (!r.ok) { console.error(avisoPermisos(r.status, t)); process.exit(1); }
+    if (!r.ok) { console.error(avisoPermisos(r.status, t)); await salir(1); }
     return JSON.parse(t);
   };
   if (args.includes('--disenar')) {
     const descripcion = opt('--disenar');
-    if (!descripcion || descripcion.length < 20) { console.error('Describe la voz (mínimo 20 caracteres): --disenar "mujer joven, español neutro latinoamericano, cercana, expresiva, ritmo ágil"'); process.exit(1); }
+    if (!descripcion || descripcion.length < 20) { console.error('Describe la voz (mínimo 20 caracteres): --disenar "mujer joven, español neutro latinoamericano, cercana, expresiva, ritmo ágil"'); await salir(1); }
     const j = await llamar('/v1/text-to-voice/design', {voice_description: descripcion, text: 'Hola, soy tu capitán de pádel. Con Zyra organizas la convocatoria, las parejas y la alineación en un momento. ¿Quién juega con quién? Los datos hablan, y tú decides. Pruébalo gratis.', model_id: 'eleven_multilingual_ttv_v2'});
     mkdirSync('out/voces-diseno', {recursive: true});
     (j.previews || []).forEach((p, n) => {
@@ -50,14 +51,19 @@ if (args.includes('--disenar') || args.includes('--guardar-voz')) {
     console.log(`Voz guardada. Ponla en el .env:\nELEVENLABS_VOICE_ID=${j.voice_id}`);
   }
   await new Promise((r) => setTimeout(r, 300));
-  process.exit(0);
+  await salir(0);
 }
 const id = args.find((a, i) => !a.startsWith('--') && !(i && ['--musica', '--voz'].includes(args[i - 1])));
-if (!id) { console.error('Uso: node scripts/voz.mjs <id> [--musica ruta.mp3] [--voz <voice_id>] [--sin-musica]'); process.exit(1); }
-const key = process.env.ELEVENLABS_API_KEY;
-if (!key) { console.error('Falta ELEVENLABS_API_KEY (tu clave de elevenlabs.io → Profile → API Keys).'); process.exit(1); }
-const voice = opt('--voz') || process.env.ELEVENLABS_VOICE_ID;
-if (!voice) { console.error('Falta el id de la voz: ELEVENLABS_VOICE_ID o --voz <id> (en elevenlabs.io → Voices → copiar ID).'); process.exit(1); }
+if (!id) { console.error('Uso: node scripts/voz.mjs <id> [--musica ruta.mp3] [--voz <voice_id>] [--sin-musica]'); await salir(1); }
+// Proveedor de voz: VOZ_PROVEEDOR=azure | elevenlabs. Sin indicarlo, Azure si hay AZURE_SPEECH_KEY y no hay clave de ElevenLabs.
+const proveedor = process.env.VOZ_PROVEEDOR || (process.env.AZURE_SPEECH_KEY && !process.env.ELEVENLABS_API_KEY ? 'azure' : 'elevenlabs');
+const azure = proveedor === 'azure';
+const key = azure ? process.env.AZURE_SPEECH_KEY : process.env.ELEVENLABS_API_KEY;
+if (!key) { console.error(azure ? 'Falta AZURE_SPEECH_KEY (portal.azure.com → tu recurso Speech → Claves y punto de conexión).' : 'Falta ELEVENLABS_API_KEY (tu clave de elevenlabs.io → Profile → API Keys).'); await salir(1); }
+const region = process.env.AZURE_SPEECH_REGION || 'westeurope';
+// Voces de España (es-ES): ElviraNeural (mujer), AlvaroNeural (hombre), XimenaNeural, AbrilNeural, DarioNeural, EliasNeural, LaiaNeural…
+const voice = opt('--voz') || (azure ? process.env.AZURE_SPEECH_VOICE || 'es-ES-ElviraNeural' : process.env.ELEVENLABS_VOICE_ID);
+if (!voice) { console.error('Falta el id de la voz: ELEVENLABS_VOICE_ID o --voz <id> (en elevenlabs.io → Voices → copiar ID).'); await salir(1); }
 const base = process.env.ELEVENLABS_BASE_URL || 'https://api.elevenlabs.io';
 // Ajustes de la voz. Perfil por defecto «expresivo» (entonación marcada, poco plana); cualquier ELEVENLABS_* explícito manda sobre el perfil.
 // ELEVENLABS_PERFIL=expresivo | natural | neutro (neutro = sin tocar los ajustes de la voz).
@@ -73,7 +79,7 @@ const modelo = process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2';
 
 const video = `out/${id}.mp4`;
 const guion = `out/${id}.voz.json`;
-for (const f of [video, guion]) if (!existsSync(f)) { console.error(`No existe ${f}. Genera el vídeo con "subtitulos": false o "voz": true en su JSON.`); process.exit(1); }
+for (const f of [video, guion]) if (!existsSync(f)) { console.error(`No existe ${f}. Genera el vídeo con "subtitulos": false o "voz": true en su JSON.`); await salir(1); }
 const tramos = JSON.parse(readFileSync(guion, 'utf8')).filter((x) => x.leer !== false);
 
 // ffmpeg del sistema; si no hay, el que trae Remotion (sin ffprobe: la duración se lee de la salida de ffmpeg -i).
@@ -108,10 +114,27 @@ export const paraVoz = (txt) => {
 };
 
 mkdirSync('out/.voz-cache', {recursive: true});
+const escXml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// Azure Speech (REST): SSML con velocidad y tono (AZURE_SPEECH_RATE p. ej. +5%, AZURE_SPEECH_PITCH p. ej. +2st) y estilo opcional (AZURE_SPEECH_STYLE, solo si la voz lo admite).
+const ssmlAzure = (texto) => {
+  const estilo = process.env.AZURE_SPEECH_STYLE;
+  const cuerpo = `<prosody rate="${process.env.AZURE_SPEECH_RATE || '+0%'}" pitch="${process.env.AZURE_SPEECH_PITCH || '+0st'}">${escXml(texto)}</prosody>`;
+  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-ES"><voice name="${voice}">${estilo ? `<mstts:express-as style="${escXml(estilo)}" styledegree="${process.env.AZURE_SPEECH_STYLE_DEGREE || '1.5'}">${cuerpo}</mstts:express-as>` : cuerpo}</voice></speak>`;
+};
+const sintetizarAzure = async (texto) => {
+  const r = await fetch(process.env.AZURE_SPEECH_URL || `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {method: 'POST', headers: {'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-96kbitrate-mono-mp3', 'User-Agent': 'zyra-videos'}, body: ssmlAzure(texto)});
+  if (!r.ok) {
+    const cuerpo = await r.text();
+    if (r.status === 401 || r.status === 403) throw new Error(`Azure Speech ${r.status}: clave o región incorrectas. Revisa AZURE_SPEECH_KEY y AZURE_SPEECH_REGION (la región de tu recurso, p. ej. westeurope).`);
+    throw new Error(`Azure Speech ${r.status}: ${cuerpo.slice(0, 300)}`);
+  }
+  return Buffer.from(await r.arrayBuffer());
+};
 const sintetizar = async (texto) => {
-  const hash = createHash('sha1').update(`${voice}|${modelo}|${JSON.stringify(ajustes)}|${texto}`).digest('hex').slice(0, 16);
+  const hash = createHash('sha1').update(azure ? `azure|${voice}|${process.env.AZURE_SPEECH_RATE}|${process.env.AZURE_SPEECH_PITCH}|${process.env.AZURE_SPEECH_STYLE}|${process.env.AZURE_SPEECH_STYLE_DEGREE}|${texto}` : `${voice}|${modelo}|${JSON.stringify(ajustes)}|${texto}`).digest('hex').slice(0, 16);
   const f = `out/.voz-cache/${hash}.mp3`; // misma frase + misma voz = sin gastar caracteres otra vez
   if (existsSync(f)) return f;
+  if (azure) { writeFileSync(f, await sintetizarAzure(texto)); return f; }
   const r = await fetch(`${base}/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {method: 'POST', headers: {'xi-api-key': key, 'content-type': 'application/json'}, body: JSON.stringify({text: texto, model_id: modelo, ...(/turbo|flash|v3/.test(modelo) ? {language_code: 'es'} : {}), ...(Object.keys(ajustes).length ? {voice_settings: ajustes} : {})})});
   if (!r.ok) {
     const cuerpo = await r.text();
@@ -128,7 +151,7 @@ const MAX_ATEMPO = 1.35; // más rápido suena a ardilla; si no cabe, se avisa
 const clips = [];
 const total = duracion(video);
 for (const [k, x] of tramos.entries()) {
-  const mp3 = await sintetizar(paraVoz(x.txt));
+  const mp3 = await sintetizar(paraVoz(x.txt)).catch(async (e) => { console.error(`✖ ${e.message}`); await salir(1); });
   const d = duracion(mp3);
   // La frase puede ocupar hasta donde empieza la siguiente que se lee (los tramos «solo en pantalla» no cuentan).
   const hasta = k + 1 < tramos.length ? tramos[k + 1].a : total - 0.3;
@@ -161,6 +184,6 @@ if (musica) {
 } else filtros.push('[voz]anull[a]');
 execFileSync(FF, ['-y', '-loglevel', 'error', ...entradas, '-filter_complex', filtros.join(';'), '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-t', total.toFixed(3), `out/${id}.final.mp4`], {stdio: 'inherit'});
 const tieneAudio = /Audio:/.test(spawnSync(FF, ['-i', `out/${id}.final.mp4`], {encoding: 'utf8'}).stderr || '');
-if (!tieneAudio) { console.error('✖ El vídeo final no tiene pista de audio: algo falló al mezclar.'); process.exit(1); }
+if (!tieneAudio) { console.error('✖ El vídeo final no tiene pista de audio: algo falló al mezclar.'); await salir(1); }
 console.log(`Listo: out/${id}.final.mp4 (con voz${musica ? ' y música' : ''})`);
 await new Promise((r) => setTimeout(r, 300)); // deja cerrar las conexiones: en Windows, salir de golpe tras fetch provoca «Assertion failed … async.c»
