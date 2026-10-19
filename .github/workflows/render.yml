@@ -11,19 +11,34 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
+      - name: Qué hay que renderizar
+        id: que
+        run: |
+          # Manual: todo. Por push: solo los guiones/memes/reacciones añadidos o modificados; todo si cambia la plantilla (src, public...).
+          # Si el push solo borra vídeos, no se renderiza nada (skip=true).
+          changed=$(git diff --name-only --diff-filter=AM HEAD~1 HEAD 2>/dev/null || true)
+          skip=false; ids=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then ids=""
+          elif [ -z "$changed" ]; then skip=true
+          elif echo "$changed" | grep -qvE '^(guiones|memes|reacciones)/'; then ids=""
+          else ids=$(echo "$changed" | sed -E 's#guiones/(.*)\.json#\1#; s#memes/(.*)\.json#meme-\1#; s#reacciones/(.*)\.json#reaccion-\1#' | tr '\n' ' '); fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          echo "ids=$ids" >> "$GITHUB_OUTPUT"
+          echo "skip: $skip · ids: '$ids'"
       - uses: actions/setup-node@v4
+        if: steps.que.outputs.skip != 'true'
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npx remotion browser ensure
+      - if: steps.que.outputs.skip != 'true'
+        run: npm ci
+      - if: steps.que.outputs.skip != 'true'
+        run: npx remotion browser ensure
       - name: Renderizar (solo los guiones nuevos o cambiados; todos si cambia la plantilla)
-        run: |
-          changed=$(git diff --name-only --diff-filter=AM HEAD~1 HEAD 2>/dev/null || true)
-          if echo "$changed" | grep -qvE '^(guiones|memes|reacciones)/'; then ids=""; else ids=$(echo "$changed" | sed -E 's#guiones/(.*)\.json#\1#; s#memes/(.*)\.json#meme-\1#; s#reacciones/(.*)\.json#reaccion-\1#' | tr '\n' ' '); fi
-          echo "ids: '$ids'"
-          node render.mjs $ids
+        if: steps.que.outputs.skip != 'true'
+        run: node render.mjs ${{ steps.que.outputs.ids }}
       - name: 'Voz en off (Azure Speech o ElevenLabs) y música para los que piden voz'
+        if: steps.que.outputs.skip != 'true'
         env:
           VOZ_PROVEEDOR: ${{ secrets.VOZ_PROVEEDOR || vars.VOZ_PROVEEDOR }}
           AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
@@ -42,6 +57,7 @@ jobs:
           ELEVENLABS_SPEED: ${{ vars.ELEVENLABS_SPEED }}
         run: node scripts/voz-lote.mjs --limpiar
       - uses: actions/upload-artifact@v4
+        if: steps.que.outputs.skip != 'true'
         with:
           name: videos-tiktok
           path: |
