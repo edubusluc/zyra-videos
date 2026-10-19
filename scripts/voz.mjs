@@ -194,8 +194,11 @@ if (musica) {
   const duck = clips.map(rampa).reduce((acc, e) => (acc ? `max(${acc},${e})` : e), '');
   const base = 0.3, bajo = 0.08;
   const ganancia = `(${base}-${(base - bajo).toFixed(3)}*(${duck || '0'}))*clip(t/1,0,1)*clip((${total.toFixed(2)}-t)/1.5,0,1)`;
-  filtros.push(`[${m}:a]volume='${ganancia}':eval=frame[mus]`, `[voz][mus]amix=inputs=2:normalize=0:duration=longest[a]`);
-} else filtros.push(`[voz]apad=whole_dur=${total.toFixed(3)}[a]`); // relleno acotado: el audio dura lo que el vídeo (apad sin límite no termina en el ffmpeg de Remotion)
+  filtros.push(`[${m}:a]volume='${ganancia}':eval=frame[mus]`, `[voz][mus]amix=inputs=2:normalize=0:duration=longest[mix]`);
+} else filtros.push('[voz]anull[mix]');
+// Sellos de tiempo limpios: el ffmpeg de Remotion deja la pista de audio con un inicio absurdo (años luz) y los reproductores pierden el sincronismo o van a tirones.
+// aresample fija el inicio en 0; apad+atrim dejan el audio con la duración exacta del vídeo (apad sin límite no termina en ese ffmpeg).
+filtros.push(`[mix]aresample=async=1:first_pts=0,apad=whole_dur=${total.toFixed(3)},atrim=0:${total.toFixed(3)},asetpts=PTS-STARTPTS[a]`);
 execFileSync(FF, ['-y', '-loglevel', 'error', ...entradas, '-filter_complex', filtros.join(';'), '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', `out/${id}.final.mp4`], {stdio: 'inherit'});
 const tieneAudio = /Audio:/.test(spawnSync(FF, ['-i', `out/${id}.final.mp4`], {encoding: 'utf8'}).stderr || '');
 if (!tieneAudio) { console.error('✖ El vídeo final no tiene pista de audio: algo falló al mezclar.'); await salir(1); }
