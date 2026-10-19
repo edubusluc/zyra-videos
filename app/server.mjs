@@ -53,7 +53,9 @@ async function llamar(sistema, mensajes, {web = false, max = 800} = {}) {
       if (!e) return res(out);
       if (e.code === 'ENOENT') return rej(new Error('No hay ANTHROPIC_API_KEY ni el CLI `claude` instalado y con sesión iniciada (ver README).'));
       // El CLI a veces escribe el motivo en stdout; lo incluimos para ver la causa real.
-      rej(new Error(`claude -p falló (código ${e.code}): ${(err || out || e.message).toString().trim().slice(0, 600)}`));
+      const motivo = (err || out || e.message).toString().trim().slice(0, 600);
+      const pista = /authenticat|OAuth|log ?in|expired/i.test(motivo) ? ' → Tu sesión de Claude Code ha caducado: abre una terminal, ejecuta `claude` y usa /login; luego reintenta.' : '';
+      rej(new Error(`claude -p falló (código ${e.code}): ${motivo}${pista}`));
     });
     p.stdin.end(prompt);
   });
