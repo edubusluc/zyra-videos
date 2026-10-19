@@ -5,6 +5,7 @@ import {execFile, execFileSync} from 'node:child_process';
 import {readFileSync, writeFileSync, mkdirSync, existsSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {dirname, join} from 'node:path';
+import {tmpdir} from 'node:os';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT || 4173);
@@ -33,14 +34,10 @@ export function validar(g, cat) {
   return e;
 }
 
-async function pedirGuion(peticion, log) {
+/** Llama a Claude: con la API si hay ANTHROPIC_API_KEY (de pago por uso) o, si no, con el CLI `claude -p` de tu suscripción. */
+async function llamar(sistema, mensajes) {
   const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error('Falta ANTHROPIC_API_KEY (ver README).');
-  const cat = catalogo();
-  const sistema = `Eres el guionista de vídeos de TikTok de Zyra, una app web para que capitanes de equipos de pádel organicen convocatorias, parejas, alineaciones y estadísticas. Escribes en español de España, directo y sin exagerar. Devuelve SOLO un objeto JSON (sin texto alrededor) con: hook (array de 2 textos EN MAYÚSCULAS, máx. ${LIMITES.hook} caracteres cada uno, que formen una pregunta o frase gancho), title (MAYÚSCULAS, máx. ${LIMITES.title}), src (una de las capturas), subs (array de 3 subtítulos, máx. ${LIMITES.sub} caracteres, que cuenten la función en orden), cta (máx. ${LIMITES.cta}, p. ej. «Pruébalo gratis»). No inventes funciones que no aparezcan en la descripción de la captura. Capturas disponibles:\n${cat.map((c) => `- ${c.src}: ${c.descripcion}`).join('\n')}`;
-  let mensajes = [{role: 'user', content: peticion}];
-  for (let intento = 1; intento <= 2; intento++) {
-    log(`Pidiendo el guion a Claude (intento ${intento})…`);
+  if (key) {
     const r = await fetch((process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com') + '/v1/messages', {
       method: 'POST',
       headers: {'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
@@ -48,7 +45,23 @@ async function pedirGuion(peticion, log) {
     });
     const j = await r.json();
     if (!r.ok) throw new Error(`API de Claude: ${j.error?.message || r.status}`);
-    const texto = j.content.map((b) => b.text || '').join('');
+    return j.content.map((b) => b.text || '').join('');
+  }
+  const prompt = `${sistema}\n\n` + mensajes.map((m) => `${m.role === 'user' ? 'Petición' : 'Tu respuesta anterior'}:\n${m.content}`).join('\n\n');
+  return new Promise((res, rej) => {
+    const p = execFile('claude', ['-p', '--output-format', 'text'], {cwd: tmpdir(), timeout: 180000, maxBuffer: 1 << 20}, (e, out, err) =>
+      e ? rej(new Error(e.code === 'ENOENT' ? 'No hay ANTHROPIC_API_KEY ni el CLI `claude` instalado y con sesión iniciada (ver README).' : `claude -p: ${(err || e.message).trim()}`)) : res(out));
+    p.stdin.end(prompt);
+  });
+}
+
+async function pedirGuion(peticion, log) {
+  const cat = catalogo();
+  const sistema = `Eres el guionista de vídeos de TikTok de Zyra, una app web para que capitanes de equipos de pádel organicen convocatorias, parejas, alineaciones y estadísticas. Escribes en español de España, directo y sin exagerar. Devuelve SOLO un objeto JSON (sin texto alrededor) con: hook (array de 2 textos EN MAYÚSCULAS, máx. ${LIMITES.hook} caracteres cada uno, que formen una pregunta o frase gancho), title (MAYÚSCULAS, máx. ${LIMITES.title}), src (una de las capturas), subs (array de 3 subtítulos, máx. ${LIMITES.sub} caracteres, que cuenten la función en orden), cta (máx. ${LIMITES.cta}, p. ej. «Pruébalo gratis»). No inventes funciones que no aparezcan en la descripción de la captura. Capturas disponibles:\n${cat.map((c) => `- ${c.src}: ${c.descripcion}`).join('\n')}`;
+  let mensajes = [{role: 'user', content: peticion}];
+  for (let intento = 1; intento <= 2; intento++) {
+    log(`Pidiendo el guion a Claude (intento ${intento})…`);
+    const texto = await llamar(sistema, mensajes);
     let g;
     try { g = JSON.parse(texto.slice(texto.indexOf('{'), texto.lastIndexOf('}') + 1)); } catch { g = null; }
     const errores = g ? validar(g, cat) : ['la respuesta no es JSON'];

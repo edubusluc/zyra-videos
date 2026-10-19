@@ -29,9 +29,12 @@ Capturas nuevas: solo con datos de demostración (JUGADOR 1…), nunca nombres r
 
 ## App local: «genera un vídeo para mostrar…»
     git clone https://github.com/edubusluc/zyra-videos && cd zyra-videos && npm install
-    export ANTHROPIC_API_KEY=...   # clave de la API de Claude (de pago por uso, unos céntimos por guion)
     export GITHUB_TOKEN=...        # token con permiso de lectura de Actions en este repo (solo para el modo CI)
     npm run app                    # abre http://localhost:4173
+
+El guion lo escribe Claude de una de estas dos formas:
+- **Sin coste extra:** si tienes instalado Claude Code (`claude`) con la sesión de tu suscripción iniciada, la app lo usa por defecto (`claude -p`). Cuenta contra los límites de tu suscripción.
+- **Con API:** si defines `ANTHROPIC_API_KEY`, usa la API de Claude, que se factura aparte de la suscripción (de pago por uso).
 
 Escribes qué vídeo quieres y eliges dónde renderizar:
 - **CI de GitHub:** Claude escribe el guion, la app lo sube con `git push`, el CI renderiza solo ese vídeo y la app descarga el MP4 en `out/`. Hace falta que `git push` funcione en tu equipo.
