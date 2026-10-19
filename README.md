@@ -10,9 +10,9 @@ Genera vídeos verticales de Zyra (1080×1920, 15 s, sin audio) a partir de un g
 El flujo solo se lanza a mano: Actions → Generar vídeos → Run workflow. El campo `ids` admite los guiones a renderizar separados por espacios (p. ej. `mi-guion meme-x reaccion-y`); vacío = todos.
 
 ## Token de GitHub para descargar los vídeos del CI
-Sin token, la app sube el guion, pero no puede descargar el resultado (lo bajas a mano desde Actions → ejecución → Artifacts). Para que lo descargue sola, una de dos:
-- Instala el [CLI de GitHub](https://cli.github.com/) y ejecuta `gh auth login`; la app usa esa sesión.
-- O crea un token en GitHub → Settings → Developer settings → Fine-grained tokens, solo para este repo, con permiso **Actions: Read-only**, y expórtalo como `GITHUB_TOKEN` antes de `npm run app`.
+Tras subir el guion, la app lanza ella misma el workflow (workflow_dispatch con los `ids` subidos), espera ese run y descarga el vídeo. Necesita un token con permiso de lanzar workflows; sin él te lo dice y puedes lanzarlo a mano desde Actions. Una de dos:
+- Instala el [CLI de GitHub](https://cli.github.com/) y ejecuta `gh auth login`; la app usa esa sesión (si da 403 al lanzar: `gh auth refresh -s workflow`).
+- O crea un token en GitHub → Settings → Developer settings → Fine-grained tokens, solo para este repo, con permiso **Actions: Read and write**, y expórtalo como `GITHUB_TOKEN` antes de `npm run app`.
 
 ## Formato del guion (`guiones/<id>.json`)
 | Campo | Qué es |

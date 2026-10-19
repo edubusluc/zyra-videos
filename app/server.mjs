@@ -160,16 +160,33 @@ async function pedirGuion(peticion, log) {
 
 const repoSlug = async () => (await sh('git', ['remote', 'get-url', 'origin'])).replace(/\.git$/, '').split(/github\.com[/:]/)[1];
 
-async function esperarCI(sha, log) {
+async function esperarCI(ids, log) {
   // GITHUB_TOKEN, o el de la sesión del CLI de GitHub (`gh auth login`) si está instalado.
   const token = process.env.GITHUB_TOKEN || (await sh('gh', ['auth', 'token']).catch(() => ''));
-  if (!token) throw new Error('Falta un token de GitHub para seguir el CI y descargar el vídeo: define GITHUB_TOKEN o ejecuta `gh auth login` (ver README). Lo subido sigue renderizándose: míralo en la pestaña Actions del repo.');
+  if (!token) throw new Error('Falta un token de GitHub para lanzar el CI y descargar el vídeo: define GITHUB_TOKEN o ejecuta `gh auth login` (ver README). El guion ya está subido: lánzalo a mano en Actions → Generar vídeos → Run workflow.');
   const repo = await repoSlug();
   const gh = (p, o = {}) => fetch(`https://api.github.com/repos/${repo}${p}`, {...o, headers: {authorization: `Bearer ${token}`, accept: 'application/vnd.github+json'}});
-  log('Esperando al CI de GitHub…');
+  const rama = await sh('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
+  // Los pushes no renderizan solos: la app lanza el workflow a mano (workflow_dispatch) con los ids recién subidos.
+  const antes = new Date(Date.now() - 60000).toISOString();
+  log('Lanzando el workflow «Generar vídeos» en GitHub…');
+  const d = await gh('/actions/workflows/render.yml/dispatches', {method: 'POST', body: JSON.stringify({ref: rama, inputs: {ids: ids.join(' ')}})});
+  if (!d.ok) {
+    const msg = (await d.json().catch(() => ({}))).message || '';
+    const pista = d.status === 403 || d.status === 404 || d.status === 401
+      ? 'El token no tiene permiso para lanzar workflows: necesita «Actions: Read and write» (fine-grained) o el scope «workflow» (clásico); con `gh auth login` ejecuta `gh auth refresh -s workflow`.'
+      : '';
+    throw new Error(`No se pudo lanzar el workflow (${d.status}${msg ? `: ${msg}` : ''}). ${pista} El guion ya está subido: lánzalo a mano en Actions → Generar vídeos → Run workflow.`.replace(/\s+/g, ' '));
+  }
+  log('Workflow lanzado; esperando al CI de GitHub…');
+  let runId = null;
   for (let i = 0; i < 120; i++) {
-    const runs = (await (await gh(`/actions/runs?head_sha=${sha}`)).json()).workflow_runs || [];
-    const run = runs[0];
+    await new Promise((r) => setTimeout(r, 10000));
+    if (i === 12 && !runId) throw new Error('GitHub no ha creado el run tras lanzar el workflow (2 min). Míralo en la pestaña Actions del repo.');
+    const runs = (await (await gh(`/actions/workflows/render.yml/runs?event=workflow_dispatch&branch=${encodeURIComponent(rama)}&created=%3E${antes}`)).json()).workflow_runs || [];
+    // GitHub no devuelve el id del run al lanzar: tomamos el más antiguo creado tras `antes` y lo fijamos.
+    const run = runId ? runs.find((r) => r.id === runId) : runs[runs.length - 1];
+    if (run) runId = run.id;
     if (run && run.status === 'completed') {
       if (run.conclusion !== 'success') throw new Error(`El CI terminó con «${run.conclusion}»: ${run.html_url}`);
       const arts = (await (await gh(`/actions/runs/${run.id}/artifacts`)).json()).artifacts || [];
@@ -187,9 +204,8 @@ async function esperarCI(sha, log) {
       log(ok ? 'Vídeos extraídos en out/.' : `No pude descomprimir el ZIP: está en ${zip}; descomprímelo a mano en out/.`);
       return run.html_url;
     }
-    await new Promise((r) => setTimeout(r, 10000));
   }
-  throw new Error('El CI tardó más de 20 minutos; mira la pestaña Actions.');
+  throw new Error(`El CI tardó más de 20 minutos; mira la pestaña Actions${runId ? `: https://github.com/${repo}/actions/runs/${runId}` : ''}.`);
 }
 
 const TIPOS = {
@@ -358,7 +374,7 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
         await sh('git', ['push']);
       }
       log('Subido; el CI empieza a renderizar.');
-      await esperarCI(await sh('git', ['rev-parse', 'HEAD']), log);
+      await esperarCI(items.map((i) => i.id), log);
       organizar(true);
     }
     job.estado = 'hecho';
