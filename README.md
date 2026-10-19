@@ -22,7 +22,7 @@ Sin token, la app sube el guion y el CI renderiza, pero no puede descargar el re
 | `src`, `imgW` | Captura de `public/ui/` y su ancho en px |
 | `scroll` | Desplazamiento inicial y final de la captura (px) |
 | `box` | Destacado opcional `[x, y, ancho, alto]` en px de la captura |
-| `subs` | Tres subtítulos que van cambiando |
+| `subs` | De 3 a 5 subtítulos que van cambiando (se reparten a partes iguales; la voz y el `.txt` siguen el mismo reparto) |
 | `cta` | Frase del cierre; la URL es siempre zyrapadel.com |
 
 Capturas nuevas: solo con datos de demostración (JUGADOR 1…), nunca nombres reales.
@@ -80,7 +80,7 @@ Licencias: fuentes Archivo y Syncopate bajo OFL (`public/fonts`). Logo y captura
 
 ## Con o sin subtítulos (voz en off)
 
-En el chat hay una casilla **Con subtítulos** (marcada por defecto). Si la desmarcas, el vídeo se genera sin los 3 textos
+En el chat hay una casilla **Con subtítulos** (marcada por defecto). Si la desmarcas, el vídeo se genera sin los textos
 bajo el móvil (guion) ni el texto/emojis (reacción); el gancho, el título y la llamada final se mantienen.
 Además se crea `out/<id>.voz.txt` con una línea por tramo y sus segundos, por ejemplo:
 

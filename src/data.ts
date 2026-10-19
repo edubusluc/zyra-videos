@@ -13,7 +13,8 @@ export type VideoData = {
   imgW: number;
   scroll: [number, number];
   box?: [number, number, number, number];
-  subs: [string, string, string];
+  /** De 3 a 5 subtítulos, repartidos a partes iguales durante el vídeo. */
+  subs: string[];
   cta: string;
   /** false = sin subtítulos (los 3 textos bajo el móvil); render.mjs deja entonces out/<id>.voz.txt con los tiempos para la voz en off. */
   subtitulos?: boolean;

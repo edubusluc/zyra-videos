@@ -25,13 +25,16 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   const ctaIn = prog(f, CTA_FROM, 18);
   const sc = interpolate(f, [HOOK_END, CTA_FROM], scroll, {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const pulse = 0.55 + 0.45 * Math.sin(f / 5);
-  const subStart = [86, 166, 246];
-  const subIdx = f < subStart[1] ? 0 : f < subStart[2] ? 1 : 2;
+  // 3 a 5 subtítulos repartidos a partes iguales entre el título y el cierre (la misma cuenta la hace render.mjs para el guion de voz).
+  const subStart = subs.map((_, i) => Math.round(86 + (i * (CTA_FROM - 86)) / subs.length));
+  const subIdx = subStart.filter((t) => f >= t).length - 1 < 0 ? 0 : subStart.filter((t) => f >= t).length - 1;
   const subAt = subStart[subIdx];
   // Cámara 3D suave: entra girando y, en cada beat, el móvil pasa a otro ángulo (interpolación continua, sin golpes).
-  const camT = [HOOK_END, subStart[0], subStart[1], subStart[2], CTA_FROM];
-  const yaw = interpolate(f, camT, [-58, -16, 14, -10, 8], {easing: Easing.inOut(Easing.cubic), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
-  const pitch = interpolate(f, camT, [20, 8, 3, 9, 4], {easing: Easing.inOut(Easing.cubic), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}) + Math.sin(f / 34) * 1.5;
+  const camT = [HOOK_END, ...subStart, CTA_FROM];
+  const yaws = [-16, 14, -10, 12, -8];
+  const pitches = [8, 3, 9, 4, 7];
+  const yaw = interpolate(f, camT, [-58, ...subStart.map((_, i) => yaws[i % 5]), 8], {easing: Easing.inOut(Easing.cubic), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const pitch = interpolate(f, camT, [20, ...subStart.map((_, i) => pitches[i % 5]), 4], {easing: Easing.inOut(Easing.cubic), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}) + Math.sin(f / 34) * 1.5;
   const drift = interpolate(f, [HOOK_END, CTA_FROM], [0.96, 1.08], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const float = Math.sin(f / 26) * 12;
   const hookPop = spring({frame: f, fps, config: {damping: 11, stiffness: 140, mass: 0.7}, durationInFrames: 24});

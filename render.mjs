@@ -26,7 +26,11 @@ const guionVoz = (nombre, tramos) => {
 const quiere = (id) => !ids.length || ids.includes(id);
 for (const v of videos) if (quiere(v.id)) {
   remotion(['render', v.id, `out/${v.id}.mp4`, '--codec=h264', ...browser]);
-  if (v.subtitulos === false || v.voz) guionVoz(v.id, [linea(0.1, 2.3, `${v.hook[0]} ${v.hook[1]}`), linea(2.3, 2.9, `(título en pantalla: ${v.title})`, false), linea(2.9, 5.5, v.subs[0]), linea(5.5, 8.2, v.subs[1]), linea(8.2, 12, v.subs[2]), linea(12, 15, v.cta)]);
+  if (v.subtitulos === false || v.voz) {
+    // Mismo reparto que src/Feature.tsx: los subtítulos van de 86 a 360 fotogramas a partes iguales.
+    const ini = v.subs.map((_, i) => Math.round(86 + (i * 274) / v.subs.length) / 30);
+    guionVoz(v.id, [linea(0.1, 2.3, `${v.hook[0]} ${v.hook[1]}`), linea(2.3, 2.9, `(título en pantalla: ${v.title})`, false), ...v.subs.map((x, i) => linea(ini[i], ini[i + 1] ?? 12, x)), linea(12, 15, v.cta)]);
+  }
 }
 for (const r of reacciones) if (quiere(`reaccion-${r.id}`)) {
   remotion(['render', `reaccion-${r.id}`, `out/reaccion-${r.id}.mp4`, '--codec=h264', '--image-format=png', ...browser]);
