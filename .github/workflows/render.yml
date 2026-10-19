@@ -1,8 +1,12 @@
 name: Generar vídeos
 on:
-  push:
-    paths: ['guiones/**', 'memes/**', 'reacciones/**', 'src/**', 'public/**']
+  # Solo manual: subir cambios (guiones, src, public...) no renderiza nada.
   workflow_dispatch:
+    inputs:
+      ids:
+        description: 'Guiones a renderizar, separados por espacios (p. ej. "mi-guion meme-x reaccion-y"). Vacío = todos.'
+        required: false
+        default: ''
 jobs:
   render:
     runs-on: ubuntu-24.04
@@ -28,22 +32,15 @@ jobs:
       ELEVENLABS_SPEED: ${{ vars.ELEVENLABS_SPEED }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
       - name: Qué hay que renderizar
         id: que
+        env:
+          IDS: ${{ inputs.ids }}
         run: |
-          # Manual: todo. Por push: solo los guiones/memes/reacciones añadidos o modificados; todo si cambia la plantilla (src, public...).
-          # Si el push solo borra vídeos, no se renderiza nada (skip=true).
-          changed=$(git diff --name-only --diff-filter=AM HEAD~1 HEAD 2>/dev/null || true)
-          skip=false; ids=""
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then ids=""
-          elif [ -z "$changed" ]; then skip=true
-          elif echo "$changed" | grep -qvE '^(guiones|memes|reacciones)/'; then ids=""
-          else ids=$(echo "$changed" | sed -E 's#guiones/(.*)\.json#\1#; s#memes/(.*)\.json#meme-\1#; s#reacciones/(.*)\.json#reaccion-\1#' | tr '\n' ' '); fi
-          echo "skip=$skip" >> "$GITHUB_OUTPUT"
-          echo "ids=$ids" >> "$GITHUB_OUTPUT"
-          echo "skip: $skip · ids: '$ids'"
+          # Solo se ejecuta a mano: sin ids se renderiza todo; con ids, solo esos.
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "ids=$IDS" >> "$GITHUB_OUTPUT"
+          echo "ids: '$IDS'"
       - uses: actions/setup-node@v4
         if: steps.que.outputs.skip != 'true'
         with:
@@ -56,7 +53,7 @@ jobs:
         run: command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
       - if: steps.que.outputs.skip != 'true'
         run: npx remotion browser ensure
-      - name: Renderizar (solo los guiones nuevos o cambiados; todos si cambia la plantilla)
+      - name: Renderizar (los ids indicados; todos si se deja vacío)
         if: steps.que.outputs.skip != 'true'
         run: node render.mjs ${{ steps.que.outputs.ids }}
       - name: 'Voz en off (Azure Speech o ElevenLabs) y música para los que piden voz'
