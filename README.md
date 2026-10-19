@@ -90,3 +90,7 @@ Además se crea `out/<id>.voz.txt` con una línea por tramo y sus segundos, por 
 
 A mano: añade `"subtitulos": false` al JSON del guion o la reacción y ejecuta `npm run render`.
 En el CI el `.voz.txt` va dentro del artefacto `videos-tiktok`.
+
+## Estilo de los vídeos de la app
+
+La plantilla `Feature` lleva fondo vivo (rejilla de pista, luces y partículas), barridos de color entre escenas, destellos en cada cambio de subtítulo, móvil que entra en 3D con zoom lento y latido de cámara, subtítulos que aparecen palabra a palabra, puntos de avance y un cierre con logo, botón y URL. Los tiempos no cambian, así que `out/<id>.voz.txt` sigue valiendo.
