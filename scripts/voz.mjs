@@ -14,6 +14,16 @@ const salir = async (c) => { await new Promise((r) => setTimeout(r, 300)); proce
 const avisoPermisos = (estado, cuerpo) => (/missing_permissions/.test(cuerpo)
   ? `ElevenLabs ${estado}: tu clave API no tiene todos los permisos. En elevenlabs.io → Developers → API Keys, edita la clave y activa «Text to Speech» y «Voices: Read» (o crea una clave nueva sin restricciones).`
   : `ElevenLabs ${estado}: ${cuerpo.slice(0, 300)}`);
+if (args.includes('--voces-azure')) { // lista las voces de España que ofrece tu región de Azure (las «DragonHD» son las más naturales)
+  const k = process.env.AZURE_SPEECH_KEY, reg = process.env.AZURE_SPEECH_REGION || 'westeurope';
+  if (!k) { console.error('Falta AZURE_SPEECH_KEY.'); await salir(1); }
+  const r = await fetch(process.env.AZURE_SPEECH_VOICES_URL || `https://${reg}.tts.speech.microsoft.com/cognitiveservices/voices/list`, {headers: {'Ocp-Apim-Subscription-Key': k}});
+  if (!r.ok) { console.error(`Azure Speech ${r.status}: ${(await r.text()).slice(0, 200)}. Revisa AZURE_SPEECH_KEY y AZURE_SPEECH_REGION.`); await salir(1); }
+  const lista = (await r.json()).filter((v) => v.Locale === 'es-ES').sort((a, b) => /HD/.test(b.ShortName) - /HD/.test(a.ShortName));
+  for (const v of lista) console.log(`${/HD/.test(v.ShortName) ? '★ HD ' : '     '} ${v.ShortName}  ${v.Gender}${v.StyleList?.length ? '  estilos: ' + v.StyleList.join(', ') : ''}`);
+  console.log(`\n${lista.length} voces es-ES en ${reg}. Pon la elegida en AZURE_SPEECH_VOICE (.env y variable del CI).`);
+  await salir(0);
+}
 if (args.includes('--voces')) { // lista las voces de tu cuenta (las «premade» valen en el plan gratuito por API)
   const k = process.env.ELEVENLABS_API_KEY;
   if (!k) { console.error('Falta ELEVENLABS_API_KEY.'); await salir(1); }
@@ -62,7 +72,7 @@ const key = azure ? process.env.AZURE_SPEECH_KEY : process.env.ELEVENLABS_API_KE
 if (!key) { console.error(azure ? 'Falta AZURE_SPEECH_KEY (portal.azure.com → tu recurso Speech → Claves y punto de conexión).' : 'Falta ELEVENLABS_API_KEY (tu clave de elevenlabs.io → Profile → API Keys).'); await salir(1); }
 const region = process.env.AZURE_SPEECH_REGION || 'westeurope';
 if (azure && !process.env.AZURE_SPEECH_REGION) console.warn('⚠ AZURE_SPEECH_REGION sin definir: se usa westeurope. Pon la región de tu recurso (p. ej. francecentral) o dará 401/403.');
-// Voces de España (es-ES): ElviraNeural (mujer), AlvaroNeural (hombre), XimenaNeural, AbrilNeural, DarioNeural, EliasNeural, LaiaNeural…
+// Voces de España (es-ES), la más natural: es-ES-Ximena:DragonHDLatestNeural (mujer) o es-ES-Tristan:DragonHDLatestNeural (hombre); lista con --voces-azure. Estándar: ElviraNeural (mujer), AlvaroNeural (hombre), XimenaNeural, AbrilNeural, DarioNeural, EliasNeural, LaiaNeural…
 const voice = opt('--voz') || (azure ? process.env.AZURE_SPEECH_VOICE || 'es-ES-ElviraNeural' : process.env.ELEVENLABS_VOICE_ID);
 if (!voice) { console.error('Falta el id de la voz: ELEVENLABS_VOICE_ID o --voz <id> (en elevenlabs.io → Voices → copiar ID).'); await salir(1); }
 const base = process.env.ELEVENLABS_BASE_URL || 'https://api.elevenlabs.io';
@@ -119,8 +129,10 @@ mkdirSync('out/.voz-cache', {recursive: true});
 const escXml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // Azure Speech (REST): SSML con velocidad y tono (AZURE_SPEECH_RATE p. ej. +5%, AZURE_SPEECH_PITCH p. ej. +2st) y estilo opcional (AZURE_SPEECH_STYLE, solo si la voz lo admite).
 const ssmlAzure = (texto) => {
-  const estilo = process.env.AZURE_SPEECH_STYLE;
-  const cuerpo = `<prosody rate="${process.env.AZURE_SPEECH_RATE || '+0%'}" pitch="${process.env.AZURE_SPEECH_PITCH || '+0st'}">${escXml(texto)}</prosody>`;
+  const estilo = /DragonHD/i.test(voice) ? undefined : process.env.AZURE_SPEECH_STYLE;
+  const hd = /DragonHD/i.test(voice); // las voces HD deciden solas el tono y la emoción: sin prosody salvo que lo pidas
+  const rate = process.env.AZURE_SPEECH_RATE, pitch = process.env.AZURE_SPEECH_PITCH;
+  const cuerpo = hd && !rate && !pitch ? escXml(texto) : `<prosody rate="${rate || '+0%'}" pitch="${pitch || '+0st'}">${escXml(texto)}</prosody>`;
   return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-ES"><voice name="${voice}">${estilo ? `<mstts:express-as style="${escXml(estilo)}" styledegree="${process.env.AZURE_SPEECH_STYLE_DEGREE || '1.5'}">${cuerpo}</mstts:express-as>` : cuerpo}</voice></speak>`;
 };
 const sintetizarAzure = async (texto) => {
