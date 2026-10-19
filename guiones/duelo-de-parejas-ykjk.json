@@ -1,0 +1,20 @@
+{
+  "hook": [
+    "¿PAREJA A O B?",
+    "LOS DATOS HABLAN"
+  ],
+  "title": "DUELO DE PAREJAS",
+  "src": "ui/estadisticas-pareja.png",
+  "imgW": 780,
+  "scroll": [
+    124,
+    1238
+  ],
+  "subs": [
+    "Eliges dos jugadores y Zyra te lo cuenta",
+    "Partidos juntos y % de victorias reales",
+    "Adiós al «siempre hemos jugado juntos»"
+  ],
+  "cta": "Pruébalo en zyrapadel.com",
+  "voz": true
+}
