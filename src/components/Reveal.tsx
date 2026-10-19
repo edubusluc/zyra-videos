@@ -29,7 +29,7 @@ type Props = {
 export const Line: React.FC<Props> = ({text, at, out, size, color = C.text, italic, align = 'left', from = 'up', font = 'display', weight = 700, letterSpacing = 0, extra}) => {
   const f = useCurrentFrame();
   const {fps} = useVideoConfig();
-  const inP = spring({frame: f - at, fps, config: {damping: 200, mass: 0.7}, durationInFrames: 18});
+  const inP = spring({frame: f - at, fps, config: {damping: 200, mass: 0.7}, durationInFrames: 26});
   const outP = out === undefined ? 0 : prog(f, out, 12);
   const dist = 115;
   const sign = from === 'down' ? -1 : 1;

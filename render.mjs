@@ -27,9 +27,9 @@ const quiere = (id) => !ids.length || ids.includes(id);
 for (const v of videos) if (quiere(v.id)) {
   const conVoz = v.subtitulos === false || v.voz;
   if (conVoz) {
-    // Mismo reparto que src/Feature.tsx (sin locución única): los subtítulos van de 86 a 360 fotogramas a partes iguales.
-    const ini = v.subs.map((_, i) => Math.round(86 + (i * 274) / v.subs.length) / 30);
-    guionVoz(v.id, [linea(0.1, 2.3, v.hook.map((h, i) => (i < v.hook.length - 1 && !/[.!?…,:]$/.test(h) ? `${h}.` : h)).join(' ')) /* sin punto, «LISTA LLENA ¿Y AHORA QUIÉN?» se leía de corrido */, linea(2.3, 2.9, `(título en pantalla: ${v.title})`, false), ...v.subs.map((x, i) => linea(ini[i], ini[i + 1] ?? 12, (v.locucion?.[i] || x).replace(/\*/g, ''))), linea(12, 15, v.cta)]);
+    // Mismo reparto que src/Feature.tsx (sin locución única): los subtítulos van de 104 a 450 fotogramas a partes iguales.
+    const ini = v.subs.map((_, i) => Math.round(104 + (i * 346) / v.subs.length) / 30);
+    guionVoz(v.id, [linea(0.1, 2.3, v.hook.map((h, i) => (i < v.hook.length - 1 && !/[.!?…,:]$/.test(h) ? `${h}.` : h)).join(' ')) /* sin punto, «LISTA LLENA ¿Y AHORA QUIÉN?» se leía de corrido */, linea(2.3, 2.9, `(título en pantalla: ${v.title})`, false), ...v.subs.map((x, i) => linea(ini[i], ini[i + 1] ?? 15, (v.locucion?.[i] || x))), linea(15, 18, v.cta)]);
   }
   if (v.voz) {
     // Con voz: primero la locución única; los subtítulos y cortes del vídeo siguen a la voz. Si no hay credenciales o falla, tiempos fijos y una voz por frase (scripts/voz.mjs).
