@@ -113,3 +113,12 @@ En un archivo `.env` en la raíz del proyecto (copia `.env.example`), una por l�
 ### Ajustar la voz
 
 Opcional, en el mismo `.env` (ver `.env.example`): `ELEVENLABS_STABILITY`, `ELEVENLABS_SIMILARITY`, `ELEVENLABS_STYLE`, `ELEVENLABS_SPEED` (0,7–1,2), `ELEVENLABS_SPEAKER_BOOST` y `ELEVENLABS_MODEL`. Al cambiarlos se regeneran las frases (la caché los tiene en cuenta). La voz en sí se cambia con `ELEVENLABS_VOICE_ID` o `--voz <id>`; la música, con `--musica` o `--sin-musica`.
+
+## Añadir más pantallas de la app
+
+1. Haz la captura en el móvil (o en el navegador a ~390 px de ancho, escala ×2) con **datos de demostración**, nunca nombres reales.
+2. `npm run captura -- ruta/pantalla.png --desc "Qué muestra, con los textos clave"` (o una carpeta entera: `npm run captura -- ruta/capturas/`).
+3. Se copia a `public/ui/`, se calcula el desplazamiento y se añade a `capturas.json`. Si no pones `--desc`, queda «PENDIENTE: describe…»: edítalo, porque esa descripción es lo que lee Claude para elegir la captura y no inventar funciones.
+4. Opcional: en `capturas.json` ajusta `scroll` y añade `box` `[x, y, ancho, alto]` para resaltar un elemento.
+
+Para el chat basta con reiniciar `npm run app`.
