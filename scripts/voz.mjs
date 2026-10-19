@@ -1,6 +1,7 @@
 // Pone voz en off (ElevenLabs) y música de fondo a un vídeo ya renderizado: out/<id>.mp4 + out/<id>.voz.json -> out/<id>.final.mp4
 // Uso: node scripts/voz.mjs <id> [--musica ruta.mp3] [--voz <voice_id>] [--sin-musica]
 // Variables: ELEVENLABS_API_KEY (obligatoria), ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL (por defecto eleven_multilingual_v2), ELEVENLABS_BASE_URL (para pruebas).
+import './env.mjs';
 import {execFileSync, spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync} from 'node:fs';

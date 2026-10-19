@@ -105,3 +105,7 @@ Resultado final con todo en un mp4: `out/<id>.final.mp4`.
 3. Desde la app: marca **Con voz y música** con «Render: En local». A mano: pon `"voz": true` en el JSON del guion o reacción, `npm run render <id>` y `npm run voz <id>`.
 
 Cómo encaja: `render.mjs` deja `out/<id>.voz.json` con los tramos y sus segundos; `scripts/voz.mjs` pide a ElevenLabs cada frase, la acelera hasta ×1,3 si no cabe en su tramo (avisa si aun así no cabe), la coloca en su segundo exacto, baja la música mientras habla y le pone fundido de entrada y salida. Las frases ya generadas se guardan en `out/.voz-cache` para no gastar caracteres al repetir. Necesita ffmpeg (el del sistema o el de Remotion).
+
+### Dónde van las claves
+
+En un archivo `.env` en la raíz del proyecto (copia `.env.example`), una por línea: `ELEVENLABS_API_KEY=…` y `ELEVENLABS_VOICE_ID=…`. Lo leen la app y `npm run voz`; está en `.gitignore`, así que no se sube. Las variables de entorno del sistema tienen prioridad sobre el `.env`.

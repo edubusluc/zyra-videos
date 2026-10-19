@@ -1,5 +1,6 @@
 // App local de Zyra Videos: describes el vídeo, Claude escribe el guion, se sube al repo y el CI lo renderiza.
 // Uso: npm run app  ->  http://localhost:4173   (ver README para las variables de entorno)
+import '../scripts/env.mjs';
 import {createServer} from 'node:http';
 import {execFile, execFileSync} from 'node:child_process';
 import {readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync} from 'node:fs';
