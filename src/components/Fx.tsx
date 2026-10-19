@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {C} from '../styles/brand';
 
 /** Fondo vivo: degradado, rejilla de pista en movimiento, luces que flotan y partículas que suben. */
@@ -32,25 +32,17 @@ export const LiveBg: React.FC = () => {
   );
 };
 
-/** Barrido diagonal de color que tapa la pantalla (para cambiar de escena). `at` = fotograma en que cruza el centro. */
-export const Wipe: React.FC<{at: number; dur?: number; color?: string}> = ({at, dur = 16, color = C.lime}) => {
+/** Cortinilla elegante: panel oscuro que cruza la pantalla con un filo de color. `at` = fotograma en que cubre el centro. */
+export const Wipe: React.FC<{at: number; dur?: number}> = ({at, dur = 26}) => {
   const f = useCurrentFrame();
-  const p = interpolate(f, [at - dur / 2, at + dur / 2], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const p = interpolate(f, [at - dur / 2, at + dur / 2], [0, 1], {easing: Easing.inOut(Easing.cubic), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   if (p <= 0 || p >= 1) return null;
-  const x = interpolate(p, [0, 1], [-1500, 1500]);
+  const x = interpolate(p, [0, 1], [-1700, 1500]);
   return (
     <AbsoluteFill style={{pointerEvents: 'none'}}>
-      <div style={{position: 'absolute', top: -200, bottom: -200, left: 0, width: 1500, transform: `translateX(${x}px) skewX(-14deg)`, background: color}} />
-      <div style={{position: 'absolute', top: -200, bottom: -200, left: 0, width: 160, transform: `translateX(${x - 260}px) skewX(-14deg)`, background: `${color}66`}} />
+      <div style={{position: 'absolute', top: -200, bottom: -200, left: 0, width: 1500, transform: `translateX(${x}px) skewX(-12deg)`, background: `linear-gradient(90deg, ${C.forestDeep}, ${C.forest} 85%, #1d4a22)`, borderRight: `10px solid ${C.lime}`, boxShadow: `30px 0 80px ${C.lime}44`}} />
     </AbsoluteFill>
   );
-};
-
-/** Destello breve de pantalla completa. */
-export const Flash: React.FC<{at: number}> = ({at}) => {
-  const f = useCurrentFrame();
-  const o = interpolate(f, [at, at + 2, at + 9], [0, 0.5, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
-  return o > 0 ? <AbsoluteFill style={{background: '#fff', opacity: o, pointerEvents: 'none'}} /> : null;
 };
 
 /** Pulso de escala (1.0x→`amp` y vuelta) con muelle al inicio de cada beat. */

@@ -37,3 +37,28 @@ export const Screen: React.FC<{src: string; imgW: number; width: number; scroll?
     </div>
   );
 };
+
+/**
+ * Móvil con volumen real (CSS 3D): el frontal con la captura y un canto de varias capas detrás.
+ * `yaw`/`pitch`/`roll` en grados; un reflejo recorre el cristal según `sheen` (0→1).
+ */
+export const Phone3D: React.FC<{width: number; height: number; yaw: number; pitch: number; roll?: number; scale?: number; sheen?: number; children: React.ReactNode}> = ({width, height, yaw, pitch, roll = 0, scale = 1, sheen = 0, children}) => {
+  const W = width + 28;
+  const H = height + 28;
+  const layers = Array.from({length: 12}, (_, i) => i + 1);
+  return (
+    <div style={{perspective: 2200, perspectiveOrigin: '50% 45%', width: W, height: H}}>
+      <div style={{position: 'relative', width: W, height: H, transformStyle: 'preserve-3d', transform: `rotateX(${pitch}deg) rotateY(${yaw}deg) rotateZ(${roll}deg) scale(${scale})`}}>
+        {layers.map((i) => (
+          <div key={i} style={{position: 'absolute', inset: 0, borderRadius: 64, background: i % 3 === 0 ? '#2a2d27' : '#171815', border: '2px solid #3a3d36', transform: `translateZ(${-i * 2.2}px)`}} />
+        ))}
+        <div style={{position: 'absolute', inset: 0, transform: 'translateZ(1px)'}}>
+          <PhoneFrame width={width} height={height}>{children}</PhoneFrame>
+          <div style={{position: 'absolute', inset: 14, borderRadius: 50, overflow: 'hidden', pointerEvents: 'none'}}>
+            <div style={{position: 'absolute', top: -200, bottom: -200, width: 220, left: `${-30 + sheen * 150}%`, transform: 'skewX(-18deg)', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.10), transparent)'}} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
