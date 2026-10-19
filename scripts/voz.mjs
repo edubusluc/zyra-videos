@@ -129,16 +129,23 @@ export const paraVoz = (txt) => {
   return /\d$/.test(t) ? `${t}!` : `${t}.`; // «…10.» se lee «diez punto»: tras un número se cierra con «!»
 };
 
+/**
+ * Entonación de locutor: si todas las frases van entre «¡…!», la voz las grita todas igual y suena plana y chillona.
+ * Solo el gancho conserva su exclamación; el resto se dice como afirmación (las preguntas se respetan siempre).
+ */
+export const entonar = (frases) => frases.map((t, i) => (i === 0 ? t : t.replace(/¡/g, '').replace(/!(?=\s|$)/g, '.').replace(/(\d)\.$/, '$1!')));
+
 console.log(`Voz: ${azure ? `Azure Speech · ${voice} · ${region}` : `ElevenLabs · ${voice}`}`);
 mkdirSync('out/.voz-cache', {recursive: true});
 const escXml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // Azure Speech (REST): SSML con velocidad y tono (AZURE_SPEECH_RATE p. ej. +5%, AZURE_SPEECH_PITCH p. ej. +2st) y estilo opcional (AZURE_SPEECH_STYLE, solo si la voz lo admite).
-// Perfil de entrega de Azure: «deportivo» (por defecto: +10 % de velocidad y +1 semitono, tono de anuncio) o «neutro» (sin tocar). Las voces HD deciden solas el tono:
-// con ellas solo se aplica lo que pidas tú. AZURE_SPEECH_RATE / PITCH / STYLE mandan sobre el perfil. El mismo ajuste en todas las frases da un tono continuo.
+// Perfil de entrega de Azure: «natural» (por defecto: la voz tal cual, que es como mejor entona) o «deportivo» (+4 % de velocidad, sin tocar el tono).
+// Subir el tono (+1st) y la velocidad (+10 %) a la vez sonaba a chillido sin entonación: no se hace por defecto. Las voces HD deciden solas el tono:
+// con ellas solo se aplica lo que pidas tú. AZURE_SPEECH_RATE / PITCH / STYLE mandan sobre el perfil.
 const hd = /DragonHD/i.test(voice);
-const perfilAz = process.env.AZURE_SPEECH_PERFIL || 'deportivo';
-const rate = process.env.AZURE_SPEECH_RATE || (!hd && perfilAz === 'deportivo' ? '+10%' : '');
-const pitch = process.env.AZURE_SPEECH_PITCH || (!hd && perfilAz === 'deportivo' ? '+1st' : '');
+const perfilAz = process.env.AZURE_SPEECH_PERFIL || 'natural';
+const rate = process.env.AZURE_SPEECH_RATE || (!hd && perfilAz === 'deportivo' ? '+4%' : '');
+const pitch = process.env.AZURE_SPEECH_PITCH || '';
 const estiloAz = hd ? '' : process.env.AZURE_SPEECH_STYLE || '';
 // nivel 0: estilo + velocidad/tono; 1: solo velocidad/tono; 2: texto plano (por si la voz rechaza el SSML)
 const ssmlAzure = (texto, nivel = 0, xml = false) => { // xml: el texto ya es XML (varias frases con <break/>)
@@ -245,7 +252,7 @@ const sintetizarElevenUnico = async (frases) => {
   return {mp3: f, seg};
 };
 if (narracion) {
-  const frases = tramos.map((x) => paraVoz(x.txt));
+  const frases = entonar(tramos.map((x) => paraVoz(x.txt)));
   let mp3, seg;
   try {
     if (azure) { mp3 = await sintetizar(frases.map(escXml).join(`<break time="${PAUSA_AZ}ms"/>`), true); seg = limitesPorSilencio(mp3, frases.length); }
@@ -255,7 +262,7 @@ if (narracion) {
   seg.forEach((x, i) => { x.dur = x.e - x.s; x.txt = frases[i]; });
   const GAPS = seg.map((_, i) => (i === 0 ? 0.55 : i === seg.length - 2 ? 0.35 : 0.28)); // tras el gancho cabe el título; antes del cierre, un respiro
   const FIN = 14.7; // objetivo: 15 s. Si las frases no caben ni acelerando algo (máx. ×1,12), el vídeo se alarga hasta 18 s
-  const MAX_FACTOR = 1.12, MAX_SEG = 18;
+  const MAX_FACTOR = 1.05, MAX_SEG = 18; // acelerar más deforma la voz: mejor alargar el vídeo
   const colocar = (fct) => { let c = 0.1; return seg.map((x, i) => { const ini = c; c += x.dur / fct + GAPS[i]; return ini; }); };
   let factor = 1;
   for (let k = 0; k < 4; k++) {
@@ -333,18 +340,18 @@ const sfx = [];
     console.log(`Efectos de sonido (estilo creador): ${sfx.length}`);
   }
 }
-// Cadena de voz de anuncio (VOZ_MEZCLA=anuncio, por defecto): quita graves y retumbe, da presencia y brillo y comprime para que la voz
-// vaya siempre por delante de la música. Necesita un ffmpeg completo (el del sistema; en el CI se instala): el mínimo de Remotion no trae
+// Cadena de voz de anuncio (VOZ_MEZCLA=anuncio, por defecto): quita retumbe, algo de presencia y compresión suave para que la voz
+// vaya por delante de la música sin aplastar la entonación (la anterior, +3,5 dB a 3,2 kHz y compresión 4:1 con +5 dB, sonaba a grito). Necesita un ffmpeg completo (el del sistema; en el CI se instala): el mínimo de Remotion no trae
 // esos filtros y entonces solo se normaliza el volumen. VOZ_MEZCLA=natural: solo volumen; VOZ_MEZCLA=no: como sale del proveedor.
 const mezcla = process.env.VOZ_MEZCLA || 'anuncio';
 const filtrosFF = new Set((spawnSync(FF, ['-hide_banner', '-filters'], {encoding: 'utf8'}).stdout || '').split('\n').map((l) => l.trim().split(/\s+/)[1]).filter(Boolean));
-const CADENA_ANUNCIO = ['highpass', 'equalizer', 'highshelf', 'acompressor', 'alimiter'];
+const CADENA_ANUNCIO = ['highpass', 'equalizer', 'acompressor', 'alimiter'];
 const cadenaVoz = mezcla === 'anuncio' && CADENA_ANUNCIO.every((x) => filtrosFF.has(x))
-  ? 'highpass=f=90,equalizer=f=280:t=q:w=1.2:g=-2.5,equalizer=f=3200:t=q:w=1.1:g=3.5,highshelf=f=9000:g=2,acompressor=threshold=-21dB:ratio=4:attack=4:release=90:makeup=5dB,alimiter=limit=0.89:level=false'
+  ? 'highpass=f=75,equalizer=f=250:t=q:w=1.2:g=-1.5,equalizer=f=2800:t=q:w=1.2:g=1.5,acompressor=threshold=-18dB:ratio=2:attack=12:release=180:makeup=1.5dB,alimiter=limit=0.89:level=false'
   : 'anull';
 if (mezcla === 'anuncio' && cadenaVoz === 'anull') console.warn('⚠ Este ffmpeg no trae los filtros de la voz de anuncio (ecualizador y compresor): instala ffmpeg en el sistema. Solo se normaliza el volumen.');
 // Volumen final de anuncio: −14 LUFS integrados y pico real de −1,5 dB, la referencia de TikTok, Reels y Shorts.
-const normaliza = mezcla !== 'no' && filtrosFF.has('loudnorm') ? 'loudnorm=I=-14:TP=-1.5:LRA=9,' : '';
+const normaliza = mezcla !== 'no' && filtrosFF.has('loudnorm') ? 'loudnorm=I=-14:TP=-1.5:LRA=11,' : '';
 console.log(`Mezcla de voz: ${cadenaVoz !== 'anull' ? 'anuncio (EQ + compresor)' : 'sin procesar'}${normaliza ? ' · −14 LUFS' : ''}`);
 const entradas = ['-i', video, ...clips.flatMap((c) => ['-i', c.mp3]), ...(musica ? ['-stream_loop', '-1', '-i', musica] : []), ...sfx.flatMap((e) => ['-i', `public/sfx/${e.f}.wav`])];
 const filtros = clips.map((c, i) => `[${i + 1}:a]${c.ss !== undefined ? `atrim=${c.ss.toFixed(3)}:${c.ee.toFixed(3)},asetpts=PTS-STARTPTS,` : ''}${c.atempo > 1.001 ? `atempo=${c.atempo.toFixed(4)},` : ''}atrim=0:${c.dur.toFixed(3)},${c.recorta ? `volume='clip((${c.dur.toFixed(3)}-t)/0.15,0,1)':eval=frame,` : ''}adelay=${Math.round(c.ini * 1000)}|${Math.round(c.ini * 1000)}[v${i}]`);
