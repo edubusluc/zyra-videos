@@ -148,8 +148,12 @@ const rate = process.env.AZURE_SPEECH_RATE || (!hd && perfilAz === 'deportivo' ?
 const pitch = process.env.AZURE_SPEECH_PITCH || '';
 const estiloAz = hd ? '' : process.env.AZURE_SPEECH_STYLE || '';
 // nivel 0: estilo + velocidad/tono; 1: solo velocidad/tono; 2: texto plano (por si la voz rechaza el SSML)
+// Pronunciación: AlvaroNeural articula mal la «r» inicial y la «g» suave («reventar de gente» → «geventar de yiente»). Se reescriben solo en el audio
+// (los subtítulos no cambian): «rr» fuerza la vibrante y «j» la fricativa velar. Se amplía con AZURE_SPEECH_PRONUNCIACION='palabra=como suena;otra=…'.
+const PRONUNCIACION = {reventar: 'rreventar', reventón: 'rreventón', gente: 'jente', gentes: 'jentes', rápido: 'rrápido', rápida: 'rrápida', rápidos: 'rrápidos', rápidas: 'rrápidas', resultado: 'rresultado', resultados: 'rresultados', rival: 'rrival', rivales: 'rrivales', ranking: 'ránkin', ...Object.fromEntries((process.env.AZURE_SPEECH_PRONUNCIACION || '').split(';').map((p) => p.split('=').map((x) => x.trim())).filter(([a, b]) => a && b))};
+const pronunciar = (t) => t.replace(/[\p{L}]+/gu, (w) => { const r = PRONUNCIACION[w.toLowerCase()]; return r ? (w[0] === w[0].toUpperCase() ? r[0].toUpperCase() + r.slice(1) : r) : w; });
 const ssmlAzure = (texto, nivel = 0, xml = false) => { // xml: el texto ya es XML (varias frases con <break/>)
-  const cuerpoTxt = xml ? texto : escXml(texto);
+  const cuerpoTxt = pronunciar(xml ? texto : escXml(texto));
   const prosodia = nivel < 2 && (rate || pitch);
   const cuerpo = prosodia ? `<prosody${rate ? ` rate="${escXml(rate)}"` : ''}${pitch ? ` pitch="${escXml(pitch)}"` : ''}>${cuerpoTxt}</prosody>` : cuerpoTxt;
   const estilo = nivel === 0 && estiloAz;
@@ -158,7 +162,7 @@ const ssmlAzure = (texto, nivel = 0, xml = false) => { // xml: el texto ya es XM
 let nivelAz = 0; // baja una vez si Azure rechaza el SSML y se mantiene para el resto de frases
 const sintetizarAzure = async (texto, xml = false) => {
   for (;;) {
-    const r = await fetch(process.env.AZURE_SPEECH_URL || `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {method: 'POST', headers: {'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-96kbitrate-mono-mp3', 'User-Agent': 'zyra-videos'}, body: ssmlAzure(texto, nivelAz, xml)});
+    const r = await fetch(process.env.AZURE_SPEECH_URL || `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {method: 'POST', headers: {'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-48khz-192kbitrate-mono-mp3', 'User-Agent': 'zyra-videos'}, body: ssmlAzure(texto, nivelAz, xml)});
     if (r.ok) return Buffer.from(await r.arrayBuffer());
     const cuerpo = await r.text();
     if (r.status === 401 || r.status === 403) throw new Error(`Azure Speech ${r.status}: clave o región incorrectas. Revisa AZURE_SPEECH_KEY y AZURE_SPEECH_REGION (la región de tu recurso, p. ej. westeurope).`);
@@ -171,7 +175,7 @@ const sintetizarAzure = async (texto, xml = false) => {
   }
 };
 const sintetizar = async (texto, xml = false) => {
-  const hash = createHash('sha1').update(azure ? `azure|${xml}|${voice}|${rate}|${pitch}|${estiloAz}|${process.env.AZURE_SPEECH_STYLE_DEGREE}|${nivelAz}|${texto}` : `${voice}|${modelo}|${JSON.stringify(ajustes)}|${texto}`).digest('hex').slice(0, 16);
+  const hash = createHash('sha1').update(azure ? `azure48|${xml}|${JSON.stringify(PRONUNCIACION)}|${voice}|${rate}|${pitch}|${estiloAz}|${process.env.AZURE_SPEECH_STYLE_DEGREE}|${nivelAz}|${texto}` : `${voice}|${modelo}|${JSON.stringify(ajustes)}|${texto}`).digest('hex').slice(0, 16);
   const f = `out/.voz-cache/${hash}.mp3`; // misma frase + misma voz = sin gastar caracteres otra vez
   if (existsSync(f)) return f;
   if (azure) { writeFileSync(f, await sintetizarAzure(texto, xml)); return f; }
