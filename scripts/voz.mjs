@@ -72,8 +72,8 @@ const key = azure ? process.env.AZURE_SPEECH_KEY : process.env.ELEVENLABS_API_KE
 if (!key) { console.error(azure ? 'Falta AZURE_SPEECH_KEY (portal.azure.com → tu recurso Speech → Claves y punto de conexión).' : 'Falta ELEVENLABS_API_KEY (tu clave de elevenlabs.io → Profile → API Keys).'); await salir(1); }
 const region = process.env.AZURE_SPEECH_REGION || 'westeurope';
 if (azure && !process.env.AZURE_SPEECH_REGION) console.warn('⚠ AZURE_SPEECH_REGION sin definir: se usa westeurope. Pon la región de tu recurso (p. ej. francecentral) o dará 401/403.');
-// Voces de España (es-ES), la más natural: es-ES-Ximena:DragonHDLatestNeural (mujer) o es-ES-Tristan:DragonHDLatestNeural (hombre); lista con --voces-azure. Estándar: ElviraNeural (mujer), AlvaroNeural (hombre), XimenaNeural, AbrilNeural, DarioNeural, EliasNeural, LaiaNeural…
-const voice = opt('--voz') || (azure ? process.env.AZURE_SPEECH_VOICE || 'es-ES-ElviraNeural' : process.env.ELEVENLABS_VOICE_ID);
+// Por defecto es-ES-AlvaroNeural (hombre, voz con cuerpo de anuncio deportivo). Voces de España (es-ES), la más natural: es-ES-Ximena:DragonHDLatestNeural (mujer) o es-ES-Tristan:DragonHDLatestNeural (hombre); lista con --voces-azure. Estándar: ElviraNeural (mujer), AlvaroNeural (hombre), XimenaNeural, AbrilNeural, DarioNeural, EliasNeural, LaiaNeural…
+const voice = opt('--voz') || (azure ? process.env.AZURE_SPEECH_VOICE || 'es-ES-AlvaroNeural' : process.env.ELEVENLABS_VOICE_ID);
 if (!voice) { console.error('Falta el id de la voz: ELEVENLABS_VOICE_ID o --voz <id> (en elevenlabs.io → Voices → copiar ID).'); await salir(1); }
 const base = process.env.ELEVENLABS_BASE_URL || 'https://api.elevenlabs.io';
 // Ajustes de la voz. Perfil por defecto «expresivo» (entonación marcada, poco plana); cualquier ELEVENLABS_* explícito manda sobre el perfil.
@@ -133,11 +133,11 @@ console.log(`Voz: ${azure ? `Azure Speech · ${voice} · ${region}` : `ElevenLab
 mkdirSync('out/.voz-cache', {recursive: true});
 const escXml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // Azure Speech (REST): SSML con velocidad y tono (AZURE_SPEECH_RATE p. ej. +5%, AZURE_SPEECH_PITCH p. ej. +2st) y estilo opcional (AZURE_SPEECH_STYLE, solo si la voz lo admite).
-// Perfil de entrega de Azure: «deportivo» (por defecto: algo más rápido y agudo, tono de anuncio) o «neutro» (sin tocar). Las voces HD deciden solas el tono:
+// Perfil de entrega de Azure: «deportivo» (por defecto: +10 % de velocidad y +1 semitono, tono de anuncio) o «neutro» (sin tocar). Las voces HD deciden solas el tono:
 // con ellas solo se aplica lo que pidas tú. AZURE_SPEECH_RATE / PITCH / STYLE mandan sobre el perfil. El mismo ajuste en todas las frases da un tono continuo.
 const hd = /DragonHD/i.test(voice);
 const perfilAz = process.env.AZURE_SPEECH_PERFIL || 'deportivo';
-const rate = process.env.AZURE_SPEECH_RATE || (!hd && perfilAz === 'deportivo' ? '+7%' : '');
+const rate = process.env.AZURE_SPEECH_RATE || (!hd && perfilAz === 'deportivo' ? '+10%' : '');
 const pitch = process.env.AZURE_SPEECH_PITCH || (!hd && perfilAz === 'deportivo' ? '+1st' : '');
 const estiloAz = hd ? '' : process.env.AZURE_SPEECH_STYLE || '';
 // nivel 0: estilo + velocidad/tono; 1: solo velocidad/tono; 2: texto plano (por si la voz rechaza el SSML)
@@ -333,12 +333,26 @@ const sfx = [];
     console.log(`Efectos de sonido (estilo creador): ${sfx.length}`);
   }
 }
+// Cadena de voz de anuncio (VOZ_MEZCLA=anuncio, por defecto): quita graves y retumbe, da presencia y brillo y comprime para que la voz
+// vaya siempre por delante de la música. Necesita un ffmpeg completo (el del sistema; en el CI se instala): el mínimo de Remotion no trae
+// esos filtros y entonces solo se normaliza el volumen. VOZ_MEZCLA=natural: solo volumen; VOZ_MEZCLA=no: como sale del proveedor.
+const mezcla = process.env.VOZ_MEZCLA || 'anuncio';
+const filtrosFF = new Set((spawnSync(FF, ['-hide_banner', '-filters'], {encoding: 'utf8'}).stdout || '').split('\n').map((l) => l.trim().split(/\s+/)[1]).filter(Boolean));
+const CADENA_ANUNCIO = ['highpass', 'equalizer', 'highshelf', 'acompressor', 'alimiter'];
+const cadenaVoz = mezcla === 'anuncio' && CADENA_ANUNCIO.every((x) => filtrosFF.has(x))
+  ? 'highpass=f=90,equalizer=f=280:t=q:w=1.2:g=-2.5,equalizer=f=3200:t=q:w=1.1:g=3.5,highshelf=f=9000:g=2,acompressor=threshold=-21dB:ratio=4:attack=4:release=90:makeup=5dB,alimiter=limit=0.89:level=false'
+  : 'anull';
+if (mezcla === 'anuncio' && cadenaVoz === 'anull') console.warn('⚠ Este ffmpeg no trae los filtros de la voz de anuncio (ecualizador y compresor): instala ffmpeg en el sistema. Solo se normaliza el volumen.');
+// Volumen final de anuncio: −14 LUFS integrados y pico real de −1,5 dB, la referencia de TikTok, Reels y Shorts.
+const normaliza = mezcla !== 'no' && filtrosFF.has('loudnorm') ? 'loudnorm=I=-14:TP=-1.5:LRA=9,' : '';
+console.log(`Mezcla de voz: ${cadenaVoz !== 'anull' ? 'anuncio (EQ + compresor)' : 'sin procesar'}${normaliza ? ' · −14 LUFS' : ''}`);
 const entradas = ['-i', video, ...clips.flatMap((c) => ['-i', c.mp3]), ...(musica ? ['-stream_loop', '-1', '-i', musica] : []), ...sfx.flatMap((e) => ['-i', `public/sfx/${e.f}.wav`])];
 const filtros = clips.map((c, i) => `[${i + 1}:a]${c.ss !== undefined ? `atrim=${c.ss.toFixed(3)}:${c.ee.toFixed(3)},asetpts=PTS-STARTPTS,` : ''}${c.atempo > 1.001 ? `atempo=${c.atempo.toFixed(4)},` : ''}atrim=0:${c.dur.toFixed(3)},${c.recorta ? `volume='clip((${c.dur.toFixed(3)}-t)/0.15,0,1)':eval=frame,` : ''}adelay=${Math.round(c.ini * 1000)}|${Math.round(c.ini * 1000)}[v${i}]`);
 const vozs = clips.map((_, i) => `[v${i}]`).join('');
 const base0 = clips.length + 1 + (musica ? 1 : 0);
 sfx.forEach((e, i) => { const ms = Math.max(0, Math.round(e.t * 1000)); filtros.push(`[${base0 + i}:a]volume=${e.vol},adelay=${ms}|${ms}[s${i}]`); });
-filtros.push(`${vozs}${sfx.map((_, i) => `[s${i}]`).join('')}amix=inputs=${clips.length + sfx.length}:normalize=0[voz]`);
+filtros.push(`${vozs}amix=inputs=${clips.length}:normalize=0,${cadenaVoz}[vozp]`);
+filtros.push(sfx.length ? `[vozp]${sfx.map((_, i) => `[s${i}]`).join('')}amix=inputs=${1 + sfx.length}:normalize=0[voz]` : '[vozp]anull[voz]');
 if (musica) {
   const m = clips.length + 1;
   // Sin filtros avanzados (sidechain, afade, asplit), que faltan en el ffmpeg mínimo de Remotion:
@@ -351,7 +365,7 @@ if (musica) {
 } else filtros.push('[voz]anull[mix]');
 // Sellos de tiempo limpios: el ffmpeg de Remotion deja la pista de audio con un inicio absurdo (años luz) y los reproductores pierden el sincronismo o van a tirones.
 // aresample fija el inicio en 0; apad+atrim dejan el audio con la duración exacta del vídeo (apad sin límite no termina en ese ffmpeg).
-filtros.push(`[mix]aresample=async=1:first_pts=0,apad=whole_dur=${total.toFixed(3)},atrim=0:${total.toFixed(3)},asetpts=PTS-STARTPTS[a]`);
+filtros.push(`[mix]${normaliza}aresample=48000:async=1:first_pts=0,apad=whole_dur=${total.toFixed(3)},atrim=0:${total.toFixed(3)},asetpts=PTS-STARTPTS[a]`);
 execFileSync(FF, ['-y', '-loglevel', 'error', ...entradas, '-filter_complex', filtros.join(';'), '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', `out/${id}.final.mp4`], {stdio: 'inherit'});
 const tieneAudio = /Audio:/.test(spawnSync(FF, ['-i', `out/${id}.final.mp4`], {encoding: 'utf8'}).stderr || '');
 if (!tieneAudio) { console.error('✖ El vídeo final no tiene pista de audio: algo falló al mezclar.'); await salir(1); }
