@@ -94,3 +94,14 @@ En el CI el `.voz.txt` va dentro del artefacto `videos-tiktok`.
 ## Estilo de los vídeos de la app
 
 La plantilla `Feature` lleva fondo vivo (rejilla de pista, luces y partículas), barridos de color entre escenas, destellos en cada cambio de subtítulo, móvil que entra en 3D con zoom lento y latido de cámara, subtítulos que aparecen palabra a palabra, puntos de avance y un cierre con logo, botón y URL. Los tiempos no cambian, así que `out/<id>.voz.txt` sigue valiendo.
+
+## Voz en off (ElevenLabs) y música de fondo
+
+Resultado final con todo en un mp4: `out/<id>.final.mp4`.
+
+1. Clave y voz: en elevenlabs.io copia tu API key y el ID de la voz elegida (Voices → ID). En PowerShell:
+   `$env:ELEVENLABS_API_KEY="…"; $env:ELEVENLABS_VOICE_ID="…"` (la clave nunca va al repo).
+2. Música: deja un mp3 en `public/musica/` (`.gitignore` lo excluye; usa solo música propia o con licencia que permita su uso comercial). Se usa la primera; o `--musica ruta.mp3`.
+3. Desde la app: marca **Con voz y música** con «Render: En local». A mano: pon `"voz": true` en el JSON del guion o reacción, `npm run render <id>` y `npm run voz <id>`.
+
+Cómo encaja: `render.mjs` deja `out/<id>.voz.json` con los tramos y sus segundos; `scripts/voz.mjs` pide a ElevenLabs cada frase, la acelera hasta ×1,3 si no cabe en su tramo (avisa si aun así no cabe), la coloca en su segundo exacto, baja la música mientras habla y le pone fundido de entrada y salida. Las frases ya generadas se guardan en `out/.voz-cache` para no gastar caracteres al repetir. Necesita ffmpeg (el del sistema o el de Remotion).

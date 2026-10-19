@@ -168,19 +168,20 @@ async function esperarCI(sha, log) {
   throw new Error('El CI tardó más de 20 minutos; mira la pestaña Actions.');
 }
 
-async function trabajo(job, {peticion, modo, borrador, subtitulos = true}) {
+async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = false}) {
   const log = (m) => job.log.push(m);
   try {
     const cat = catalogo();
     const tipo = borrador?.tipo || 'video';
     const items = []; // {archivo, id, resultado}
-    const sin = subtitulos === false || borrador?.subtitulos === false ? {subtitulos: false} : {}; // sin subtítulos → render.mjs deja out/<id>.voz.txt
+    if (voz && modo !== 'local') throw new Error('La voz se añade en local (usa «Render: En local»): la clave de ElevenLabs no se sube al CI.');
+    const sin = voz ? {voz: true, ...(subtitulos === false ? {subtitulos: false} : {})} : subtitulos === false || borrador?.subtitulos === false ? {subtitulos: false} : {}; // sin subtítulos → render.mjs deja out/<id>.voz.txt
     const guardar = (dir, base, obj, prefijo, ext) => {
       const id = slug(base) + '-' + Date.now().toString(36).slice(-4) + (items.length || '');
       mkdirSync(join(ROOT, dir), {recursive: true});
       const archivo = `${dir}/${id}.json`;
       writeFileSync(join(ROOT, archivo), JSON.stringify(obj, null, 2) + '\n');
-      items.push({archivo, id: `${prefijo}${id}`, resultado: `out/${prefijo}${id}.${ext}` + (obj.subtitulos === false ? `, out/${prefijo}${id}.voz.txt` : '')});
+      items.push({archivo, id: `${prefijo}${id}`, resultado: `out/${prefijo}${id}.${ext}` + (obj.subtitulos === false || obj.voz ? `, out/${prefijo}${id}.voz.txt` : '') + (obj.voz ? `, out/${prefijo}${id}.final.mp4` : '')});
     };
     if (tipo === 'lote') {
       const caps = Array.isArray(borrador.captions) ? borrador.captions.slice(0, 8) : [];
@@ -214,6 +215,7 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true}) {
     if (modo === 'local') {
       log('Renderizando en local…');
       await sh('node', ['render.mjs', ...items.map((i) => i.id)]);
+      if (voz) for (const i of items) { log(`Voz y música: ${i.id}…`); await sh('node', ['scripts/voz.mjs', i.id]); }
       job.resultado = items.map((i) => i.resultado).join(', ');
     } else {
       await sh('git', ['add', ...items.map((i) => i.archivo)]);
@@ -291,12 +293,12 @@ export const server = createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/api/generar') {
     let body = '';
     for await (const c of req) body += c;
-    const {peticion, modo = 'ci', borrador, subtitulos} = JSON.parse(body || '{}');
+    const {peticion, modo = 'ci', borrador, subtitulos, voz} = JSON.parse(body || '{}');
     if (!borrador && !String(peticion || '').trim()) return json(res, 400, {error: 'Escribe qué vídeo quieres.'});
     const id = Math.random().toString(36).slice(2, 10);
     const job = {estado: 'en curso', log: []};
     jobs.set(id, job);
-    trabajo(job, {peticion, modo, borrador, subtitulos});
+    trabajo(job, {peticion, modo, borrador, subtitulos, voz});
     return json(res, 200, {id});
   }
   json(res, 404, {error: 'no encontrado'});

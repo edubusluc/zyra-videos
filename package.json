@@ -6,6 +6,7 @@
     "studio": "remotion studio",
     "typecheck": "tsc --noEmit",
     "render": "node render.mjs",
+    "voz": "node scripts/voz.mjs",
     "app": "node app/server.mjs"
   },
   "dependencies": {
