@@ -236,9 +236,48 @@ async function trabajo(job, {peticion, modo, borrador}) {
 const PAGINA = readFileSync(join(ROOT, 'app', 'index.html'), 'utf8');
 const json = (res, code, obj) => { res.writeHead(code, {'content-type': 'application/json'}); res.end(JSON.stringify(obj)); };
 
+const EXT_OK = /\.(png|webp|jpe?g|mp4|webm)$/i;
+const MAX_SUBIDA = 60 * 1024 * 1024;
+
+/** Sube archivos al repo (commit + push, integrando cambios remotos si hace falta). */
+async function subirArchivos(archivos, mensaje) {
+  await sh('git', ['add', ...archivos]);
+  await sh('git', ['commit', '-m', mensaje.slice(0, 120)]);
+  try { await sh('git', ['push']); } catch {
+    await sh('git', ['pull', '--rebase', '--autostash']);
+    await sh('git', ['push']);
+  }
+}
+
 export const server = createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/') { res.writeHead(200, {'content-type': 'text/html; charset=utf-8'}); return res.end(PAGINA); }
   if (req.method === 'GET' && req.url.startsWith('/api/job/')) { const j = jobs.get(req.url.split('/').pop()); return j ? json(res, 200, j) : json(res, 404, {error: 'no existe'}); }
+  if (req.method === 'GET' && req.url === '/api/plantillas') return json(res, 200, {plantillas: plantillas(), medios: medios()});
+  if (req.method === 'POST' && req.url.startsWith('/api/subir?')) {
+    // Cuerpo = el archivo en bruto; el nombre va en ?nombre=
+    const nombre = (new URL(req.url, 'http://x').searchParams.get('nombre') || '').replace(/[^\w.-]+/g, '-').slice(-80);
+    if (!EXT_OK.test(nombre)) return json(res, 400, {error: 'Formato no admitido: usa png, webp, jpg, mp4 o webm.'});
+    const trozos = []; let n = 0;
+    for await (const c of req) { n += c.length; if (n > MAX_SUBIDA) return json(res, 413, {error: 'El archivo pesa más de 60 MB.'}); trozos.push(c); }
+    mkdirSync(join(ROOT, 'public/medios'), {recursive: true});
+    writeFileSync(join(ROOT, 'public/medios', nombre), Buffer.concat(trozos));
+    return json(res, 200, {ruta: `medios/${nombre}`});
+  }
+  if (req.method === 'POST' && req.url === '/api/plantilla') {
+    let body = '';
+    for await (const c of req) body += c;
+    try {
+      const {id, descripcion, fondo = null, recorte = null, seg = 7, pos = 'arriba', sonido = true, subir = false} = JSON.parse(body || '{}');
+      if (!/^[a-z0-9-]{2,40}$/.test(id || '')) return json(res, 400, {error: 'Nombre: 2-40 caracteres en minúsculas, números y guiones.'});
+      for (const k of [fondo, recorte]) if (k && !medios().includes(k)) return json(res, 400, {error: `No existe ${k}; sube el archivo primero.`});
+      if (!fondo && !recorte && !descripcion) return json(res, 400, {error: 'Sube un recorte o un fondo, o describe la plantilla.'});
+      mkdirSync(join(ROOT, 'plantillas'), {recursive: true});
+      const t = {descripcion: descripcion || id, fondo, recorte, seg: Number(seg) || 7, pos: pos === 'abajo' ? 'abajo' : 'arriba', sonido: Boolean(sonido)};
+      writeFileSync(join(ROOT, 'plantillas', `${id}.json`), JSON.stringify(t, null, 2) + '\n');
+      if (subir) await subirArchivos([`plantillas/${id}.json`, ...[fondo, recorte].filter(Boolean).map((m) => `public/${m}`)], `Plantilla: ${id}`);
+      return json(res, 200, {ok: true, subida: Boolean(subir)});
+    } catch (e) { return json(res, 500, {error: e.message}); }
+  }
   if (req.method === 'POST' && req.url === '/api/chat') {
     let body = '';
     for await (const c of req) body += c;

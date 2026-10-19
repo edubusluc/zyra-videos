@@ -27,12 +27,16 @@ export const Reaccion: React.FC<ReaccionData> = ({caption, emojis, fondo, recort
         <Court start={-10} dur={20} scale={1.5} opacity={0.55} />
       )}
       {recorte ? (
-        <OffthreadVideo
-          src={staticFile(recorte)}
-          transparent={/\.webm$/i.test(recorte)}
-          volume={sonido ? 1 : 0}
-          style={{position: 'absolute', left: 0, bottom: 150, width: '100%', height: 1100, objectFit: 'contain', objectPosition: '50% 100%'}}
-        />
+        esVideo(recorte) ? (
+          <OffthreadVideo
+            src={staticFile(recorte)}
+            transparent={/\.webm$/i.test(recorte)}
+            volume={sonido ? 1 : 0}
+            style={{position: 'absolute', left: 0, bottom: 150, width: '100%', height: 1100, objectFit: 'contain', objectPosition: '50% 100%'}}
+          />
+        ) : (
+          <Img src={staticFile(recorte)} style={{position: 'absolute', left: 0, bottom: 150, width: '100%', height: 1100, objectFit: 'contain', objectPosition: '50% 100%'}} />
+        )
       ) : null}
       <div style={{position: 'absolute', left: 64, right: 64, textAlign: 'center', ...(pos === 'abajo' ? {bottom: 300} : {top: 330})}}>
         <div

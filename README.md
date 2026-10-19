@@ -43,6 +43,9 @@ No se «entrena» a Claude: se le da contexto. Cuando veas un meme que funciona 
 Genera `referencias/<nombre>.md` (formato, estructura, por qué funciona, cómo reproducirlo con tus medios y qué no copiar). El chat lee esas fichas y propone memes del mismo patrón. Los fotogramas se quedan en `referencias/.cache` (no se suben): el repo es público, así que no se guarda material de terceros, solo el análisis. Añade también tus propias métricas en la nota (visitas, guardados) para que el chat aprenda qué rinde en vuestra cuenta.
 
 ## Plantillas propias y lotes
+**Desde la app:** abre el panel «Plantillas (recortes y fondos)», sube el recorte (PNG con transparencia, WebM con alfa o MP4) y, si quieres, un fondo; ponle un nombre y una descripción de cuándo usarla y pulsa «Guardar plantilla». Con «Subir al repo» marcado se sube a GitHub para que el CI también la use (el repo es público: solo material propio o con licencia). El chat las conoce y las usa en reacciones y lotes. Un PNG recortado es una imagen fija; para movimiento usa WebM con alfa (ver `scripts/recortar.sh`).
+
+**A mano:**
 Una plantilla (`plantillas/<id>.json`) guarda un fondo, un recorte, la duración y la posición del texto para reutilizarlos. El chat las conoce, elige la que encaje y puede crear **varios memes de una vez** («Lote de memes»: hasta 8 textos con la misma plantilla).
     node scripts/nueva-plantilla.mjs doble-cristal --desc "compañero que se come el cristal" --recorte medios/doble-cristal.webm --fondo medios/pista.mp4 --pos arriba
 Antes copia los archivos a `public/medios/`.

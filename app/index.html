@@ -21,6 +21,18 @@ button{background:var(--lime);color:#0A0A0A;font-weight:700;border-color:var(--l
  <button class="sec" data-q="Busca tendencias actuales de TikTok de pádel que podamos aprovechar para Zyra.">Tendencias</button>
  <button class="sec" data-q="Dame un guion para el vídeo de la alineación sugerida con un enfoque distinto al que hicimos.">Otro guion</button>
 </div>
+<details id="pl" style="margin:14px 0"><summary style="cursor:pointer;color:var(--lime);font-weight:700">Plantillas (recortes y fondos)</summary>
+<div class="msg" style="margin-top:8px">
+ <div id="lista" class="log"></div>
+ <div class="row"><input id="pid" placeholder="nombre-corto" style="padding:10px;border-radius:10px;border:1px solid var(--b);background:#0d0e0c;color:var(--t)"> <input id="pdesc" placeholder="cuándo usarla (p. ej. compañero que se ríe)" style="flex:1;min-width:200px;padding:10px;border-radius:10px;border:1px solid var(--b);background:#0d0e0c;color:var(--t)"></div>
+ <div class="row"><label>Recorte (PNG con transparencia, WebM o MP4) <input type="file" id="prec" accept=".png,.webp,.webm,.mp4"></label></div>
+ <div class="row"><label>Fondo (foto o vídeo, opcional) <input type="file" id="pfon" accept=".png,.jpg,.jpeg,.webp,.mp4,.webm"></label></div>
+ <div class="row"><label>Texto <select id="ppos"><option value="arriba">arriba</option><option value="abajo">abajo</option></select></label>
+ <label>Segundos <input id="pseg" type="number" value="7" min="2" max="20" style="width:64px"></label>
+ <label><input type="checkbox" id="pson" checked> Mantener sonido del recorte</label></div>
+ <div class="row"><label><input type="checkbox" id="psub" checked> Subir al repo (necesario para el CI; el repo es público: solo material propio o con licencia)</label></div>
+ <div class="row"><button id="pgo">Guardar plantilla</button></div>
+</div></details>
 <div id="chat"></div>
 <textarea id="p" placeholder="Ej.: dame ideas de guion para mostrar las estadísticas de pareja…"></textarea>
 <div class="row"><button id="send">Enviar</button>
@@ -47,4 +59,18 @@ async function crear(b,bt){
     if(s.estado==='error'){clearInterval(t);$('log').className='log err';$('log').textContent+='\n✖ '+s.error;bt.disabled=false}},1500)}
 $('send').onclick=()=>enviar($('p').value);$('p').onkeydown=(e)=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))enviar($('p').value)};
 document.querySelectorAll('[data-q]').forEach((b)=>b.onclick=()=>enviar(b.dataset.q));
+
+async function listar(){try{const j=await (await fetch('/api/plantillas')).json();$('lista').textContent=j.plantillas.length?'Guardadas: '+j.plantillas.map(p=>p.id).join(', '):'Aún no hay plantillas.'}catch{}}
+async function subirArchivo(f){const r=await fetch('/api/subir?nombre='+encodeURIComponent(f.name),{method:'POST',body:f});const j=await r.json();if(!r.ok)throw new Error(j.error);return j.ruta}
+$('pgo').onclick=async()=>{
+  $('pgo').disabled=true;$('log').className='log';$('log').textContent='Guardando plantilla…';
+  try{
+    const rec=$('prec').files[0],fon=$('pfon').files[0];
+    const recorte=rec?await subirArchivo(rec):null,fondo=fon?await subirArchivo(fon):null;
+    const r=await fetch('/api/plantilla',{method:'POST',body:JSON.stringify({id:$('pid').value.trim(),descripcion:$('pdesc').value,recorte,fondo,pos:$('ppos').value,seg:$('pseg').value,sonido:$('pson').checked,subir:$('psub').checked})});
+    const j=await r.json();if(!r.ok)throw new Error(j.error);
+    $('log').textContent='✔ Plantilla guardada'+(j.subida?' y subida al repo.':' (solo en local).');listar();
+  }catch(e){$('log').className='log err';$('log').textContent=e.message}
+  $('pgo').disabled=false};
+listar();
 </script></main></body></html>
