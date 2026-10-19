@@ -203,8 +203,42 @@ const pcmMono = (f) => {
   for (let k = 0; k < n; k++) x[k] = b.readInt16LE(i + k * 2) / 32768;
   return x;
 };
-/** Busca en el audio los n-1 silencios más largos (las pausas entre frases) y devuelve {s, e} de cada una de las n frases, en segundos. */
-const limitesPorSilencio = (mp3, n) => {
+/** De las pausas candidatas (ordenadas en el tiempo) elige k que reparten el habla en tramos proporcionales al texto de cada frase; null si el reparto es inverosímil. */
+const elegirPausas = (cand, k, frases, ini, fin) => {
+  if (cand.length < k) return null;
+  if (!frases) return cand.slice().sort((p, q) => (q[1] - q[0]) - (p[1] - p[0])).slice(0, k).sort((p, q) => p[0] - q[0]);
+  const w = frases.map((f) => f.replace(/[^\p{L}\p{N}]/gu, '').length || 1), W = w.reduce((a, b) => a + b, 0);
+  const objetivo = []; let c = 0;
+  for (let i = 0; i < k; i++) { c += w[i]; objetivo.push(ini + (c / W) * (fin - ini)); }
+  // programación dinámica: coste = desviación cuadrática de cada corte (punto medio de la pausa) respecto a su posición esperada
+  const memo = new Map();
+  const mejor = (i, desde) => {
+    if (i === k) return {coste: 0, ruta: []};
+    const clave = i * 1000 + desde;
+    if (memo.has(clave)) return memo.get(clave);
+    let r = {coste: Infinity, ruta: null};
+    for (let j = desde; j <= cand.length - (k - i); j++) {
+      const m = (cand[j][0] + cand[j][1]) / 2, sub = mejor(i + 1, j + 1);
+      const coste = (m - objetivo[i]) ** 2 - (cand[j][1] - cand[j][0]) * 0.5 + sub.coste;
+      if (sub.ruta && coste < r.coste) r = {coste, ruta: [j, ...sub.ruta]};
+    }
+    memo.set(clave, r);
+    return r;
+  };
+  const r = mejor(0, 0);
+  if (!r.ruta) return null;
+  const sel = r.ruta.map((j) => cand[j]);
+  // validación: ninguna frase puede durar mucho más (ni mucho menos) de lo que pide su texto
+  const cortes = [ini, ...sel.flat(), fin];
+  const ritmo = (fin - ini - sel.reduce((a, [s, e]) => a + (e - s), 0)) / W;
+  for (let i = 0; i < frases.length; i++) {
+    const d = cortes[2 * i + 1] - cortes[2 * i], esp = w[i] * ritmo;
+    if (d > esp * 1.8 + 0.5 || d < esp * 0.45 - 0.2) return null;
+  }
+  return sel;
+};
+/** Busca en el audio las n-1 pausas entre frases (las que mejor encajan con el reparto de texto)  y devuelve {s, e} de cada una de las n frases, en segundos. */
+const limitesPorSilencio = (mp3, n, frases) => {
   const x = pcmMono(mp3), V = 160; // ventanas de 10 ms a 16 kHz
   const nv = Math.floor(x.length / V), env = new Float32Array(nv);
   let pico = 0;
@@ -223,7 +257,10 @@ const limitesPorSilencio = (mp3, n) => {
     fin = (fin + 1) / 100;
     const dentro = runs.filter(([s, e]) => s > ini + 0.05 && e < fin - 0.05);
     if (dentro.length < n - 1) continue;
-    const pausas = dentro.sort((p, q) => (q[1] - q[0]) - (p[1] - p[0])).slice(0, n - 1).sort((p, q) => p[0] - q[0]);
+    // Las pausas no son siempre las n-1 más largas (una coma o un respiro dentro de una frase puede ser más largo que el hueco): se eligen las que dejan
+    // cada frase con una duración proporcional a su texto, y si ni así encaja se descarta (se usará una voz por frase) en vez de cortar a media frase.
+    const pausas = elegirPausas(dentro.sort((p, q) => p[0] - q[0]), n - 1, frases, ini, fin);
+    if (!pausas) continue;
     const cortes = [ini, ...pausas.flat(), fin];
     return Array.from({length: n}, (_, i) => ({s: Math.max(0, cortes[2 * i] - 0.03), e: cortes[2 * i + 1] + 0.05}));
   }
@@ -259,7 +296,7 @@ if (narracion) {
   const frases = entonar(tramos.map((x) => paraVoz(x.txt)));
   let mp3, seg;
   try {
-    if (azure) { mp3 = await sintetizar(frases.map(escXml).join(`<break time="${PAUSA_AZ}ms"/>`), true); seg = limitesPorSilencio(mp3, frases.length); }
+    if (azure) { mp3 = await sintetizar(frases.map(escXml).join(`<break time="${PAUSA_AZ}ms"/>`), true); seg = limitesPorSilencio(mp3, frases.length, frases); }
     else ({mp3, seg} = await sintetizarElevenUnico(frases));
   } catch (e) { console.error(`✖ ${e.message}`); await salir(2); }
   if (!seg) { console.warn('⚠ No pude localizar las frases en la locución única: se usará una voz por frase con los tiempos fijos.'); await salir(2); }
