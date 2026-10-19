@@ -1,7 +1,7 @@
 name: Generar vídeos
 on:
   push:
-    paths: ['guiones/**', 'src/**', 'public/**']
+    paths: ['guiones/**', 'memes/**', 'src/**', 'public/**']
   workflow_dispatch:
 jobs:
   render:
@@ -20,10 +20,12 @@ jobs:
       - name: Renderizar (solo los guiones nuevos o cambiados; todos si cambia la plantilla)
         run: |
           changed=$(git diff --name-only --diff-filter=AM HEAD~1 HEAD 2>/dev/null || true)
-          if echo "$changed" | grep -qvE '^guiones/'; then ids=""; else ids=$(echo "$changed" | sed -E 's#guiones/(.*)\.json#\1#' | tr '\n' ' '); fi
+          if echo "$changed" | grep -qvE '^(guiones|memes)/'; then ids=""; else ids=$(echo "$changed" | sed -E 's#guiones/(.*)\.json#\1#; s#memes/(.*)\.json#meme-\1#' | tr '\n' ' '); fi
           echo "ids: '$ids'"
           node render.mjs $ids
       - uses: actions/upload-artifact@v4
         with:
           name: videos-tiktok
-          path: out/*.mp4
+          path: |
+            out/*.mp4
+            out/*.png

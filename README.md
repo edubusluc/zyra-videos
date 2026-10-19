@@ -22,6 +22,9 @@ También se puede lanzar a mano: Actions → Generar vídeos → Run workflow.
 
 Capturas nuevas: solo con datos de demostración (JUGADOR 1…), nunca nombres reales.
 
+## Memes
+Formato «antes / después» con la marca (imagen 1080×1350, `memes/<id>.json`: `beforeLabel`, `before`, `afterLabel`, `after`; textos de máx. 70 caracteres). El CI los deja como PNG junto a los vídeos. Son originales de Zyra: no se usan plantillas ni fotos con derechos de terceros. Generar imágenes con IA (fotos, ilustraciones) exigiría un modelo de imagen externo, normalmente de pago, y no está incluido.
+
 ## En local
     npm install
     npm run render [id]       # CHROME=/ruta/a/chrome si Remotion no descarga navegador
@@ -36,7 +39,7 @@ El guion lo escribe Claude de una de estas dos formas:
 - **Sin coste extra:** si tienes instalado Claude Code (`claude`) con la sesión de tu suscripción iniciada, la app lo usa por defecto (`claude -p`). Cuenta contra los límites de tu suscripción.
 - **Con API:** si defines `ANTHROPIC_API_KEY`, usa la API de Claude, que se factura aparte de la suscripción (de pago por uso).
 
-Escribes qué vídeo quieres y eliges dónde renderizar:
+La página es un **chat**: pídele ideas («dame 5 ideas que no hayamos hecho», «busca tendencias», «un meme para capitanes»). Si la idea está lista, la respuesta trae un botón **Crear este vídeo / meme**. Marca «Buscar en la web» para que investigue tendencias (con la suscripción usa las búsquedas del CLI; con API usa la herramienta de búsqueda web de la API, sin probar). Claude conoce lo que ya hay en `guiones/` y `memes/` para no repetirlo. Eliges dónde renderizar:
 - **CI de GitHub:** Claude escribe el guion, la app lo sube con `git push`, el CI renderiza solo ese vídeo y la app descarga el MP4 en `out/`. Hace falta que `git push` funcione en tu equipo.
 - **En local:** renderiza en tu ordenador (puede requerir `CHROME=/ruta/a/chrome`).
 

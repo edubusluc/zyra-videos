@@ -2,7 +2,7 @@
 // Uso: npm run app  ->  http://localhost:4173   (ver README para las variables de entorno)
 import {createServer} from 'node:http';
 import {execFile, execFileSync} from 'node:child_process';
-import {readFileSync, writeFileSync, mkdirSync, existsSync} from 'node:fs';
+import {readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {dirname, join} from 'node:path';
 import {tmpdir} from 'node:os';
@@ -35,13 +35,13 @@ export function validar(g, cat) {
 }
 
 /** Llama a Claude: con la API si hay ANTHROPIC_API_KEY (de pago por uso) o, si no, con el CLI `claude -p` de tu suscripción. */
-async function llamar(sistema, mensajes) {
+async function llamar(sistema, mensajes, {web = false, max = 800} = {}) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (key) {
     const r = await fetch((process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com') + '/v1/messages', {
       method: 'POST',
       headers: {'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json'},
-      body: JSON.stringify({model: MODEL, max_tokens: 800, system: sistema, messages: mensajes}),
+      body: JSON.stringify({model: MODEL, max_tokens: max, system: sistema, messages: mensajes, ...(web ? {tools: [{type: 'web_search_20250305', name: 'web_search', max_uses: 3}]} : {})}),
     });
     const j = await r.json();
     if (!r.ok) throw new Error(`API de Claude: ${j.error?.message || r.status}`);
@@ -49,10 +49,39 @@ async function llamar(sistema, mensajes) {
   }
   const prompt = `${sistema}\n\n` + mensajes.map((m) => `${m.role === 'user' ? 'Petición' : 'Tu respuesta anterior'}:\n${m.content}`).join('\n\n');
   return new Promise((res, rej) => {
-    const p = execFile('claude', ['-p', '--output-format', 'text'], {cwd: tmpdir(), timeout: 180000, maxBuffer: 1 << 20}, (e, out, err) =>
+    const p = execFile('claude', ['-p', '--output-format', 'text', ...(web ? ['--allowedTools', 'WebSearch', 'WebFetch'] : [])], {cwd: tmpdir(), timeout: 240000, maxBuffer: 1 << 20}, (e, out, err) =>
       e ? rej(new Error(e.code === 'ENOENT' ? 'No hay ANTHROPIC_API_KEY ni el CLI `claude` instalado y con sesión iniciada (ver README).' : `claude -p: ${(err || e.message).trim()}`)) : res(out));
     p.stdin.end(prompt);
   });
+}
+
+
+const LIM_MEME = {label: 14, texto: 70};
+/** Valida un meme «antes / después»; devuelve los problemas. */
+export function validarMeme(g) {
+  const e = [];
+  for (const [k, max] of [['beforeLabel', LIM_MEME.label], ['afterLabel', LIM_MEME.label], ['before', LIM_MEME.texto], ['after', LIM_MEME.texto]]) {
+    if (typeof g[k] !== 'string' || !g[k].trim() || g[k].length > max) e.push(`${k}: obligatorio y de máx. ${max} caracteres`);
+  }
+  return e;
+}
+
+const listar = (dir) => (existsSync(join(ROOT, dir)) ? readdirSync(join(ROOT, dir)).filter((f) => f.endsWith('.json')) : []).map((f) => JSON.parse(readFileSync(join(ROOT, dir, f), 'utf8')));
+
+/** Respuesta del chat de ideas: conoce lo ya creado y las capturas disponibles. */
+async function chatear(mensajes, web) {
+  const cat = catalogo();
+  const hechos = listar('guiones').map((g) => `- vídeo «${g.title}»: ${g.hook.join(' ')}`).concat(listar('memes').map((m) => `- meme: ${m.before} / ${m.after}`));
+  const sistema = `Eres el estratega de contenido de TikTok de Zyra (zyrapadel.com), una web gratuita para que capitanes de equipos de pádel organicen convocatorias en PDF, parejas, alineación sugerida, puntos SNP y estadísticas. Público: capitanes y jugadores de ligas por equipos en España. Tono: cercano, de pádel, con humor sano. Responde en español, breve y concreto.
+Lo que ya está creado (no lo repitas, propón cosas distintas):
+${hechos.join('\n') || '(nada todavía)'}
+Capturas de la app disponibles para vídeos:
+${cat.map((c) => `- ${c.src}: ${c.descripcion}`).join('\n')}
+Cuando propongas una pieza concreta lista para producir, añade AL FINAL de tu respuesta un único bloque \`\`\`json con uno de estos formatos (el usuario lo convertirá con un botón):
+vídeo: {"tipo":"video","hook":["MÁX 16 CARACTERES","MÁX 16 CARACTERES"],"title":"MÁX 23, MAYÚSCULAS","src":"<una captura>","subs":["máx 42","máx 42","máx 42"],"cta":"máx 28"}
+meme antes/después: {"tipo":"meme","beforeLabel":"ANTES","before":"máx 70 caracteres","afterLabel":"CON ZYRA","after":"máx 70 caracteres"}
+Para ideas sueltas no hace falta bloque. No inventes funciones que Zyra no tenga. Los memes son originales con la marca de Zyra; no uses plantillas ni imágenes con derechos de terceros. ${web ? 'Puedes buscar en la web tendencias o ideas si ayuda; cita de dónde sale lo que encuentres.' : ''}`;
+  return llamar(sistema, mensajes, {web, max: 1500});
 }
 
 async function pedirGuion(peticion, log) {
@@ -105,24 +134,41 @@ async function trabajo(job, {peticion, modo, borrador}) {
   const log = (m) => job.log.push(m);
   try {
     const cat = catalogo();
-    const g = borrador || (await pedirGuion(peticion, log));
-    const errores = validar(g, cat);
-    if (errores.length) throw new Error(`Guion no válido: ${errores.join('; ')}`);
-    const c = cat.find((x) => x.src === g.src);
-    const id = slug(job.id_hint || g.title) + '-' + Date.now().toString(36).slice(-4);
-    const guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, cta: g.cta};
-    job.guion = guion;
-    writeFileSync(join(ROOT, 'guiones', `${id}.json`), JSON.stringify(guion, null, 2) + '\n');
-    log(`Guion guardado en guiones/${id}.json`);
+    const meme = borrador?.tipo === 'meme';
+    let archivo, id, resultado;
+    if (meme) {
+      const errores = validarMeme(borrador);
+      if (errores.length) throw new Error(`Meme no válido: ${errores.join('; ')}`);
+      const guion = Object.fromEntries(['beforeLabel', 'before', 'afterLabel', 'after'].map((k) => [k, borrador[k]]));
+      id = slug(borrador.before) + '-' + Date.now().toString(36).slice(-4);
+      mkdirSync(join(ROOT, 'memes'), {recursive: true});
+      archivo = `memes/${id}.json`;
+      writeFileSync(join(ROOT, archivo), JSON.stringify(guion, null, 2) + '\n');
+      job.guion = guion;
+      resultado = `out/meme-${id}.png`;
+      id = `meme-${id}`;
+    } else {
+      const g = borrador || (await pedirGuion(peticion, log));
+      const errores = validar(g, cat);
+      if (errores.length) throw new Error(`Guion no válido: ${errores.join('; ')}`);
+      const c = cat.find((x) => x.src === g.src);
+      id = slug(g.title) + '-' + Date.now().toString(36).slice(-4);
+      const guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, cta: g.cta};
+      job.guion = guion;
+      archivo = `guiones/${id}.json`;
+      writeFileSync(join(ROOT, archivo), JSON.stringify(guion, null, 2) + '\n');
+      resultado = `out/${id}.mp4`;
+    }
+    log(`Guardado en ${archivo}`);
     if (modo === 'local') {
       log('Renderizando en local…');
       await sh('node', ['render.mjs', id]);
-      job.resultado = `out/${id}.mp4`;
+      job.resultado = resultado;
     } else {
-      await sh('git', ['add', `guiones/${id}.json`]);
-      await sh('git', ['commit', '-m', `Guion: ${g.title}`]);
+      await sh('git', ['add', archivo]);
+      await sh('git', ['commit', '-m', `${meme ? 'Meme' : 'Guion'}: ${id}`]);
       await sh('git', ['push']);
-      log('Guion subido; el CI empieza a renderizar.');
+      log('Subido; el CI empieza a renderizar.');
       job.resultado = await esperarCI(await sh('git', ['rev-parse', 'HEAD']), log);
     }
     job.estado = 'hecho';
@@ -138,6 +184,15 @@ const json = (res, code, obj) => { res.writeHead(code, {'content-type': 'applica
 export const server = createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/') { res.writeHead(200, {'content-type': 'text/html; charset=utf-8'}); return res.end(PAGINA); }
   if (req.method === 'GET' && req.url.startsWith('/api/job/')) { const j = jobs.get(req.url.split('/').pop()); return j ? json(res, 200, j) : json(res, 404, {error: 'no existe'}); }
+  if (req.method === 'POST' && req.url === '/api/chat') {
+    let body = '';
+    for await (const c of req) body += c;
+    try {
+      const {mensajes, web} = JSON.parse(body || '{}');
+      if (!Array.isArray(mensajes) || !mensajes.length) return json(res, 400, {error: 'Escribe un mensaje.'});
+      return json(res, 200, {respuesta: await chatear(mensajes, Boolean(web))});
+    } catch (e) { return json(res, 500, {error: e.message}); }
+  }
   if (req.method === 'POST' && req.url === '/api/generar') {
     let body = '';
     for await (const c of req) body += c;

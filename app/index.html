@@ -2,29 +2,47 @@
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Zyra Vídeos</title>
 <style>
 :root{--bg:#0A0B09;--s:#141512;--b:#30322D;--t:#F4F5F1;--m:#A4A79E;--lime:#B4F100}
-body{margin:0;background:var(--bg);color:var(--t);font:16px/1.5 system-ui,sans-serif;display:grid;place-items:start center;padding:32px 16px}
-main{width:min(680px,100%)}h1{font-size:22px;margin:0 0 4px}p{color:var(--m);margin:0 0 20px}
-textarea{width:100%;box-sizing:border-box;min-height:120px;background:var(--s);color:var(--t);border:1px solid var(--b);border-radius:12px;padding:12px;font:inherit}
-.row{display:flex;gap:12px;align-items:center;margin:12px 0;flex-wrap:wrap}select,button{font:inherit;border-radius:10px;border:1px solid var(--b);background:var(--s);color:var(--t);padding:10px 14px}
-button{background:var(--lime);color:#0A0A0A;font-weight:700;border-color:var(--lime);cursor:pointer}button:disabled{opacity:.5;cursor:wait}
-pre{background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px;white-space:pre-wrap;min-height:48px}.err{color:#ff7b7b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font:16px/1.5 system-ui,sans-serif;display:grid;place-items:start center;padding:24px 16px}
+main{width:min(760px,100%)}h1{font-size:22px;margin:0 0 4px}.sub{color:var(--m);margin:0 0 16px}
+#chat{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.msg{padding:12px 14px;border-radius:12px;border:1px solid var(--b);white-space:pre-wrap;background:var(--s)}.u{background:#1c2410;border-color:#3b4a14;align-self:flex-end;max-width:90%}
+.msg pre{margin:8px 0 0;font-size:13px;overflow:auto;background:#0d0e0c;border-radius:8px;padding:8px}
+textarea,select,button{font:inherit;border-radius:10px;border:1px solid var(--b);background:var(--s);color:var(--t);padding:10px 12px}
+textarea{width:100%;min-height:84px}.row{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap}label{color:var(--m);font-size:14px}
+button{background:var(--lime);color:#0A0A0A;font-weight:700;border-color:var(--lime);cursor:pointer}button.sec{background:var(--s);color:var(--t);border-color:var(--b)}button:disabled{opacity:.5;cursor:wait}
+.ideas{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}.log{color:var(--m);font-size:14px;margin-top:8px}.err{color:#ff7b7b}
 </style></head><body><main>
-<h1>Zyra Vídeos</h1><p>Describe el vídeo; Claude escribe el guion y se renderiza (en el CI de GitHub o en este ordenador).</p>
-<textarea id="p" placeholder="Ej.: un vídeo para mostrar cómo la alineación sugerida ayuda al capitán a elegir parejas"></textarea>
-<div class="row"><select id="m"><option value="ci">Renderizar en el CI de GitHub</option><option value="local">Renderizar en local</option></select><button id="go">Generar vídeo</button></div>
-<pre id="log">Esperando…</pre>
+<h1>Zyra Vídeos</h1><p class="sub">Habla con Claude para sacar ideas y conviértelas en vídeo o meme con un botón.</p>
+<div class="ideas">
+ <button class="sec" data-q="Dame 5 ideas de vídeos de TikTok que aún no hayamos hecho, distintas entre sí.">5 ideas nuevas</button>
+ <button class="sec" data-q="Propón 3 memes antes/después para capitanes de pádel y déjame crear el mejor.">Memes</button>
+ <button class="sec" data-q="Busca tendencias actuales de TikTok de pádel que podamos aprovechar para Zyra.">Tendencias</button>
+ <button class="sec" data-q="Dame un guion para el vídeo de la alineación sugerida con un enfoque distinto al que hicimos.">Otro guion</button>
+</div>
+<div id="chat"></div>
+<textarea id="p" placeholder="Ej.: dame ideas de guion para mostrar las estadísticas de pareja…"></textarea>
+<div class="row"><button id="send">Enviar</button>
+ <label><input type="checkbox" id="web"> Buscar en la web</label>
+ <label>Render: <select id="m"><option value="ci">CI de GitHub</option><option value="local">En local</option></select></label></div>
+<div class="log" id="log"></div>
 <script>
-const $=(i)=>document.getElementById(i);
-$('go').onclick=async()=>{
-  $('go').disabled=true;$('log').className='';$('log').textContent='Enviando…';
-  const r=await fetch('/api/generar',{method:'POST',body:JSON.stringify({peticion:$('p').value,modo:$('m').value})});
-  const j=await r.json(); if(!r.ok){$('log').className='err';$('log').textContent=j.error;$('go').disabled=false;return;}
-  const t=setInterval(async()=>{
-    const s=await (await fetch('/api/job/'+j.id)).json();
-    let txt=s.log.join('\n'); if(s.guion) txt+='\n\n'+JSON.stringify(s.guion,null,2);
-    if(s.estado==='hecho'){clearInterval(t);txt+='\n\n✔ Hecho: '+s.resultado;$('go').disabled=false}
-    if(s.estado==='error'){clearInterval(t);$('log').className='err';txt+='\n\n✖ '+s.error;$('go').disabled=false}
-    $('log').textContent=txt;
-  },1500);
-};
+const $=(i)=>document.getElementById(i);const hist=[];
+function add(rol,txt){const d=document.createElement('div');d.className='msg '+(rol==='user'?'u':'');d.textContent=txt;$('chat').appendChild(d);return d}
+function bloque(t){const m=t.match(/```json\s*([\s\S]*?)```/);if(!m)return null;try{return JSON.parse(m[1])}catch{return null}}
+async function enviar(texto){
+  if(!texto.trim())return;add('user',texto);hist.push({role:'user',content:texto});$('p').value='';$('send').disabled=true;$('log').className='log';$('log').textContent='Claude está pensando…';
+  try{
+    const r=await fetch('/api/chat',{method:'POST',body:JSON.stringify({mensajes:hist,web:$('web').checked})});const j=await r.json();if(!r.ok)throw new Error(j.error);
+    hist.push({role:'assistant',content:j.respuesta});const d=add('a',j.respuesta);const b=bloque(j.respuesta);
+    if(b&&(b.tipo==='video'||b.tipo==='meme')){const bt=document.createElement('button');bt.textContent=b.tipo==='meme'?'Crear este meme':'Crear este vídeo';bt.style.marginTop='10px';bt.onclick=()=>crear(b,bt);d.appendChild(document.createElement('br'));d.appendChild(bt)}
+    $('log').textContent='';
+  }catch(e){$('log').className='log err';$('log').textContent=e.message}$('send').disabled=false}
+async function crear(b,bt){
+  bt.disabled=true;$('log').className='log';$('log').textContent='Enviando…';
+  const r=await fetch('/api/generar',{method:'POST',body:JSON.stringify({borrador:b,modo:$('m').value})});const j=await r.json();if(!r.ok){$('log').className='log err';$('log').textContent=j.error;bt.disabled=false;return}
+  const t=setInterval(async()=>{const s=await (await fetch('/api/job/'+j.id)).json();$('log').textContent=s.log.join('\n');
+    if(s.estado==='hecho'){clearInterval(t);$('log').textContent+='\n✔ Hecho: '+s.resultado;bt.disabled=false}
+    if(s.estado==='error'){clearInterval(t);$('log').className='log err';$('log').textContent+='\n✖ '+s.error;bt.disabled=false}},1500)}
+$('send').onclick=()=>enviar($('p').value);$('p').onkeydown=(e)=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))enviar($('p').value)};
+document.querySelectorAll('[data-q]').forEach((b)=>b.onclick=()=>enviar(b.dataset.q));
 </script></main></body></html>
