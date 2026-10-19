@@ -90,7 +90,8 @@ const modelo = process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2';
 
 const video = `out/${id}.mp4`;
 const guion = `out/${id}.voz.json`;
-for (const f of [video, guion]) if (!existsSync(f)) { console.error(`No existe ${f}. Genera el vídeo con "subtitulos": false o "voz": true en su JSON.`); await salir(1); }
+const narracion = args.includes('--narracion'); // solo la locución única y sus tiempos (antes de renderizar el vídeo)
+for (const f of narracion ? [guion] : [video, guion]) if (!existsSync(f)) { console.error(`No existe ${f}. Genera el vídeo con "subtitulos": false o "voz": true en su JSON.`); await salir(1); }
 const tramos = JSON.parse(readFileSync(guion, 'utf8')).filter((x) => x.leer !== false);
 
 // ffmpeg del sistema; si no hay, el que trae Remotion (sin ffprobe: la duración se lee de la salida de ffmpeg -i).
@@ -140,16 +141,17 @@ const rate = process.env.AZURE_SPEECH_RATE || (!hd && perfilAz === 'deportivo' ?
 const pitch = process.env.AZURE_SPEECH_PITCH || (!hd && perfilAz === 'deportivo' ? '+1st' : '');
 const estiloAz = hd ? '' : process.env.AZURE_SPEECH_STYLE || '';
 // nivel 0: estilo + velocidad/tono; 1: solo velocidad/tono; 2: texto plano (por si la voz rechaza el SSML)
-const ssmlAzure = (texto, nivel = 0) => {
+const ssmlAzure = (texto, nivel = 0, xml = false) => { // xml: el texto ya es XML (varias frases con <break/>)
+  const cuerpoTxt = xml ? texto : escXml(texto);
   const prosodia = nivel < 2 && (rate || pitch);
-  const cuerpo = prosodia ? `<prosody${rate ? ` rate="${escXml(rate)}"` : ''}${pitch ? ` pitch="${escXml(pitch)}"` : ''}>${escXml(texto)}</prosody>` : escXml(texto);
+  const cuerpo = prosodia ? `<prosody${rate ? ` rate="${escXml(rate)}"` : ''}${pitch ? ` pitch="${escXml(pitch)}"` : ''}>${cuerpoTxt}</prosody>` : cuerpoTxt;
   const estilo = nivel === 0 && estiloAz;
   return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-ES"><voice name="${voice}">${estilo ? `<mstts:express-as style="${escXml(estiloAz)}"${process.env.AZURE_SPEECH_STYLE_DEGREE ? ` styledegree="${escXml(process.env.AZURE_SPEECH_STYLE_DEGREE)}"` : ''}>${cuerpo}</mstts:express-as>` : cuerpo}</voice></speak>`;
 };
 let nivelAz = 0; // baja una vez si Azure rechaza el SSML y se mantiene para el resto de frases
-const sintetizarAzure = async (texto) => {
+const sintetizarAzure = async (texto, xml = false) => {
   for (;;) {
-    const r = await fetch(process.env.AZURE_SPEECH_URL || `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {method: 'POST', headers: {'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-96kbitrate-mono-mp3', 'User-Agent': 'zyra-videos'}, body: ssmlAzure(texto, nivelAz)});
+    const r = await fetch(process.env.AZURE_SPEECH_URL || `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {method: 'POST', headers: {'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-96kbitrate-mono-mp3', 'User-Agent': 'zyra-videos'}, body: ssmlAzure(texto, nivelAz, xml)});
     if (r.ok) return Buffer.from(await r.arrayBuffer());
     const cuerpo = await r.text();
     if (r.status === 401 || r.status === 403) throw new Error(`Azure Speech ${r.status}: clave o región incorrectas. Revisa AZURE_SPEECH_KEY y AZURE_SPEECH_REGION (la región de tu recurso, p. ej. westeurope).`);
@@ -161,11 +163,11 @@ const sintetizarAzure = async (texto) => {
     throw new Error(`Azure Speech ${r.status}: ${cuerpo.slice(0, 300)}`);
   }
 };
-const sintetizar = async (texto) => {
-  const hash = createHash('sha1').update(azure ? `azure|${voice}|${rate}|${pitch}|${estiloAz}|${process.env.AZURE_SPEECH_STYLE_DEGREE}|${nivelAz}|${texto}` : `${voice}|${modelo}|${JSON.stringify(ajustes)}|${texto}`).digest('hex').slice(0, 16);
+const sintetizar = async (texto, xml = false) => {
+  const hash = createHash('sha1').update(azure ? `azure|${xml}|${voice}|${rate}|${pitch}|${estiloAz}|${process.env.AZURE_SPEECH_STYLE_DEGREE}|${nivelAz}|${texto}` : `${voice}|${modelo}|${JSON.stringify(ajustes)}|${texto}`).digest('hex').slice(0, 16);
   const f = `out/.voz-cache/${hash}.mp3`; // misma frase + misma voz = sin gastar caracteres otra vez
   if (existsSync(f)) return f;
-  if (azure) { writeFileSync(f, await sintetizarAzure(texto)); return f; }
+  if (azure) { writeFileSync(f, await sintetizarAzure(texto, xml)); return f; }
   const r = await fetch(`${base}/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {method: 'POST', headers: {'xi-api-key': key, 'content-type': 'application/json'}, body: JSON.stringify({text: texto, model_id: modelo, ...(/turbo|flash|v3/.test(modelo) ? {language_code: 'es'} : {}), ...(Object.keys(ajustes).length ? {voice_settings: ajustes} : {})})});
   if (!r.ok) {
     const cuerpo = await r.text();
@@ -177,12 +179,119 @@ const sintetizar = async (texto) => {
   return f;
 };
 
+// ---- Locución única (--narracion) ----
+// Todo el guion hablado se pide de una sola vez (la entonación fluye de una frase a otra, como un locutor), con pausas marcadas entre frases;
+// luego se localizan las frases en ese audio y se colocan en la línea de tiempo con huecos cortos y un único ajuste de velocidad para todas.
+// Los tiempos resultantes (out/<id>.tiempos.json) los usa render.mjs para que subtítulos y cortes sigan a la voz, y este script para mezclar.
+const PAUSA_AZ = 650; // ms entre frases dentro de la locución única (se recortan después)
+const pcmMono = (f) => {
+  const b = spawnSync(FF, ['-v', 'error', '-i', f, '-vn', '-ac', '1', '-ar', '16000', '-f', 'wav', '-'], {maxBuffer: 1 << 28}).stdout;
+  const i = b && b.length ? b.indexOf('data') + 8 : 0;
+  const n = i >= 8 ? Math.floor((b.length - i) / 2) : 0;
+  const x = new Float32Array(n);
+  for (let k = 0; k < n; k++) x[k] = b.readInt16LE(i + k * 2) / 32768;
+  return x;
+};
+/** Busca en el audio los n-1 silencios más largos (las pausas entre frases) y devuelve {s, e} de cada una de las n frases, en segundos. */
+const limitesPorSilencio = (mp3, n) => {
+  const x = pcmMono(mp3), V = 160; // ventanas de 10 ms a 16 kHz
+  const nv = Math.floor(x.length / V), env = new Float32Array(nv);
+  let pico = 0;
+  for (let v = 0; v < nv; v++) { let q = 0; for (let k = 0; k < V; k++) q += x[v * V + k] ** 2; env[v] = Math.sqrt(q / V); pico = Math.max(pico, env[v]); }
+  if (!nv || pico < 0.003) return null;
+  for (const [rel, min] of [[0.02, 0.3], [0.05, 0.25], [0.1, 0.2]]) {
+    const thr = pico * rel, runs = [];
+    let a = -1;
+    for (let v = 0; v <= nv; v++) {
+      const callado = v < nv && env[v] < thr;
+      if (callado && a < 0) a = v;
+      if (!callado && a >= 0) { if ((v - a) / 100 >= min) runs.push([a / 100, v / 100]); a = -1; }
+    }
+    const ini = env.findIndex((e) => e >= thr) / 100;
+    let fin = nv - 1; while (fin > 0 && env[fin] < thr) fin--;
+    fin = (fin + 1) / 100;
+    const dentro = runs.filter(([s, e]) => s > ini + 0.05 && e < fin - 0.05);
+    if (dentro.length < n - 1) continue;
+    const pausas = dentro.sort((p, q) => (q[1] - q[0]) - (p[1] - p[0])).slice(0, n - 1).sort((p, q) => p[0] - q[0]);
+    const cortes = [ini, ...pausas.flat(), fin];
+    return Array.from({length: n}, (_, i) => ({s: Math.max(0, cortes[2 * i] - 0.03), e: cortes[2 * i + 1] + 0.05}));
+  }
+  return null;
+};
+/** ElevenLabs con marcas de tiempo por carácter: las frases se localizan exactamente, sin buscar silencios. */
+const sintetizarElevenUnico = async (frases) => {
+  const texto = frases.join(modelo.includes('v3') ? '\n\n' : ' <break time="0.6s" /> ');
+  const hash = createHash('sha1').update(`eleven-unico|${voice}|${modelo}|${JSON.stringify(ajustes)}|${texto}`).digest('hex').slice(0, 16);
+  const f = `out/.voz-cache/${hash}.mp3`, fj = `${f}.json`;
+  if (!existsSync(fj) || !existsSync(f)) {
+    const r = await fetch(`${base}/v1/text-to-speech/${voice}/with-timestamps?output_format=mp3_44100_128`, {method: 'POST', headers: {'xi-api-key': key, 'content-type': 'application/json'}, body: JSON.stringify({text: texto, model_id: modelo, ...(/turbo|flash|v3/.test(modelo) ? {language_code: 'es'} : {}), ...(Object.keys(ajustes).length ? {voice_settings: ajustes} : {})})});
+    if (!r.ok) throw new Error(`ElevenLabs ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    const j = await r.json();
+    writeFileSync(f, Buffer.from(j.audio_base64, 'base64'));
+    writeFileSync(fj, JSON.stringify(j.alignment || j.normalized_alignment || null));
+  }
+  const al = JSON.parse(readFileSync(fj, 'utf8'));
+  if (!al?.characters) return {mp3: f, seg: null};
+  const txt = al.characters.join('');
+  let pos = 0;
+  const seg = [];
+  for (const fr of frases) {
+    const i = txt.indexOf(fr, pos);
+    if (i < 0) return {mp3: f, seg: null};
+    const j = i + fr.length - 1;
+    seg.push({s: Math.max(0, al.character_start_times_seconds[i] - 0.03), e: al.character_end_times_seconds[j] + 0.05});
+    pos = j + 1;
+  }
+  return {mp3: f, seg};
+};
+if (narracion) {
+  const frases = tramos.map((x) => paraVoz(x.txt));
+  let mp3, seg;
+  try {
+    if (azure) { mp3 = await sintetizar(frases.map(escXml).join(`<break time="${PAUSA_AZ}ms"/>`), true); seg = limitesPorSilencio(mp3, frases.length); }
+    else ({mp3, seg} = await sintetizarElevenUnico(frases));
+  } catch (e) { console.error(`✖ ${e.message}`); await salir(2); }
+  if (!seg) { console.warn('⚠ No pude localizar las frases en la locución única: se usará una voz por frase con los tiempos fijos.'); await salir(2); }
+  seg.forEach((x, i) => { x.dur = x.e - x.s; x.txt = frases[i]; });
+  const GAPS = seg.map((_, i) => (i === 0 ? 0.55 : i === seg.length - 2 ? 0.35 : 0.28)); // tras el gancho cabe el título; antes del cierre, un respiro
+  const FIN = 14.7; // objetivo: 15 s. Si las frases no caben ni acelerando algo (máx. ×1,12), el vídeo se alarga hasta 18 s
+  const MAX_FACTOR = 1.12, MAX_SEG = 18;
+  const colocar = (fct) => { let c = 0.1; return seg.map((x, i) => { const ini = c; c += x.dur / fct + GAPS[i]; return ini; }); };
+  let factor = 1;
+  for (let k = 0; k < 4; k++) {
+    const ini = colocar(factor), fin = ini.at(-1) + seg.at(-1).dur / factor;
+    if (fin <= FIN || factor >= MAX_FACTOR) break;
+    factor = Math.min(MAX_FACTOR, factor * (fin / FIN));
+  }
+  const ini = colocar(factor);
+  const fin = ini.at(-1) + seg.at(-1).dur / factor;
+  const frames = Math.min(MAX_SEG * 30, Math.max(450, Math.ceil((fin + 0.8) * 30))); // duración del vídeo: 15 s o lo que pida la voz (con 0,8 s de cierre)
+  if (fin + 0.8 > MAX_SEG) console.warn(`⚠ La locución acaba a los ${fin.toFixed(1)} s y no cabe en ${MAX_SEG} s: acorta los textos (locucion).`);
+  // Fotogramas (30 fps) para src/Feature.tsx: fin del gancho, entrada de cada subtítulo (3 fotogramas antes de la voz) y entrada del cierre.
+  const f30 = (t) => Math.round(t * 30);
+  const hookEnd = Math.max(62, Math.ceil((ini[0] + seg[0].dur / factor + 0.12) * 30));
+  const subs = [];
+  for (let i = 1; i < seg.length - 1; i++) subs.push(Math.max(i === 1 ? hookEnd + 16 : subs[i - 2] + 20, f30(ini[i]) - 3));
+  const cta = Math.min(frames - 45, Math.max(subs.at(-1) + 20, f30(ini.at(-1)) - 4));
+  seg.forEach((x, i) => { x.ini = +ini[i].toFixed(3); });
+  writeFileSync(`out/${id}.tiempos.json`, JSON.stringify({mp3, factor: +factor.toFixed(4), frases: seg, hookEnd, subs, cta, frames, fin: +fin.toFixed(2)}, null, 2));
+  seg.forEach((x) => console.log(`✓ ${x.ini.toFixed(1)} s · ${(x.dur / factor).toFixed(1)} s · ${x.txt}`));
+  console.log(`Locución única: ${fin.toFixed(1)} s${factor > 1.001 ? ` (×${factor.toFixed(2)} en todas las frases)` : ''} → gancho ${hookEnd}, subtítulos ${subs.join('/')}, cierre ${cta}, vídeo de ${frames} (fotogramas)`);
+  await salir(0);
+}
+
 const MARGEN = 0.15; // aire al final de cada tramo
 const HUECO_MIN = 0.8;
 const MAX_ATEMPO = 1.3; // más rápido suena a ardilla
 const MAX_ATEMPO_FINAL = 1.5; // solo el último tramo, que no puede pasar del final del vídeo
 const clips = [];
 const total = duracion(video);
+const tiempos = existsSync(`out/${id}.tiempos.json`) ? JSON.parse(readFileSync(`out/${id}.tiempos.json`, 'utf8')) : null;
+if (tiempos && existsSync(tiempos.mp3)) {
+  // Locución única ya generada: cada frase se recorta de la misma toma y se coloca donde marcan los tiempos (con una sola velocidad común).
+  for (const x of tiempos.frases) clips.push({mp3: tiempos.mp3, ss: x.s, ee: x.e, ini: x.ini, atempo: tiempos.factor, dur: x.dur / tiempos.factor + 0.05, recorta: false});
+  console.log(`Voz: locución única (${tiempos.frases.length} frases${tiempos.factor > 1.001 ? `, ×${tiempos.factor}` : ''}), tiempos de out/${id}.tiempos.json`);
+} else {
 let libre = 0; // hasta cuándo está ocupada la voz: una frase nunca se corta, la siguiente espera a que acabe
 for (const [k, x] of tramos.entries()) {
   const mp3 = await sintetizar(paraVoz(x.txt)).catch(async (e) => { console.error(`✖ ${e.message}`); await salir(1); });
@@ -201,6 +310,7 @@ for (const [k, x] of tramos.entries()) {
   libre = ini + dur + 0.12;
   console.log(`✓ ${ini.toFixed(1)} s · ${d.toFixed(1)} s${atempo > 1.001 ? ` (×${atempo.toFixed(2)})` : ''} · ${x.txt}`);
 }
+}
 
 // Música: --musica, o la primera de public/musica/. Sin música si no hay o con --sin-musica.
 const dirMus = 'public/musica';
@@ -213,18 +323,18 @@ const sfx = [];
 {
   const v = existsSync('src/scripts.json') ? JSON.parse(readFileSync('src/scripts.json', 'utf8')).find((x) => x.id === id) : null;
   if (v && v.estilo !== 'base' && v.subtitulos !== false && !args.includes('--sin-sfx') && existsSync('public/sfx/whoosh.wav')) {
-    const ini = v.subs.map((_, i) => Math.round(86 + (i * 274) / v.subs.length) / 30);
-    sfx.push({f: 'whoosh', t: 70 / 30 - 0.12, vol: 0.5});
+    const ini = tiempos ? tiempos.subs.map((f) => f / 30) : v.subs.map((_, i) => Math.round(86 + (i * 274) / v.subs.length) / 30);
+    sfx.push({f: 'whoosh', t: (tiempos ? tiempos.hookEnd : 70) / 30 - 0.12, vol: 0.5});
     ini.forEach((t, i) => {
       if (i % 2 === 1) sfx.push({f: 'impacto', t, vol: 0.55}, {f: 'whoosh', t: t - 0.1, vol: 0.4});
       else if (i > 0) sfx.push({f: 'pop', t, vol: 0.5});
     });
-    sfx.push({f: 'whoosh', t: 360 / 30 - 0.12, vol: 0.5});
+    sfx.push({f: 'whoosh', t: (tiempos ? tiempos.cta : 360) / 30 - 0.12, vol: 0.5});
     console.log(`Efectos de sonido (estilo creador): ${sfx.length}`);
   }
 }
 const entradas = ['-i', video, ...clips.flatMap((c) => ['-i', c.mp3]), ...(musica ? ['-stream_loop', '-1', '-i', musica] : []), ...sfx.flatMap((e) => ['-i', `public/sfx/${e.f}.wav`])];
-const filtros = clips.map((c, i) => `[${i + 1}:a]${c.atempo > 1.001 ? `atempo=${c.atempo.toFixed(4)},` : ''}atrim=0:${c.dur.toFixed(3)},${c.recorta ? `volume='clip((${c.dur.toFixed(3)}-t)/0.15,0,1)':eval=frame,` : ''}adelay=${Math.round(c.ini * 1000)}|${Math.round(c.ini * 1000)}[v${i}]`);
+const filtros = clips.map((c, i) => `[${i + 1}:a]${c.ss !== undefined ? `atrim=${c.ss.toFixed(3)}:${c.ee.toFixed(3)},asetpts=PTS-STARTPTS,` : ''}${c.atempo > 1.001 ? `atempo=${c.atempo.toFixed(4)},` : ''}atrim=0:${c.dur.toFixed(3)},${c.recorta ? `volume='clip((${c.dur.toFixed(3)}-t)/0.15,0,1)':eval=frame,` : ''}adelay=${Math.round(c.ini * 1000)}|${Math.round(c.ini * 1000)}[v${i}]`);
 const vozs = clips.map((_, i) => `[v${i}]`).join('');
 const base0 = clips.length + 1 + (musica ? 1 : 0);
 sfx.forEach((e, i) => { const ms = Math.max(0, Math.round(e.t * 1000)); filtros.push(`[${base0 + i}:a]volume=${e.vol},adelay=${ms}|${ms}[s${i}]`); });

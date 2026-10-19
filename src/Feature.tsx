@@ -10,13 +10,15 @@ import {C, FONT, SAFE} from './styles/brand';
 
 export const FPS = 30;
 export const DURATION = 450; // 15 s
-const HOOK_END = 70;
-const CTA_FROM = 360;
+const HOOK_END_FIJO = 70;
+const CTA_FROM_FIJO = 360;
 const PH_W = 680;
 const PH_H = 900;
 
 /** Plantilla «función en 15 s»: gancho → móvil con captura real y subtítulos → cierre con logo y URL. */
-export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, box, subs, cta, subtitulos = true, estilo = 'creador'}) => {
+export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, box, subs, cta, subtitulos = true, estilo = 'creador', tiempos}) => {
+  const HOOK_END = tiempos?.hookEnd ?? HOOK_END_FIJO;
+  const CTA_FROM = tiempos?.cta ?? CTA_FROM_FIJO;
   const creador = estilo === 'creador';
   useBrandFonts();
   const f = useCurrentFrame();
@@ -29,7 +31,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   const sc = interpolate(f, [HOOK_END, CTA_FROM], scroll, {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const pulse = 0.55 + 0.45 * Math.sin(f / 5);
   // 3 a 5 subtítulos repartidos a partes iguales entre el título y el cierre (la misma cuenta la hace render.mjs para el guion de voz).
-  const subStart = subs.map((_, i) => Math.round(86 + (i * (CTA_FROM - 86)) / subs.length));
+  const subStart = tiempos && tiempos.subs.length === subs.length ? tiempos.subs : subs.map((_, i) => Math.round(86 + (i * (CTA_FROM - 86)) / subs.length));
   const subIdx = subStart.filter((t) => f >= t).length - 1 < 0 ? 0 : subStart.filter((t) => f >= t).length - 1;
   const subAt = subStart[subIdx];
   // Cámara 3D suave: entra girando y, en cada beat, el móvil pasa a otro ángulo (interpolación continua, sin golpes).
@@ -52,7 +54,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
     <AbsoluteFill>
       {creador ? <BlurBg src={src} /> : <LiveBg />}
       {/* Barra de progreso */}
-      <div style={{position: 'absolute', left: 0, top: 0, height: 8, width: `${(f / DURATION) * 100}%`, background: C.lime, boxShadow: `0 0 20px ${C.lime}`, zIndex: 5}} />
+      <div style={{position: 'absolute', left: 0, top: 0, height: 8, width: `${(f / (tiempos?.frames ?? DURATION)) * 100}%`, background: C.lime, boxShadow: `0 0 20px ${C.lime}`, zIndex: 5}} />
       {/* Gancho */}
       <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: 700, opacity: 1 - hookOut, transform: `scale(${0.85 + 0.15 * hookPop})`, transformOrigin: '0 50%'}}>
         <Line text={hook[0]} at={2} out={HOOK_END} size={64} from="left" />

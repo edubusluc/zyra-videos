@@ -186,3 +186,13 @@ Es el estilo **por defecto** de todos los vídeos con captura (para usar el clá
 
 - La IA marca la palabra clave de cada subtítulo con asteriscos (`Convoca en *10 segundos*`); sin asteriscos se usa la última palabra. Los asteriscos no se muestran ni se leen.
 - **Efectos de sonido** (en los vídeos con voz): whoosh al salir del gancho y antes del cierre, impacto + whoosh en cada tarjeta y pop en los demás cambios. Están sintetizados en `public/sfx/*.wav` (`node scripts/sfx.mjs` los regenera); `--sin-sfx` en `scripts/voz.mjs` los quita.
+
+## Locución única (la voz manda, el vídeo la sigue)
+
+Con `"voz": true`, `render.mjs` pide **antes de renderizar** todo el guion hablado (gancho, locución de cada subtítulo y cierre) **en una sola toma**, con una pausa entre frases. Así la entonación fluye como la de un locutor, en vez de sonar como audios sueltos. Después `scripts/voz.mjs --narracion`:
+
+- localiza cada frase en el audio (Azure: por los silencios; ElevenLabs: por las marcas de tiempo por carácter) y guarda `out/<id>.tiempos.json`;
+- coloca las frases con huecos cortos y **una única velocidad común** (máx. ×1,12), sin acelerar frases sueltas ni cortarlas;
+- si no caben en 15 s, **alarga el vídeo** hasta 18 s en vez de apretar más la voz (avisa si tampoco cabe: acorta la `locucion`).
+
+El vídeo usa esos tiempos (`tiempos` en `src/data.ts`) para el fin del gancho, la entrada de cada subtítulo y el cierre, y los efectos de sonido caen en esos mismos cortes. Sin credenciales o si algo falla, vuelve al sistema anterior (tiempos fijos y una voz por frase). El CI pasa ahora las variables de voz también al paso de renderizado.

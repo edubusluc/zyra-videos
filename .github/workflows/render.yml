@@ -7,6 +7,23 @@ jobs:
   render:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      # La voz se pide antes de renderizar (locución única: los subtítulos siguen a la voz), así que el render también necesita las credenciales.
+      VOZ_PROVEEDOR: ${{ secrets.VOZ_PROVEEDOR || vars.VOZ_PROVEEDOR }}
+      AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION || vars.AZURE_SPEECH_REGION }}
+      AZURE_SPEECH_VOICE: ${{ secrets.AZURE_SPEECH_VOICE || vars.AZURE_SPEECH_VOICE }}
+      AZURE_SPEECH_RATE: ${{ secrets.AZURE_SPEECH_RATE || vars.AZURE_SPEECH_RATE }}
+      AZURE_SPEECH_PITCH: ${{ secrets.AZURE_SPEECH_PITCH || vars.AZURE_SPEECH_PITCH }}
+      AZURE_SPEECH_STYLE: ${{ secrets.AZURE_SPEECH_STYLE || vars.AZURE_SPEECH_STYLE }}
+      AZURE_SPEECH_STYLE_DEGREE: ${{ secrets.AZURE_SPEECH_STYLE_DEGREE || vars.AZURE_SPEECH_STYLE_DEGREE }}
+      AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
+      ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+      ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+      ELEVENLABS_MODEL: ${{ vars.ELEVENLABS_MODEL }}
+      ELEVENLABS_STABILITY: ${{ vars.ELEVENLABS_STABILITY }}
+      ELEVENLABS_SIMILARITY: ${{ vars.ELEVENLABS_SIMILARITY }}
+      ELEVENLABS_STYLE: ${{ vars.ELEVENLABS_STYLE }}
+      ELEVENLABS_SPEED: ${{ vars.ELEVENLABS_SPEED }}
     steps:
       - uses: actions/checkout@v4
         with:

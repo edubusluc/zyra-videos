@@ -1,8 +1,8 @@
 // Une guiones/*.json (vídeos) memes/*.json (memes) y reacciones/*.json (reacciones) y renderiza out/<id>.mp4, out/meme-<id>.png y out/reaccion-<id>.mp4.
 // Uso: npm run render [id…]   (los memes se llaman meme-<nombre>)
 // Localmente puedes fijar CHROME=/ruta/a/chrome; en CI Remotion descarga su navegador.
-import {execFileSync} from 'node:child_process';
-import {existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync} from 'node:fs';
+import {execFileSync, spawnSync} from 'node:child_process';
+import {existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync} from 'node:fs';
 
 const ids = process.argv.slice(2);
 const leer = (dir) => (existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.json')).sort() : []).map((f) => ({id: f.replace(/\.json$/, ''), ...JSON.parse(readFileSync(`${dir}/${f}`, 'utf8'))}));
@@ -25,12 +25,23 @@ const guionVoz = (nombre, tramos) => {
 };
 const quiere = (id) => !ids.length || ids.includes(id);
 for (const v of videos) if (quiere(v.id)) {
-  remotion(['render', v.id, `out/${v.id}.mp4`, '--codec=h264', ...browser]);
-  if (v.subtitulos === false || v.voz) {
-    // Mismo reparto que src/Feature.tsx: los subtítulos van de 86 a 360 fotogramas a partes iguales.
+  const conVoz = v.subtitulos === false || v.voz;
+  if (conVoz) {
+    // Mismo reparto que src/Feature.tsx (sin locución única): los subtítulos van de 86 a 360 fotogramas a partes iguales.
     const ini = v.subs.map((_, i) => Math.round(86 + (i * 274) / v.subs.length) / 30);
     guionVoz(v.id, [linea(0.1, 2.3, `${v.hook[0]} ${v.hook[1]}`), linea(2.3, 2.9, `(título en pantalla: ${v.title})`, false), ...v.subs.map((x, i) => linea(ini[i], ini[i + 1] ?? 12, (v.locucion?.[i] || x).replace(/\*/g, ''))), linea(12, 15, v.cta)]);
   }
+  if (v.voz) {
+    // Con voz: primero la locución única; los subtítulos y cortes del vídeo siguen a la voz. Si no hay credenciales o falla, tiempos fijos y una voz por frase (scripts/voz.mjs).
+    rmSync(`out/${v.id}.tiempos.json`, {force: true});
+    spawnSync(process.execPath, ['scripts/voz.mjs', v.id, '--narracion'], {stdio: 'inherit'});
+    if (existsSync(`out/${v.id}.tiempos.json`)) {
+      const {hookEnd, subs, cta, frames} = JSON.parse(readFileSync(`out/${v.id}.tiempos.json`, 'utf8'));
+      v.tiempos = {hookEnd, subs, cta, frames};
+    } else delete v.tiempos;
+    writeFileSync('src/scripts.json', JSON.stringify(videos, null, 2));
+  }
+  remotion(['render', v.id, `out/${v.id}.mp4`, '--codec=h264', ...browser]);
 }
 for (const r of reacciones) if (quiere(`reaccion-${r.id}`)) {
   remotion(['render', `reaccion-${r.id}`, `out/reaccion-${r.id}.mp4`, '--codec=h264', '--image-format=png', ...browser]);
