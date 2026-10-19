@@ -19,6 +19,7 @@ if (args.includes('--voces')) { // lista las voces de tu cuenta (las «premade»
   if (!r.ok) { console.error(avisoPermisos(r.status, await r.text())); process.exit(1); }
   for (const v of (await r.json()).voices) console.log(`${v.category === 'premade' ? '★ premade ' : '          '} ${v.voice_id}  ${v.name}${v.labels?.language ? ' · ' + v.labels.language : ''}${v.labels?.accent ? ' · ' + v.labels.accent : ''}${v.labels?.gender ? ' · ' + v.labels.gender : ''}`);
   console.log('\nCopia el ID de una voz premade en ELEVENLABS_VOICE_ID (.env).');
+  await new Promise((r) => setTimeout(r, 300)); // evita el «Assertion failed» de Node en Windows al salir con conexiones abiertas
   process.exit(0);
 }
 const id = args.find((a, i) => !a.startsWith('--') && !(i && ['--musica', '--voz'].includes(args[i - 1])));
@@ -95,8 +96,16 @@ const vozs = clips.map((_, i) => `[v${i}]`).join('');
 filtros.push(`${vozs}amix=inputs=${clips.length}:normalize=0[voz]`);
 if (musica) {
   const m = clips.length + 1;
-  // La música sube y baja con fundidos y se agacha cuando habla la voz (sidechain).
-  filtros.push(`[${m}:a]volume=0.35,afade=t=in:d=1,afade=t=out:st=${(total - 1.5).toFixed(2)}:d=1.5[mus]`, `[voz]asplit[voz1][voz2]`, `[mus][voz2]sidechaincompress=threshold=0.02:ratio=8:attack=30:release=500[duck]`, `[voz1][duck]amix=inputs=2:normalize=0[a]`);
+  // Sin filtros avanzados (sidechain, afade, asplit), que faltan en el ffmpeg mínimo de Remotion:
+  // el volumen de la música es una expresión del tiempo. Baja cuando habla la voz (rampas suaves) y tiene fundido de entrada y salida.
+  const rampa = (c) => `clip((t-${(c.ini - 0.25).toFixed(2)})/0.25,0,1)*clip((${(c.ini + c.dur + 0.35).toFixed(2)}-t)/0.35,0,1)`;
+  const duck = clips.map(rampa).reduce((acc, e) => (acc ? `max(${acc},${e})` : e), '');
+  const base = 0.3, bajo = 0.08;
+  const ganancia = `(${base}-${(base - bajo).toFixed(3)}*(${duck || '0'}))*clip(t/1,0,1)*clip((${total.toFixed(2)}-t)/1.5,0,1)`;
+  filtros.push(`[${m}:a]volume='${ganancia}':eval=frame[mus]`, `[voz][mus]amix=inputs=2:normalize=0:duration=first[a]`);
 } else filtros.push('[voz]anull[a]');
 execFileSync(FF, ['-y', '-loglevel', 'error', ...entradas, '-filter_complex', filtros.join(';'), '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-t', total.toFixed(3), `out/${id}.final.mp4`], {stdio: 'inherit'});
-console.log(`Listo: out/${id}.final.mp4`);
+const tieneAudio = /Audio:/.test(spawnSync(FF, ['-i', `out/${id}.final.mp4`], {encoding: 'utf8'}).stderr || '');
+if (!tieneAudio) { console.error('✖ El vídeo final no tiene pista de audio: algo falló al mezclar.'); process.exit(1); }
+console.log(`Listo: out/${id}.final.mp4 (con voz${musica ? ' y música' : ''})`);
+await new Promise((r) => setTimeout(r, 300)); // deja cerrar las conexiones: en Windows, salir de golpe tras fetch provoca «Assertion failed … async.c»

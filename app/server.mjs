@@ -3,7 +3,7 @@
 import '../scripts/env.mjs';
 import {createServer} from 'node:http';
 import {execFile, execFileSync, spawn} from 'node:child_process';
-import {readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync} from 'node:fs';
+import {readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, copyFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {dirname, join} from 'node:path';
 import {tmpdir} from 'node:os';
@@ -190,7 +190,6 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
     const cat = catalogo();
     const tipo = borrador?.tipo || 'video';
     const items = []; // {archivo, id, resultado}
-    if (voz && modo !== 'local') throw new Error('La voz se añade en local (usa «Render: En local»): la clave de ElevenLabs no se sube al CI.');
     const sin = voz ? {voz: true, ...(subtitulos === false ? {subtitulos: false} : {})} : subtitulos === false || borrador?.subtitulos === false ? {subtitulos: false} : {}; // sin subtítulos → render.mjs deja out/<id>.voz.txt
     const guardar = (dir, base, obj, prefijo, ext) => {
       const id = slug(base) + '-' + Date.now().toString(36).slice(-4) + (items.length || '');
@@ -228,6 +227,23 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       guardar('guiones', g.title, job.guion, '', 'mp4');
     }
     log(`Guardado: ${items.map((i) => i.archivo).join(', ')}`);
+    // Una carpeta por prompt: salidas/<fecha>-<texto>/ con el vídeo final, el vídeo sin audio, el guion de voz y el JSON.
+    const organizar = () => {
+      const d = new Date(), z = (x) => String(x).padStart(2, '0');
+      const base = slug(String(peticion || borrador?.caption || borrador?.title || borrador?.before || items[0].id)).slice(0, 40);
+      const carpeta = `salidas/${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}-${base}`;
+      mkdirSync(join(ROOT, carpeta), {recursive: true});
+      const copiados = [];
+      for (const i of items) {
+        const nom = i.id;
+        for (const [origen, destino] of [[`out/${nom}.final.mp4`, `${nom}.FINAL-con-voz.mp4`], [`out/${nom}.mp4`, voz ? `${nom}.sin-audio.mp4` : `${nom}.mp4`], [`out/${nom}.png`, `${nom}.png`], [`out/${nom}.voz.txt`, `${nom}.voz.txt`], [i.archivo, `${nom}.json`]]) {
+          if (existsSync(join(ROOT, origen))) { copyFileSync(join(ROOT, origen), join(ROOT, carpeta, destino)); copiados.push(destino); }
+        }
+      }
+      log(copiados.length ? `Carpeta: ${carpeta}/ → ${copiados.join(', ')}` : `No encontré los vídeos en out/ (si el ZIP del CI no se descomprimió, hazlo a mano en out/); carpeta vacía: ${carpeta}/`);
+      job.carpeta = carpeta;
+      job.resultado = `${carpeta}/` + (voz ? ' (abre el archivo «FINAL-con-voz.mp4»)' : '');
+    };
     if (modo === 'local') {
       log('Renderizando en local…');
       // Progreso: el render ocupa hasta el 80 % (o el 100 % sin voz); cada vídeo con voz suma su parte del resto.
@@ -248,12 +264,18 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
         let k = 0;
         for (const i of items) {
           fase = `Voz y música (${k + 1} de ${n})…`; poner(0.8 + (0.2 * k) / n); log(`Voz y música: ${i.id}…`);
-          await shLineas(process.execPath, ['scripts/voz.mjs', i.id], (l) => { if (/^[✓⚠]/.test(l)) log(l); });
+          try {
+            await shLineas(process.execPath, ['scripts/voz.mjs', i.id], (l) => { if (!/^Assertion failed/.test(l)) log(l); });
+          } catch (e) {
+            // En Windows Node puede abortar al salir aunque el vídeo ya esté hecho: si existe el final, se sigue.
+            if (!existsSync(join(ROOT, 'out', `${i.id}.final.mp4`))) throw new Error(`No se pudo añadir la voz: ${e.message}`);
+            log(`Aviso al cerrar voz.mjs: ${e.message.split('\n').pop()}`);
+          }
           k++;
         }
       }
       job.progreso = {pct: 100, fase: 'Listo'};
-      job.resultado = items.map((i) => i.resultado).join(', ');
+      organizar();
     } else {
       await sh('git', ['add', ...items.map((i) => i.archivo)]);
       await sh('git', ['commit', '-m', `${tipo}: ${items.map((i) => i.id).join(', ')}`.slice(0, 120)]);
@@ -264,7 +286,8 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
         await sh('git', ['push']);
       }
       log('Subido; el CI empieza a renderizar.');
-      job.resultado = await esperarCI(await sh('git', ['rev-parse', 'HEAD']), log);
+      await esperarCI(await sh('git', ['rev-parse', 'HEAD']), log);
+      organizar();
     }
     job.estado = 'hecho';
   } catch (e) {

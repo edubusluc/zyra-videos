@@ -23,6 +23,16 @@ jobs:
           if echo "$changed" | grep -qvE '^(guiones|memes|reacciones)/'; then ids=""; else ids=$(echo "$changed" | sed -E 's#guiones/(.*)\.json#\1#; s#memes/(.*)\.json#meme-\1#; s#reacciones/(.*)\.json#reaccion-\1#' | tr '\n' ' '); fi
           echo "ids: '$ids'"
           node render.mjs $ids
+      - name: 'Voz en off (ElevenLabs) y música para los que piden voz'
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+          ELEVENLABS_MODEL: ${{ vars.ELEVENLABS_MODEL }}
+          ELEVENLABS_STABILITY: ${{ vars.ELEVENLABS_STABILITY }}
+          ELEVENLABS_SIMILARITY: ${{ vars.ELEVENLABS_SIMILARITY }}
+          ELEVENLABS_STYLE: ${{ vars.ELEVENLABS_STYLE }}
+          ELEVENLABS_SPEED: ${{ vars.ELEVENLABS_SPEED }}
+        run: node scripts/voz-lote.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: videos-tiktok
@@ -30,3 +40,4 @@ jobs:
             out/*.mp4
             out/*.png
             out/*.voz.txt
+            out/*.final.mp4
