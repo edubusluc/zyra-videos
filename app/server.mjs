@@ -138,8 +138,9 @@ async function pedirGuion(peticion, log) {
 const repoSlug = async () => (await sh('git', ['remote', 'get-url', 'origin'])).replace(/\.git$/, '').split(/github\.com[/:]/)[1];
 
 async function esperarCI(sha, log) {
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) throw new Error('Falta GITHUB_TOKEN para seguir el CI y descargar el vídeo (ver README). El guion ya está subido: míralo en la pestaña Actions.');
+  // GITHUB_TOKEN, o el de la sesión del CLI de GitHub (`gh auth login`) si está instalado.
+  const token = process.env.GITHUB_TOKEN || (await sh('gh', ['auth', 'token']).catch(() => ''));
+  if (!token) throw new Error('Falta un token de GitHub para seguir el CI y descargar el vídeo: define GITHUB_TOKEN o ejecuta `gh auth login` (ver README). Lo subido sigue renderizándose: míralo en la pestaña Actions del repo.');
   const repo = await repoSlug();
   const gh = (p, o = {}) => fetch(`https://api.github.com/repos/${repo}${p}`, {...o, headers: {authorization: `Bearer ${token}`, accept: 'application/vnd.github+json'}});
   log('Esperando al CI de GitHub…');

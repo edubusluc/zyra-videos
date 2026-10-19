@@ -9,6 +9,11 @@ Genera vídeos verticales de Zyra (1080×1920, 15 s, sin audio) a partir de un g
 
 También se puede lanzar a mano: Actions → Generar vídeos → Run workflow.
 
+## Token de GitHub para descargar los vídeos del CI
+Sin token, la app sube el guion y el CI renderiza, pero no puede descargar el resultado (lo bajas a mano desde Actions → ejecución → Artifacts). Para que lo descargue sola, una de dos:
+- Instala el [CLI de GitHub](https://cli.github.com/) y ejecuta `gh auth login`; la app usa esa sesión.
+- O crea un token en GitHub → Settings → Developer settings → Fine-grained tokens, solo para este repo, con permiso **Actions: Read-only**, y expórtalo como `GITHUB_TOKEN` antes de `npm run app`.
+
 ## Formato del guion (`guiones/<id>.json`)
 | Campo | Qué es |
 | --- | --- |
@@ -46,7 +51,7 @@ Antes copia los archivos a `public/medios/`.
 
 ## App local: «genera un vídeo para mostrar…»
     git clone https://github.com/edubusluc/zyra-videos && cd zyra-videos && npm install
-    export GITHUB_TOKEN=...        # token con permiso de lectura de Actions en este repo (solo para el modo CI)
+    export GITHUB_TOKEN=...        # solo modo CI; o usa `gh auth login` (CLI de GitHub) y no hace falta
     npm run app                    # abre http://localhost:4173
 
 El guion lo escribe Claude de una de estas dos formas:
