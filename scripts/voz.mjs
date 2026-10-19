@@ -187,5 +187,15 @@ if (musica) {
 execFileSync(FF, ['-y', '-loglevel', 'error', ...entradas, '-filter_complex', filtros.join(';'), '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-t', total.toFixed(3), `out/${id}.final.mp4`], {stdio: 'inherit'});
 const tieneAudio = /Audio:/.test(spawnSync(FF, ['-i', `out/${id}.final.mp4`], {encoding: 'utf8'}).stderr || '');
 if (!tieneAudio) { console.error('✖ El vídeo final no tiene pista de audio: algo falló al mezclar.'); await salir(1); }
+// Mide el nivel real del audio (PCM decodificado, sin filtros que falten en el ffmpeg de Remotion): una pista muda también cuenta como fallo.
+{
+  const pcm = spawnSync(FF, ['-v', 'error', '-i', `out/${id}.final.mp4`, '-vn', '-ac', '1', '-ar', '8000', '-f', 's16le', '-'], {maxBuffer: 1 << 28}).stdout;
+  let suma = 0, pico = 0;
+  const n = Math.floor((pcm?.length || 0) / 2);
+  for (let i = 0; i < n; i++) { const v = pcm.readInt16LE(i * 2) / 32768; suma += v * v; pico = Math.max(pico, Math.abs(v)); }
+  const db = (x) => (x > 0 ? (20 * Math.log10(x)).toFixed(1) : '-inf');
+  console.log(`Nivel del audio final: medio ${db(Math.sqrt(suma / (n || 1)))} dBFS, pico ${db(pico)} dBFS`);
+  if (!n || pico < 0.003) { console.error('✖ El audio del vídeo final está en silencio: algo falló al mezclar.'); await salir(1); }
+}
 console.log(`Listo: out/${id}.final.mp4 (con voz${musica ? ' y música' : ''})`);
 await new Promise((r) => setTimeout(r, 300)); // deja cerrar las conexiones: en Windows, salir de golpe tras fetch provoca «Assertion failed … async.c»
