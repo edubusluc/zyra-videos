@@ -20,6 +20,8 @@ export type VideoData = {
   cta: string;
   /** false = sin subtítulos (los 3 textos bajo el móvil); render.mjs deja entonces out/<id>.voz.txt con los tiempos para la voz en off. */
   subtitulos?: boolean;
+  /** Estilo visual: «base» (por defecto) o «creador» (fondo desenfocado, tarjetas de palabra clave, blanco y negro → color, subtítulos con palabra destacada). En `subs`, *así* marca la palabra a destacar. */
+  estilo?: 'base' | 'creador';
 };
 
 export const VIDEOS = scripts as VideoData[];

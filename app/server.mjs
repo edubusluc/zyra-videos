@@ -45,7 +45,7 @@ export function validar(g, cat) {
   else g.hook.forEach((h, i) => { const m = txt(h, LIMITES.hook, `hook[${i}]`); if (m) e.push(m); });
   [txt(g.title, LIMITES.title, 'title'), txt(g.cta, LIMITES.cta, 'cta')].forEach((m) => m && e.push(m));
   if (!Array.isArray(g.subs) || g.subs.length < 3 || g.subs.length > 5) e.push(`subs: de 3 a 5 subtítulos (traía ${Array.isArray(g.subs) ? g.subs.length : 'ninguno'})`);
-  else g.subs.forEach((s, i) => { const m = txt(s, LIMITES.sub, `subs[${i}]`); if (m) e.push(m); });
+  else g.subs.forEach((s, i) => { const m = txt(String(s).replace(/\*/g, ''), LIMITES.sub, `subs[${i}]`); if (m) e.push(m); });
   if (g.locucion !== undefined) { // opcional: lo que se DICE en voz alta, uno por subtítulo
     if (!Array.isArray(g.locucion) || g.locucion.length !== (g.subs || []).length) e.push('locucion: una frase por cada subtítulo');
     else g.locucion.forEach((l, i) => { const m = txt(l, 45, `locucion[${i}]`); if (m) e.push(m); });
@@ -143,7 +143,7 @@ Formatos de referencia que funcionan en redes (fichas analizadas; inspírate en 
 
 async function pedirGuion(peticion, log) {
   const cat = catalogo();
-  const sistema = `Eres el guionista de vídeos de TikTok de Zyra, una app web para que capitanes de equipos de pádel organicen convocatorias, parejas, alineaciones y estadísticas. Escribes en español de España, directo y sin exagerar. Devuelve SOLO un objeto JSON (sin texto alrededor) con: hook (array de 2 textos EN MAYÚSCULAS, máx. ${LIMITES.hook} caracteres cada uno, que formen una pregunta o frase gancho), title (MAYÚSCULAS, máx. ${LIMITES.title}), src (una de las capturas), subs (array de 3 a 5 subtítulos, máx. ${LIMITES.sub} caracteres, que cuenten la función en orden), cta (máx. ${LIMITES.cta}, p. ej. «Pruébalo gratis»). No inventes funciones que no aparezcan en la descripción de la captura. Capturas disponibles:\n${cat.map((c) => `- ${c.src}: ${c.descripcion}`).join('\n')}`;
+  const sistema = `Eres el guionista de vídeos de TikTok de Zyra, una app web para que capitanes de equipos de pádel organicen convocatorias, parejas, alineaciones y estadísticas. Escribes en español de España, directo y sin exagerar. Devuelve SOLO un objeto JSON (sin texto alrededor) con: hook (array de 2 textos EN MAYÚSCULAS, máx. ${LIMITES.hook} caracteres cada uno, que formen una pregunta o frase gancho), title (MAYÚSCULAS, máx. ${LIMITES.title}), src (una de las capturas), subs (array de 3 a 5 subtítulos; en cada uno envuelve entre asteriscos la palabra clave que más importa, p. ej. «Convoca en *10 segundos*»; máx. ${LIMITES.sub} caracteres, que cuenten la función en orden), cta (máx. ${LIMITES.cta}, p. ej. «Pruébalo gratis»). No inventes funciones que no aparezcan en la descripción de la captura. Capturas disponibles:\n${cat.map((c) => `- ${c.src}: ${c.descripcion}`).join('\n')}`;
   let mensajes = [{role: 'user', content: peticion}];
   for (let intento = 1; intento <= 2; intento++) {
     log(`Pidiendo el guion a Claude (intento ${intento})…`);
@@ -242,7 +242,7 @@ async function borrar({de, id, repo = false, archivos = true, medios = false}) {
 }
 const listarJson = (dir) => (existsSync(join(ROOT, dir)) ? readdirSync(join(ROOT, dir)).filter((f) => f.endsWith('.json')) : []).map((f) => JSON.parse(readFileSync(join(ROOT, dir, f), 'utf8')));
 
-async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = false}) {
+async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = false, estilo = 'base'}) {
   const log = (m) => job.log.push(m);
   try {
     const cat = catalogo();
@@ -294,7 +294,7 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       const errores = validar(g, cat);
       if (errores.length) throw new Error(`Guion no válido: ${errores.join('; ')}`);
       const c = cat.find((x) => x.src === g.src);
-      job.guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin};
+      job.guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(estilo === 'creador' ? {estilo} : {}), ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin};
       guardar('guiones', g.title, job.guion, '', 'mp4');
     }
     log(tipo === 'regenerar' ? `Regenerando: ${items[0].archivo}` : `Guardado: ${items.map((i) => i.archivo).join(', ')}`);
@@ -431,12 +431,12 @@ export const server = createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/api/generar') {
     let body = '';
     for await (const c of req) body += c;
-    const {peticion, modo = 'ci', borrador, subtitulos, voz} = JSON.parse(body || '{}');
+    const {peticion, modo = 'ci', borrador, subtitulos, voz, estilo} = JSON.parse(body || '{}');
     if (!borrador && !String(peticion || '').trim()) return json(res, 400, {error: 'Escribe qué vídeo quieres.'});
     const id = Math.random().toString(36).slice(2, 10);
     const job = {estado: 'en curso', log: []};
     jobs.set(id, job);
-    trabajo(job, {peticion, modo, borrador, subtitulos, voz});
+    trabajo(job, {peticion, modo, borrador, subtitulos, voz, estilo});
     return json(res, 200, {id});
   }
   json(res, 404, {error: 'no encontrado'});

@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
-import {LiveBg, Ping, Wipe} from './components/Fx';
+import {BlurBg, KeywordCard, LiveBg, Ping, Wipe} from './components/Fx';
 import {Logo} from './components/Logo';
 import {Phone3D, Screen} from './components/Phone';
 import {Line, prog} from './components/Reveal';
@@ -16,10 +16,13 @@ const PH_W = 680;
 const PH_H = 900;
 
 /** Plantilla «función en 15 s»: gancho → móvil con captura real y subtítulos → cierre con logo y URL. */
-export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, box, subs, cta, subtitulos = true}) => {
+export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, box, subs, cta, subtitulos = true, estilo = 'base'}) => {
+  const creador = estilo === 'creador';
   useBrandFonts();
   const f = useCurrentFrame();
   const {fps} = useVideoConfig();
+  const limpio = (t: string) => t.replace(/\*/g, '');
+  const clave = (t: string) => (t.match(/\*([^*]+)\*/)?.[1] ?? limpio(t).split(' ').pop() ?? '').replace(/[.,!?¡¿]/g, '');
   const hookOut = prog(f, HOOK_END, 14);
   const main = prog(f, HOOK_END - 6, 30);
   const ctaIn = prog(f, CTA_FROM, 18);
@@ -38,12 +41,16 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   const drift = interpolate(f, [HOOK_END, CTA_FROM], [0.96, 1.08], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const float = Math.sin(f / 26) * 12;
   const hookPop = spring({frame: f, fps, config: {damping: 11, stiffness: 140, mass: 0.7}, durationInFrames: 24});
-  const words = subs[subIdx].split(' ');
+  const words = limpio(subs[subIdx]).split(' ');
+  const palabraClave = clave(subs[subIdx]).toLowerCase();
+  const desde = f - subAt;
+  const golpe = creador ? 1 + 0.06 * Math.max(0, 1 - desde / 12) ** 2 : 1; // cada corte entra con un golpe de zoom
+  const gris = creador ? (f < (subStart[1] ?? CTA_FROM) ? 1 : 1 - prog(f, subStart[1] ?? CTA_FROM, 12)) : 0; // el «problema» en blanco y negro; la solución, a color
   const ctaTxt = cta.replace(/(https?:\/\/)?(www\.)?zyrapadel\.com\/?/gi, '').replace(/(\s+(en|y|a|en la web|en nuestra web))?[\s·:–-]*$/i, '').trim() || 'Pruébalo gratis';
   const logoPop = spring({frame: f - CTA_FROM - 4, fps, config: {damping: 8, stiffness: 120, mass: 0.8}, durationInFrames: 30});
   return (
     <AbsoluteFill>
-      <LiveBg />
+      {creador ? <BlurBg src={src} /> : <LiveBg />}
       {/* Barra de progreso */}
       <div style={{position: 'absolute', left: 0, top: 0, height: 8, width: `${(f / DURATION) * 100}%`, background: C.lime, boxShadow: `0 0 20px ${C.lime}`, zIndex: 5}} />
       {/* Gancho */}
@@ -58,9 +65,9 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
           <Line text={title} at={HOOK_END + 4} size={44} />
           <div style={{height: 8, width: `${prog(f, HOOK_END + 12, 20) * 38}%`, background: C.lime, marginTop: 14, boxShadow: `0 0 24px ${C.lime}`}} />
         </div>
-        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 400 + (1 - main) * 120 + float}}>
+        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 400 + (1 - main) * 120 + float, filter: gris > 0 ? `grayscale(${gris}) contrast(1.1)` : undefined}}>
           <div style={{position: 'absolute', left: 60, right: 60, bottom: -70, height: 70, borderRadius: '50%', background: 'radial-gradient(rgba(0,0,0,.55), transparent 70%)', filter: 'blur(14px)'}} />
-          <Phone3D width={PH_W} height={PH_H} yaw={yaw} pitch={pitch} roll={(1 - main) * 3} scale={drift} sheen={prog(f, HOOK_END + 10, 150)}>
+          <Phone3D width={PH_W} height={PH_H} yaw={yaw} pitch={pitch} roll={(1 - main) * 3} scale={drift * golpe} sheen={prog(f, HOOK_END + 10, 150)}>
             <Screen src={src} imgW={imgW} width={PH_W} scroll={sc} reveal={prog(f, HOOK_END + 4, 24)}>
               {box ? (
                 <div style={{position: 'absolute', left: box[0], top: box[1], width: box[2], height: box[3], border: `5px solid ${C.lime}`, borderRadius: 18, boxShadow: `0 0 ${40 * pulse}px ${C.lime}`, opacity: prog(f, HOOK_END + 30, 12)}} />
@@ -68,7 +75,22 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
             </Screen>
           </Phone3D>
         </div>
-        {subtitulos ? (
+        {subtitulos && creador ? (
+          <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: 1340, height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+            <div key={subIdx} style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'baseline', gap: '0 18px', opacity: prog(f, subAt, 4)}}>
+              {words.map((w, i) => {
+                const esClave = w.replace(/[.,!?¡¿]/g, '').toLowerCase() === palabraClave;
+                const t = prog(f, subAt + i * 4, 8);
+                return (
+                  <span key={i} style={{fontFamily: esClave ? FONT.display : FONT.body, fontStyle: esClave ? 'italic' : 'normal', fontWeight: esClave ? 700 : 800, fontSize: esClave ? 70 : 76, lineHeight: 1.12, color: esClave ? C.lime : C.text, textShadow: '0 6px 30px rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.9)', display: 'inline-block', opacity: t, transform: `translateY(${(1 - t) * 30}px) scale(${esClave ? 0.8 + 0.2 * t + (desde < 14 ? 0.12 : 0) : 1})`}}>
+                    {w}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+        {subtitulos && !creador ? (
           <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: 1370, height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
             <div key={subIdx} style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0 14px', padding: '14px 30px', borderRadius: 28, background: 'rgba(10,11,9,.72)', border: `2px solid ${C.border}`, borderLeft: `8px solid ${C.lime}`, boxShadow: '0 20px 50px rgba(0,0,0,.5)', opacity: prog(f, subAt, 6), transform: `scale(${0.9 + 0.1 * prog(f, subAt, 10)})`}}>
               {words.map((w, i) => (
@@ -89,6 +111,8 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
       {/* Transiciones entre escenas y beats */}
       <Wipe at={HOOK_END + 2} />
       <Wipe at={CTA_FROM + 4} />
+      {creador && subtitulos && f < CTA_FROM ? subStart.map((t, i) => (i % 2 === 1 ? <KeywordCard key={i} at={t} word={clave(subs[i]).toUpperCase()} variant={Math.floor(i / 2)} /> : null)) : null}
+      {creador ? <div style={{position: 'absolute', left: 0, right: 0, bottom: 150, textAlign: 'center', fontFamily: FONT.display, fontWeight: 700, fontSize: 26, letterSpacing: 10, color: C.text, opacity: 0.45, zIndex: 7}}>ZYRA</div> : null}
       {/* Cierre */}
       <AbsoluteFill style={{opacity: ctaIn, alignItems: 'center', justifyContent: 'center'}}>
         <div style={{textAlign: 'center'}}>

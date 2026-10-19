@@ -179,3 +179,10 @@ El ajuste de tiempos y la música son los mismos que con ElevenLabs. Las frases 
 **Tono de anuncio deportivo (Azure).** Por defecto (`AZURE_SPEECH_PERFIL=deportivo`) cada frase se pide con la misma velocidad `+7%` y tono `+1st` (y el mismo `AZURE_SPEECH_STYLE` si lo has puesto), para que todos los audios tengan el mismo tono continuo; con `AZURE_SPEECH_PERFIL=neutro` no se toca nada. `AZURE_SPEECH_RATE` y `AZURE_SPEECH_PITCH` mandan sobre el perfil. Las voces HD deciden solas el tono. Si Azure rechaza el estilo o los ajustes para una voz, el script lo avisa y reintenta sin ellos.
 
 **Que no lea «punto».** Antes de hablar, el texto se limpia: sin emojis ni signos sueltos, y una frase que acaba en número se cierra con «!» (si acaba en «10.», varias voces leen «diez punto»). La web se dice «zyra pádel punto com» a propósito.
+
+## Estilo «creador»
+
+Estilo de edición inspirado en vídeos de creadores (derivado solo como parámetros, sin material de terceros): fondo desenfocado de la captura, móvil en blanco y negro que pasa a color en el segundo golpe, zoom en cada cambio, tarjeta a pantalla completa con la palabra clave en los subtítulos pares y subtítulos sin caja con la palabra clave en lima.
+
+- En el JSON del guion: `"estilo": "creador"` y marca la palabra clave con asteriscos en `subs`, p. ej. `"Convoca en *10 segundos*"`. Los asteriscos no se leen en la voz ni se muestran.
+- En la app local: casilla «Estilo creador» (la IA ya marca las palabras clave).
