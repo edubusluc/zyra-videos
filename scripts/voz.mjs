@@ -133,7 +133,7 @@ const ssmlAzure = (texto) => {
   const hd = /DragonHD/i.test(voice); // las voces HD deciden solas el tono y la emoción: sin prosody salvo que lo pidas
   const rate = process.env.AZURE_SPEECH_RATE, pitch = process.env.AZURE_SPEECH_PITCH;
   const cuerpo = hd && !rate && !pitch ? escXml(texto) : `<prosody rate="${rate || '+0%'}" pitch="${pitch || '+0st'}">${escXml(texto)}</prosody>`;
-  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-ES"><voice name="${voice}">${estilo ? `<mstts:express-as style="${escXml(estilo)}" styledegree="${process.env.AZURE_SPEECH_STYLE_DEGREE || '1.5'}">${cuerpo}</mstts:express-as>` : cuerpo}</voice></speak>`;
+  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="es-ES"><voice name="${voice}">${estilo ? `<mstts:express-as style="${escXml(estilo)}"${process.env.AZURE_SPEECH_STYLE_DEGREE ? ` styledegree="${escXml(process.env.AZURE_SPEECH_STYLE_DEGREE)}"` : ''}>${cuerpo}</mstts:express-as>` : cuerpo}</voice></speak>`;
 };
 const sintetizarAzure = async (texto) => {
   const r = await fetch(process.env.AZURE_SPEECH_URL || `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {method: 'POST', headers: {'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-96kbitrate-mono-mp3', 'User-Agent': 'zyra-videos'}, body: ssmlAzure(texto)});
