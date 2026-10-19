@@ -22,6 +22,36 @@ if (args.includes('--voces')) { // lista las voces de tu cuenta (las «premade»
   await new Promise((r) => setTimeout(r, 300)); // evita el «Assertion failed» de Node en Windows al salir con conexiones abiertas
   process.exit(0);
 }
+if (args.includes('--disenar') || args.includes('--guardar-voz')) {
+  // Diseño de voz (puede requerir un plan de pago): crea candidatas desde una descripción y guarda la que te guste.
+  const k = process.env.ELEVENLABS_API_KEY;
+  if (!k) { console.error('Falta ELEVENLABS_API_KEY.'); process.exit(1); }
+  const base = process.env.ELEVENLABS_BASE_URL || 'https://api.elevenlabs.io';
+  const llamar = async (ruta, cuerpo) => {
+    const r = await fetch(base + ruta, {method: 'POST', headers: {'xi-api-key': k, 'content-type': 'application/json'}, body: JSON.stringify(cuerpo)});
+    const t = await r.text();
+    if (!r.ok) { console.error(avisoPermisos(r.status, t)); process.exit(1); }
+    return JSON.parse(t);
+  };
+  if (args.includes('--disenar')) {
+    const descripcion = opt('--disenar');
+    if (!descripcion || descripcion.length < 20) { console.error('Describe la voz (mínimo 20 caracteres): --disenar "mujer joven, español neutro latinoamericano, cercana, expresiva, ritmo ágil"'); process.exit(1); }
+    const j = await llamar('/v1/text-to-voice/design', {voice_description: descripcion, text: 'Hola, soy tu capitán de pádel. Con Zyra organizas la convocatoria, las parejas y la alineación en un momento. ¿Quién juega con quién? Los datos hablan, y tú decides. Pruébalo gratis.', model_id: 'eleven_multilingual_ttv_v2'});
+    mkdirSync('out/voces-diseno', {recursive: true});
+    (j.previews || []).forEach((p, n) => {
+      const f = `out/voces-diseno/candidata-${n + 1}.mp3`;
+      writeFileSync(f, Buffer.from(p.audio_base_64, 'base64'));
+      console.log(`Candidata ${n + 1}: ${f}   id: ${p.generated_voice_id}`);
+    });
+    console.log('\nEscúchalas y guarda la que te guste con: node scripts/voz.mjs --guardar-voz <id> --nombre "Voz Zyra"');
+  } else {
+    const generated_voice_id = opt('--guardar-voz'), nombre = opt('--nombre') || 'Voz Zyra';
+    const j = await llamar('/v1/text-to-voice', {voice_name: nombre, voice_description: opt('--descripcion') || 'Voz neutra en español para vídeos de Zyra', generated_voice_id});
+    console.log(`Voz guardada. Ponla en el .env:\nELEVENLABS_VOICE_ID=${j.voice_id}`);
+  }
+  await new Promise((r) => setTimeout(r, 300));
+  process.exit(0);
+}
 const id = args.find((a, i) => !a.startsWith('--') && !(i && ['--musica', '--voz'].includes(args[i - 1])));
 if (!id) { console.error('Uso: node scripts/voz.mjs <id> [--musica ruta.mp3] [--voz <voice_id>] [--sin-musica]'); process.exit(1); }
 const key = process.env.ELEVENLABS_API_KEY;
@@ -29,9 +59,16 @@ if (!key) { console.error('Falta ELEVENLABS_API_KEY (tu clave de elevenlabs.io �
 const voice = opt('--voz') || process.env.ELEVENLABS_VOICE_ID;
 if (!voice) { console.error('Falta el id de la voz: ELEVENLABS_VOICE_ID o --voz <id> (en elevenlabs.io → Voices → copiar ID).'); process.exit(1); }
 const base = process.env.ELEVENLABS_BASE_URL || 'https://api.elevenlabs.io';
-// Ajustes de la voz (opcionales; si no se definen, ElevenLabs usa los de la voz).
+// Ajustes de la voz. Perfil por defecto «expresivo» (entonación marcada, poco plana); cualquier ELEVENLABS_* explícito manda sobre el perfil.
+// ELEVENLABS_PERFIL=expresivo | natural | neutro (neutro = sin tocar los ajustes de la voz).
+const PERFILES = {
+  expresivo: {stability: 0.3, similarity_boost: 0.75, style: 0.55, speed: 1.0, use_speaker_boost: true},
+  natural: {stability: 0.45, similarity_boost: 0.75, style: 0.2, speed: 1.0, use_speaker_boost: true},
+  neutro: {},
+};
 const num = (n) => (process.env[n] !== undefined && process.env[n] !== '' ? Number(process.env[n]) : undefined);
-const ajustes = Object.fromEntries(Object.entries({stability: num('ELEVENLABS_STABILITY'), similarity_boost: num('ELEVENLABS_SIMILARITY'), style: num('ELEVENLABS_STYLE'), speed: num('ELEVENLABS_SPEED'), use_speaker_boost: process.env.ELEVENLABS_SPEAKER_BOOST ? process.env.ELEVENLABS_SPEAKER_BOOST !== 'false' : undefined}).filter(([, v]) => v !== undefined && v === v));
+const perfil = PERFILES[process.env.ELEVENLABS_PERFIL || 'expresivo'] ?? PERFILES.expresivo;
+const ajustes = Object.fromEntries(Object.entries({...perfil, ...Object.fromEntries(Object.entries({stability: num('ELEVENLABS_STABILITY'), similarity_boost: num('ELEVENLABS_SIMILARITY'), style: num('ELEVENLABS_STYLE'), speed: num('ELEVENLABS_SPEED'), use_speaker_boost: process.env.ELEVENLABS_SPEAKER_BOOST ? process.env.ELEVENLABS_SPEAKER_BOOST !== 'false' : undefined}).filter(([, v]) => v !== undefined && v === v))}));
 const modelo = process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2';
 
 const video = `out/${id}.mp4`;
@@ -55,12 +92,27 @@ const duracion = (f) => {
   return +m[1] * 3600 + +m[2] * 60 + +m[3];
 };
 
+/**
+ * Prepara el texto para hablarlo: los titulares en MAYÚSCULAS suenan planos y deletreados, así que se pasan a
+ * frase normal (conservando siglas como SNP); y se asegura un cierre con puntuación, que da entonación.
+ */
+export const paraVoz = (txt) => {
+  const SIGLAS = new Set(['SNP', 'PDF', 'URL', 'QR', 'IA', 'TV', 'FAQ']);
+  let t = txt.replace(/\s+/g, ' ').trim();
+  const letras = t.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, '');
+  if (letras.length > 3 && letras === letras.toUpperCase()) {
+    t = t.toLowerCase().replace(/[a-záéíóúüñ]+/gi, (w) => (SIGLAS.has(w.toUpperCase()) ? w.toUpperCase() : w));
+  }
+  t = t.replace(/(^|[.!?]\s+|[¿¡])([a-záéíóúüñ])/g, (_, a, b) => a + b.toUpperCase()); // mayúscula al empezar frase
+  return /[.!?…]$/.test(t) ? t : `${t}.`;
+};
+
 mkdirSync('out/.voz-cache', {recursive: true});
 const sintetizar = async (texto) => {
   const hash = createHash('sha1').update(`${voice}|${modelo}|${JSON.stringify(ajustes)}|${texto}`).digest('hex').slice(0, 16);
   const f = `out/.voz-cache/${hash}.mp3`; // misma frase + misma voz = sin gastar caracteres otra vez
   if (existsSync(f)) return f;
-  const r = await fetch(`${base}/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {method: 'POST', headers: {'xi-api-key': key, 'content-type': 'application/json'}, body: JSON.stringify({text: texto, model_id: modelo, language_code: 'es', ...(Object.keys(ajustes).length ? {voice_settings: ajustes} : {})})});
+  const r = await fetch(`${base}/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {method: 'POST', headers: {'xi-api-key': key, 'content-type': 'application/json'}, body: JSON.stringify({text: texto, model_id: modelo, ...(/turbo|flash|v3/.test(modelo) ? {language_code: 'es'} : {}), ...(Object.keys(ajustes).length ? {voice_settings: ajustes} : {})})});
   if (!r.ok) {
     const cuerpo = await r.text();
     if (r.status === 402) throw new Error('ElevenLabs 402: tu plan gratuito no puede usar voces de la biblioteca por API. Usa una voz «premade» (node scripts/voz.mjs --voces) o pasa a un plan de pago.');
@@ -76,7 +128,7 @@ const MAX_ATEMPO = 1.35; // más rápido suena a ardilla; si no cabe, se avisa
 const clips = [];
 const total = duracion(video);
 for (const [k, x] of tramos.entries()) {
-  const mp3 = await sintetizar(x.txt);
+  const mp3 = await sintetizar(paraVoz(x.txt));
   const d = duracion(mp3);
   // La frase puede ocupar hasta donde empieza la siguiente que se lee (los tramos «solo en pantalla» no cuentan).
   const hasta = k + 1 < tramos.length ? tramos[k + 1].a : total - 0.3;

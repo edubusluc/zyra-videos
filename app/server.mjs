@@ -3,7 +3,7 @@
 import '../scripts/env.mjs';
 import {createServer} from 'node:http';
 import {execFile, execFileSync, spawn} from 'node:child_process';
-import {readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, copyFileSync} from 'node:fs';
+import {readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, copyFileSync, rmSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {dirname, join} from 'node:path';
 import {tmpdir} from 'node:os';
@@ -188,6 +188,56 @@ async function esperarCI(sha, log) {
   throw new Error('El CI tardó más de 20 minutos; mira la pestaña Actions.');
 }
 
+const TIPOS = {
+  guion: {dir: 'guiones', prefijo: '', ext: 'mp4', titulo: (g) => g.title},
+  reaccion: {dir: 'reacciones', prefijo: 'reaccion-', ext: 'mp4', titulo: (g) => g.caption},
+  meme: {dir: 'memes', prefijo: 'meme-', ext: 'png', titulo: (g) => `${g.before} → ${g.after}`},
+};
+const ID_OK = /^[a-z0-9-]{2,80}$/;
+const contenido = () => Object.entries(TIPOS).flatMap(([tipo, {dir, prefijo, ext, titulo}]) =>
+  (existsSync(join(ROOT, dir)) ? readdirSync(join(ROOT, dir)).filter((f) => f.endsWith('.json')).sort() : []).map((f) => {
+    const id = f.replace(/\.json$/, '');
+    const g = JSON.parse(readFileSync(join(ROOT, dir, f), 'utf8'));
+    return {tipo, id, titulo: titulo(g) || id, voz: Boolean(g.voz), renderizado: existsSync(join(ROOT, 'out', `${prefijo}${id}.${ext}`)), con_voz: existsSync(join(ROOT, 'out', `${prefijo}${id}.final.mp4`))};
+  }));
+
+/** Elimina un guion, reacción, meme o plantilla (y, si se pide, sus archivos generados y su copia en el repo). */
+async function borrar({de, id, repo = false, archivos = true, medios = false}) {
+  if (!ID_OK.test(id || '')) throw new Error('Id no válido.');
+  const hechos = [];
+  const quitar = (rel) => { if (existsSync(join(ROOT, rel))) { rmSync(join(ROOT, rel), {force: true}); hechos.push(rel); } };
+  const rutas = [];
+  if (de === 'plantilla') {
+    const rel = `plantillas/${id}.json`;
+    if (!existsSync(join(ROOT, rel))) throw new Error('Esa plantilla no existe.');
+    const t = JSON.parse(readFileSync(join(ROOT, rel), 'utf8'));
+    quitar(rel); rutas.push(rel);
+    if (medios) {
+      // Solo se borran fondo y recorte si ninguna otra plantilla ni reacción los usa.
+      const usados = new Set([...plantillas().flatMap((x) => [x.fondo, x.recorte]), ...listarJson('reacciones').flatMap((x) => [x.fondo, x.recorte])].filter(Boolean));
+      for (const m of [t.fondo, t.recorte].filter(Boolean)) if (!usados.has(m)) { quitar(`public/${m}`); rutas.push(`public/${m}`); }
+    }
+  } else {
+    const def = TIPOS[de];
+    if (!def) throw new Error('Tipo no válido.');
+    const rel = `${def.dir}/${id}.json`;
+    if (!existsSync(join(ROOT, rel))) throw new Error('Ese contenido no existe.');
+    quitar(rel); rutas.push(rel);
+    if (archivos) for (const sufijo of [`.${def.ext}`, '.final.mp4', '.voz.txt', '.voz.json']) quitar(`out/${def.prefijo}${id}${sufijo}`);
+    if (archivos) quitar(`out/sin-audio/${id}.mp4`);
+  }
+  if (repo) {
+    try {
+      await sh('git', ['add', '-A', '--', ...rutas]);
+      await sh('git', ['commit', '-m', `Eliminar ${de}: ${id}`.slice(0, 120)]);
+      try { await sh('git', ['push']); } catch { await sh('git', ['pull', '--rebase', '--autostash']); await sh('git', ['push']); }
+      hechos.push('(quitado también del repo)');
+    } catch (e) { hechos.push(`(no se pudo quitar del repo: ${e.message.split('\n')[0]})`); }
+  }
+  return hechos;
+}
+const listarJson = (dir) => (existsSync(join(ROOT, dir)) ? readdirSync(join(ROOT, dir)).filter((f) => f.endsWith('.json')) : []).map((f) => JSON.parse(readFileSync(join(ROOT, dir, f), 'utf8')));
+
 async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = false}) {
   const log = (m) => job.log.push(m);
   try {
@@ -202,7 +252,20 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       writeFileSync(join(ROOT, archivo), JSON.stringify(obj, null, 2) + '\n');
       items.push({archivo, id: `${prefijo}${id}`, resultado: `out/${prefijo}${id}.${ext}` + (obj.subtitulos === false || obj.voz ? `, out/${prefijo}${id}.voz.txt` : '') + (obj.voz ? `, out/${prefijo}${id}.final.mp4` : '')});
     };
-    if (tipo === 'lote') {
+    if (tipo === 'regenerar') {
+      // Vuelve a renderizar un contenido ya guardado (p. ej. uno que salió mal), sin crear otro archivo.
+      if (!TIPOS[borrador.de] || !ID_OK.test(borrador.id || '')) throw new Error('Qué regenerar: indica el tipo y el id.');
+      const {dir, prefijo, ext} = TIPOS[borrador.de];
+      const archivo = `${dir}/${borrador.id}.json`;
+      if (!existsSync(join(ROOT, archivo))) throw new Error(`No existe ${archivo}.`);
+      const obj = JSON.parse(readFileSync(join(ROOT, archivo), 'utf8'));
+      if (voz) obj.voz = true; else if (obj.voz) voz = true;
+      if (subtitulos === false) obj.subtitulos = false;
+      writeFileSync(join(ROOT, archivo), JSON.stringify(obj, null, 2) + '\n');
+      job.guion = obj;
+      items.push({archivo, id: `${prefijo}${borrador.id}`, resultado: `out/${prefijo}${borrador.id}.${ext}`});
+      peticion = `regenerar ${borrador.id}`;
+    } else if (tipo === 'lote') {
       const caps = Array.isArray(borrador.captions) ? borrador.captions.slice(0, 8) : [];
       if (!caps.length) throw new Error('Lote sin textos.');
       for (const c of caps) {
@@ -230,7 +293,8 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       job.guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, cta: g.cta, ...sin};
       guardar('guiones', g.title, job.guion, '', 'mp4');
     }
-    log(`Guardado: ${items.map((i) => i.archivo).join(', ')}`);
+    log(tipo === 'regenerar' ? `Regenerando: ${items[0].archivo}` : `Guardado: ${items.map((i) => i.archivo).join(', ')}`);
+    if (tipo === 'regenerar' && modo !== 'local') throw new Error('Regenerar se hace en local: elige «Render: En local».');
     // Una carpeta por prompt: salidas/<fecha>-<texto>/ con el vídeo final, el vídeo sin audio, el guion de voz y el JSON.
     const organizar = (ci = false) => {
       const d = new Date(), z = (x) => String(x).padStart(2, '0');
@@ -319,6 +383,12 @@ async function subirArchivos(archivos, mensaje) {
 export const server = createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/') { res.writeHead(200, {'content-type': 'text/html; charset=utf-8'}); return res.end(PAGINA); }
   if (req.method === 'GET' && req.url.startsWith('/api/job/')) { const j = jobs.get(req.url.split('/').pop()); return j ? json(res, 200, j) : json(res, 404, {error: 'no existe'}); }
+  if (req.method === 'GET' && req.url === '/api/contenido') return json(res, 200, {contenido: contenido(), plantillas: plantillas().map((p) => ({id: p.id, descripcion: p.descripcion, fondo: p.fondo, recorte: p.recorte}))});
+  if (req.method === 'POST' && req.url === '/api/borrar') {
+    let body = '';
+    for await (const c of req) body += c;
+    try { return json(res, 200, {ok: true, hechos: await borrar(JSON.parse(body || '{}'))}); } catch (e) { return json(res, 400, {error: e.message}); }
+  }
   if (req.method === 'GET' && req.url === '/api/plantillas') return json(res, 200, {plantillas: plantillas(), medios: medios()});
   if (req.method === 'POST' && req.url.startsWith('/api/subir?')) {
     // Cuerpo = el archivo en bruto; el nombre va en ?nombre=
