@@ -182,7 +182,7 @@ El ajuste de tiempos y la música son los mismos que con ElevenLabs. Las frases 
 
 ## Estilo «creador»
 
-Estilo de edición inspirado en vídeos de creadores (derivado solo como parámetros, sin material de terceros): fondo desenfocado de la captura, móvil en blanco y negro que pasa a color en el segundo golpe, zoom en cada cambio, tarjeta a pantalla completa con la palabra clave en los subtítulos pares y subtítulos sin caja con la palabra clave en lima.
+Es el estilo **por defecto** de todos los vídeos con captura (para usar el clásico: `"estilo": "base"` en el JSON, o desmarcar «Estilo creador» en la app). Inspirado en vídeos de creadores (solo parámetros, sin material de terceros): fondo desenfocado de la captura, móvil en blanco y negro que pasa a color en el segundo golpe, zoom en cada cambio, tarjeta a pantalla completa con la palabra clave en los subtítulos pares y subtítulos sin caja con la palabra clave en lima.
 
-- En el JSON del guion: `"estilo": "creador"` y marca la palabra clave con asteriscos en `subs`, p. ej. `"Convoca en *10 segundos*"`. Los asteriscos no se leen en la voz ni se muestran.
-- En la app local: casilla «Estilo creador» (la IA ya marca las palabras clave).
+- La IA marca la palabra clave de cada subtítulo con asteriscos (`Convoca en *10 segundos*`); sin asteriscos se usa la última palabra. Los asteriscos no se muestran ni se leen.
+- **Efectos de sonido** (en los vídeos con voz): whoosh al salir del gancho y antes del cierre, impacto + whoosh en cada tarjeta y pop en los demás cambios. Están sintetizados en `public/sfx/*.wav` (`node scripts/sfx.mjs` los regenera); `--sin-sfx` en `scripts/voz.mjs` los quita.

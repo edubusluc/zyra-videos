@@ -242,7 +242,7 @@ async function borrar({de, id, repo = false, archivos = true, medios = false}) {
 }
 const listarJson = (dir) => (existsSync(join(ROOT, dir)) ? readdirSync(join(ROOT, dir)).filter((f) => f.endsWith('.json')) : []).map((f) => JSON.parse(readFileSync(join(ROOT, dir, f), 'utf8')));
 
-async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = false, estilo = 'base'}) {
+async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = false, estilo = 'creador'}) {
   const log = (m) => job.log.push(m);
   try {
     const cat = catalogo();
@@ -294,7 +294,7 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       const errores = validar(g, cat);
       if (errores.length) throw new Error(`Guion no válido: ${errores.join('; ')}`);
       const c = cat.find((x) => x.src === g.src);
-      job.guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(estilo === 'creador' ? {estilo} : {}), ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin};
+      job.guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(estilo === 'base' ? {estilo} : {}), ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin};
       guardar('guiones', g.title, job.guion, '', 'mp4');
     }
     log(tipo === 'regenerar' ? `Regenerando: ${items[0].archivo}` : `Guardado: ${items.map((i) => i.archivo).join(', ')}`);

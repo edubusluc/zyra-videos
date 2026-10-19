@@ -207,10 +207,28 @@ const dirMus = 'public/musica';
 const musica = args.includes('--sin-musica') ? null : opt('--musica') || (existsSync(dirMus) ? readdirSync(dirMus).filter((f) => /\.(mp3|wav|m4a|ogg)$/i.test(f)).map((f) => join(dirMus, f))[0] : null) || null;
 if (!musica) console.log('Sin música de fondo (pon un mp3 en public/musica/ o usa --musica).');
 
-const entradas = ['-i', video, ...clips.flatMap((c) => ['-i', c.mp3]), ...(musica ? ['-stream_loop', '-1', '-i', musica] : [])];
+// Efectos de sonido del estilo «creador» (public/sfx, generados con scripts/sfx.mjs): whoosh al salir del gancho y antes del cierre,
+// impacto en cada tarjeta de palabra clave y pop en los demás cambios de subtítulo. Mismos instantes que src/Feature.tsx.
+const sfx = [];
+{
+  const v = existsSync('src/scripts.json') ? JSON.parse(readFileSync('src/scripts.json', 'utf8')).find((x) => x.id === id) : null;
+  if (v && v.estilo !== 'base' && v.subtitulos !== false && !args.includes('--sin-sfx') && existsSync('public/sfx/whoosh.wav')) {
+    const ini = v.subs.map((_, i) => Math.round(86 + (i * 274) / v.subs.length) / 30);
+    sfx.push({f: 'whoosh', t: 70 / 30 - 0.12, vol: 0.5});
+    ini.forEach((t, i) => {
+      if (i % 2 === 1) sfx.push({f: 'impacto', t, vol: 0.55}, {f: 'whoosh', t: t - 0.1, vol: 0.4});
+      else if (i > 0) sfx.push({f: 'pop', t, vol: 0.5});
+    });
+    sfx.push({f: 'whoosh', t: 360 / 30 - 0.12, vol: 0.5});
+    console.log(`Efectos de sonido (estilo creador): ${sfx.length}`);
+  }
+}
+const entradas = ['-i', video, ...clips.flatMap((c) => ['-i', c.mp3]), ...(musica ? ['-stream_loop', '-1', '-i', musica] : []), ...sfx.flatMap((e) => ['-i', `public/sfx/${e.f}.wav`])];
 const filtros = clips.map((c, i) => `[${i + 1}:a]${c.atempo > 1.001 ? `atempo=${c.atempo.toFixed(4)},` : ''}atrim=0:${c.dur.toFixed(3)},${c.recorta ? `volume='clip((${c.dur.toFixed(3)}-t)/0.15,0,1)':eval=frame,` : ''}adelay=${Math.round(c.ini * 1000)}|${Math.round(c.ini * 1000)}[v${i}]`);
 const vozs = clips.map((_, i) => `[v${i}]`).join('');
-filtros.push(`${vozs}amix=inputs=${clips.length}:normalize=0[voz]`);
+const base0 = clips.length + 1 + (musica ? 1 : 0);
+sfx.forEach((e, i) => { const ms = Math.max(0, Math.round(e.t * 1000)); filtros.push(`[${base0 + i}:a]volume=${e.vol},adelay=${ms}|${ms}[s${i}]`); });
+filtros.push(`${vozs}${sfx.map((_, i) => `[s${i}]`).join('')}amix=inputs=${clips.length + sfx.length}:normalize=0[voz]`);
 if (musica) {
   const m = clips.length + 1;
   // Sin filtros avanzados (sidechain, afade, asplit), que faltan en el ffmpeg mínimo de Remotion:

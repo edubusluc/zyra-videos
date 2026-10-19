@@ -16,7 +16,7 @@ const PH_W = 680;
 const PH_H = 900;
 
 /** Plantilla «función en 15 s»: gancho → móvil con captura real y subtítulos → cierre con logo y URL. */
-export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, box, subs, cta, subtitulos = true, estilo = 'base'}) => {
+export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, box, subs, cta, subtitulos = true, estilo = 'creador'}) => {
   const creador = estilo === 'creador';
   useBrandFonts();
   const f = useCurrentFrame();
