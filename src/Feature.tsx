@@ -47,7 +47,6 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   const palabraClave = clave(subs[subIdx]).toLowerCase();
   const desde = f - subAt;
   const golpe = creador ? 1 + 0.06 * Math.max(0, 1 - desde / 12) ** 2 : 1; // cada corte entra con un golpe de zoom
-  const gris = creador ? (f < (subStart[1] ?? CTA_FROM) ? 1 : 1 - prog(f, subStart[1] ?? CTA_FROM, 12)) : 0; // el «problema» en blanco y negro; la solución, a color
   const ctaTxt = cta.replace(/(https?:\/\/)?(www\.)?zyrapadel\.com\/?/gi, '').replace(/(\s+(en|y|a|en la web|en nuestra web))?[\s·:–-]*$/i, '').trim() || 'Pruébalo gratis';
   const logoPop = spring({frame: f - CTA_FROM - 4, fps, config: {damping: 8, stiffness: 120, mass: 0.8}, durationInFrames: 30});
   return (
@@ -67,7 +66,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
           <Line text={title} at={HOOK_END + 4} size={44} extra={TYPE.title} />
           <div style={{height: 8, width: `${prog(f, HOOK_END + 12, 20) * 38}%`, background: C.lime, borderRadius: 4, marginTop: 14, boxShadow: GLOW}} />
         </div>
-        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 400 + (1 - main) * 120 + float, filter: gris > 0 ? `grayscale(${gris}) contrast(1.1)` : undefined}}>
+        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 400 + (1 - main) * 120 + float}}>
           <div style={{position: 'absolute', left: 60, right: 60, bottom: -70, height: 70, borderRadius: '50%', background: 'radial-gradient(rgba(0,0,0,.55), transparent 70%)', filter: 'blur(14px)'}} />
           <Phone3D width={PH_W} height={PH_H} yaw={yaw} pitch={pitch} roll={(1 - main) * 3} scale={drift * golpe} sheen={prog(f, HOOK_END + 10, 150)}>
             <Screen src={src} imgW={imgW} width={PH_W} scroll={sc} reveal={prog(f, HOOK_END + 4, 24)}>
