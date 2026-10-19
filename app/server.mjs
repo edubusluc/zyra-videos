@@ -176,7 +176,11 @@ async function esperarCI(sha, log) {
       mkdirSync(join(ROOT, 'out'), {recursive: true});
       const zip = join(ROOT, 'out', `ci-${run.id}.zip`);
       writeFileSync(zip, Buffer.from(await z.arrayBuffer()));
-      try { execFileSync('unzip', ['-o', '-q', zip, '-d', join(ROOT, 'out')]); log('Vídeos extraídos en out/.'); } catch { log(`ZIP guardado en ${zip} (descomprímelo a mano).`); }
+      // unzip en Linux/Mac; en Windows 10+ `tar` (bsdtar) también lee ZIP.
+      const extraer = [['unzip', ['-o', '-q', zip, '-d', join(ROOT, 'out')]], ['tar', ['-xf', zip, '-C', join(ROOT, 'out')]]];
+      let ok = false;
+      for (const [cmd, a] of extraer) { try { execFileSync(cmd, a); ok = true; break; } catch { /* prueba el siguiente */ } }
+      log(ok ? 'Vídeos extraídos en out/.' : `No pude descomprimir el ZIP: está en ${zip}; descomprímelo a mano en out/.`);
       return run.html_url;
     }
     await new Promise((r) => setTimeout(r, 10000));
@@ -228,7 +232,7 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
     }
     log(`Guardado: ${items.map((i) => i.archivo).join(', ')}`);
     // Una carpeta por prompt: salidas/<fecha>-<texto>/ con el vídeo final, el vídeo sin audio, el guion de voz y el JSON.
-    const organizar = () => {
+    const organizar = (ci = false) => {
       const d = new Date(), z = (x) => String(x).padStart(2, '0');
       const base = slug(String(peticion || borrador?.caption || borrador?.title || borrador?.before || items[0].id)).slice(0, 40);
       const carpeta = `salidas/${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}-${base}`;
@@ -236,7 +240,7 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       const copiados = [];
       for (const i of items) {
         const nom = i.id;
-        for (const [origen, destino] of [[`out/${nom}.final.mp4`, `${nom}.FINAL-con-voz.mp4`], [`out/${nom}.mp4`, voz ? `${nom}.sin-audio.mp4` : `${nom}.mp4`], [`out/${nom}.png`, `${nom}.png`], [`out/${nom}.voz.txt`, `${nom}.voz.txt`], [i.archivo, `${nom}.json`]]) {
+        for (const [origen, destino] of [[ci && voz ? `out/${nom}.mp4` : `out/${nom}.final.mp4`, `${nom}.FINAL-con-voz.mp4`], [ci && voz ? `out/sin-audio/${nom}.mp4` : `out/${nom}.mp4`, voz ? `${nom}.sin-audio.mp4` : `${nom}.mp4`], [`out/${nom}.png`, `${nom}.png`], [`out/${nom}.voz.txt`, `${nom}.voz.txt`], [i.archivo, `${nom}.json`]]) {
           if (existsSync(join(ROOT, origen))) { copyFileSync(join(ROOT, origen), join(ROOT, carpeta, destino)); copiados.push(destino); }
         }
       }
@@ -287,7 +291,7 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       }
       log('Subido; el CI empieza a renderizar.');
       await esperarCI(await sh('git', ['rev-parse', 'HEAD']), log);
-      organizar();
+      organizar(true);
     }
     job.estado = 'hecho';
   } catch (e) {

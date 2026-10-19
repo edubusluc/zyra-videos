@@ -32,7 +32,7 @@ jobs:
           ELEVENLABS_SIMILARITY: ${{ vars.ELEVENLABS_SIMILARITY }}
           ELEVENLABS_STYLE: ${{ vars.ELEVENLABS_STYLE }}
           ELEVENLABS_SPEED: ${{ vars.ELEVENLABS_SPEED }}
-        run: node scripts/voz-lote.mjs
+        run: node scripts/voz-lote.mjs --limpiar
       - uses: actions/upload-artifact@v4
         with:
           name: videos-tiktok

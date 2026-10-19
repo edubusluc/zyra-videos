@@ -2,7 +2,7 @@
 // Sin ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID avisa y deja esos vídeos sin voz.
 import './env.mjs';
 import {execFileSync} from 'node:child_process';
-import {existsSync, readFileSync, readdirSync} from 'node:fs';
+import {existsSync, mkdirSync, readFileSync, readdirSync, renameSync} from 'node:fs';
 
 const ids = existsSync('out') ? readdirSync('out').filter((f) => f.endsWith('.voz.json')).map((f) => f.replace(/\.voz\.json$/, '')) : [];
 let fallos = 0;
@@ -13,6 +13,14 @@ for (const id of ids) {
     console.log(`::warning::Faltan los secretos ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID: ${id} queda sin voz`);
     continue;
   }
-  try { execFileSync(process.execPath, ['scripts/voz.mjs', id], {stdio: 'inherit'}); } catch { fallos++; console.log(`::error::Falló la voz de ${id}`); }
+  try {
+    execFileSync(process.execPath, ['scripts/voz.mjs', id], {stdio: 'inherit'});
+    if (process.argv.includes('--limpiar') && existsSync(`out/${id}.final.mp4`)) {
+      // El artefacto deja solo el vídeo con voz como <id>.mp4; el mudo va aparte en sin-audio/ para no confundirlos.
+      mkdirSync('out/sin-audio', {recursive: true});
+      renameSync(`out/${id}.mp4`, `out/sin-audio/${id}.mp4`);
+      renameSync(`out/${id}.final.mp4`, `out/${id}.mp4`);
+    }
+  } catch { fallos++; console.log(`::error::Falló la voz de ${id}`); }
 }
 process.exit(fallos ? 1 : 0);

@@ -72,15 +72,19 @@ const sintetizar = async (texto) => {
 };
 
 const MARGEN = 0.15; // aire al final de cada tramo
-const MAX_ATEMPO = 1.3; // más rápido suena a ardilla; si no cabe, se avisa
+const MAX_ATEMPO = 1.35; // más rápido suena a ardilla; si no cabe, se avisa
 const clips = [];
-for (const x of tramos) {
+const total = duracion(video);
+for (const [k, x] of tramos.entries()) {
   const mp3 = await sintetizar(x.txt);
   const d = duracion(mp3);
-  const hueco = x.b - x.a - MARGEN;
+  // La frase puede ocupar hasta donde empieza la siguiente que se lee (los tramos «solo en pantalla» no cuentan).
+  const hasta = k + 1 < tramos.length ? tramos[k + 1].a : total - 0.3;
+  const hueco = Math.max(0.8, Math.max(x.b, hasta) - x.a - MARGEN);
   const factor = d > hueco ? d / hueco : 1;
-  if (factor > MAX_ATEMPO) console.warn(`⚠ «${x.txt}» dura ${d.toFixed(1)} s y el hueco es de ${hueco.toFixed(1)} s: se acelera ×${MAX_ATEMPO} y se corta; acorta el texto.`);
-  clips.push({mp3, ini: x.a, atempo: Math.min(Math.max(factor, 1), MAX_ATEMPO), dur: hueco});
+  const recorta = factor > MAX_ATEMPO;
+  if (recorta) console.warn(`⚠ «${x.txt}» dura ${d.toFixed(1)} s y el hueco es de ${hueco.toFixed(1)} s: se acelera ×${MAX_ATEMPO} y se corta el final; acorta el texto.`);
+  clips.push({mp3, ini: x.a, atempo: Math.min(Math.max(factor, 1), MAX_ATEMPO), dur: hueco, recorta});
   console.log(`✓ ${x.a.toFixed(1)} s · ${d.toFixed(1)} s${factor > 1 ? ` (×${Math.min(factor, MAX_ATEMPO).toFixed(2)})` : ''} · ${x.txt}`);
 }
 
@@ -89,9 +93,8 @@ const dirMus = 'public/musica';
 const musica = args.includes('--sin-musica') ? null : opt('--musica') || (existsSync(dirMus) ? readdirSync(dirMus).filter((f) => /\.(mp3|wav|m4a|ogg)$/i.test(f)).map((f) => join(dirMus, f))[0] : null) || null;
 if (!musica) console.log('Sin música de fondo (pon un mp3 en public/musica/ o usa --musica).');
 
-const total = duracion(video);
 const entradas = ['-i', video, ...clips.flatMap((c) => ['-i', c.mp3]), ...(musica ? ['-stream_loop', '-1', '-i', musica] : [])];
-const filtros = clips.map((c, i) => `[${i + 1}:a]${c.atempo > 1.001 ? `atempo=${c.atempo.toFixed(4)},` : ''}atrim=0:${c.dur.toFixed(3)},adelay=${Math.round(c.ini * 1000)}|${Math.round(c.ini * 1000)}[v${i}]`);
+const filtros = clips.map((c, i) => `[${i + 1}:a]${c.atempo > 1.001 ? `atempo=${c.atempo.toFixed(4)},` : ''}atrim=0:${c.dur.toFixed(3)},${c.recorta ? `volume='clip((${c.dur.toFixed(3)}-t)/0.15,0,1)':eval=frame,` : ''}adelay=${Math.round(c.ini * 1000)}|${Math.round(c.ini * 1000)}[v${i}]`);
 const vozs = clips.map((_, i) => `[v${i}]`).join('');
 filtros.push(`${vozs}amix=inputs=${clips.length}:normalize=0[voz]`);
 if (musica) {
