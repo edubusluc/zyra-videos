@@ -1,0 +1,33 @@
+{
+  "hook": [
+    "10 CONVOCADOS",
+    "¿QUÉ PAREJAS?"
+  ],
+  "title": "¿QUIÉN CON QUIÉN?",
+  "src": "ui/alineacion.png",
+  "imgW": 780,
+  "scroll": [
+    60,
+    330
+  ],
+  "box": [
+    58,
+    478,
+    420,
+    84
+  ],
+  "subs": [
+    "10 convocados y mil dudas",
+    "Pulsa «Alineación sugerida»",
+    "Parejas con % de victoria",
+    "Decides con datos, no a ojo"
+  ],
+  "locucion": [
+    "¡Diez convocados, mil dudas!",
+    "¡Pulsa alineación sugerida!",
+    "¡Parejas listas y con datos!",
+    "¡Decide con datos, no a ojo!"
+  ],
+  "cta": "Gratis en zyrapadel.com",
+  "voz": true
+}
