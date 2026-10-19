@@ -193,7 +193,7 @@ Con `"voz": true`, `render.mjs` pide **antes de renderizar** todo el guion habla
 
 - localiza cada frase en el audio (Azure: por los silencios; ElevenLabs: por las marcas de tiempo por carácter) y guarda `out/<id>.tiempos.json`;
 - coloca las frases con huecos cortos y **una única velocidad común** (máx. ×1,12), sin acelerar frases sueltas ni cortarlas;
-- si no caben en 15 s, **alarga el vídeo** hasta 18 s en vez de apretar más la voz (avisa si tampoco cabe: acorta la `locucion`).
+- la voz **no se acelera** y deja ~0,9 s tras el gancho, ~0,5 s entre frases y ~0,7 s antes del cierre; las palabras `*clave*` de la locución llevan un respiro y énfasis. Si no caben en ~18 s, **alarga el vídeo** hasta 24 s en vez de apretar la voz (avisa si tampoco cabe: acorta la `locucion`).
 
 El vídeo usa esos tiempos (`tiempos` en `src/data.ts`) para el fin del gancho, la entrada de cada subtítulo y el cierre, y los efectos de sonido caen en esos mismos cortes. Sin credenciales o si algo falla, vuelve al sistema anterior (tiempos fijos y una voz por frase). El CI pasa ahora las variables de voz también al paso de renderizado.
 

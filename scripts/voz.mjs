@@ -116,7 +116,7 @@ const duracion = (f) => {
  */
 export const paraVoz = (txt) => {
   const SIGLAS = new Set(['SNP', 'PDF', 'URL', 'QR', 'IA', 'TV', 'FAQ']);
-  let t = txt.replace(/\s+/g, ' ').trim();
+  let t = txt.replace(/\*([^*]+)\*/g, '\u0001$1\u0002').replace(/\s+/g, ' ').trim(); // *palabra clave* → marcas de énfasis (se resuelven en ssmlAzure o se quitan)
   const letras = t.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, '');
   if (letras.length > 3 && letras === letras.toUpperCase()) {
     t = t.toLowerCase().replace(/[a-záéíóúüñ]+/gi, (w) => (SIGLAS.has(w.toUpperCase()) ? w.toUpperCase() : w));
@@ -152,8 +152,10 @@ const estiloAz = hd ? '' : process.env.AZURE_SPEECH_STYLE || '';
 // (los subtítulos no cambian): «rr» fuerza la vibrante y «j» la fricativa velar. Se amplía con AZURE_SPEECH_PRONUNCIACION='palabra=como suena;otra=…'.
 const PRONUNCIACION = {reventar: 'rreventar', reventón: 'rreventón', gente: 'jente', gentes: 'jentes', rápido: 'rrápido', rápida: 'rrápida', rápidos: 'rrápidos', rápidas: 'rrápidas', resultado: 'rresultado', resultados: 'rresultados', rival: 'rrival', rivales: 'rrivales', ranking: 'ránkin', ...Object.fromEntries((process.env.AZURE_SPEECH_PRONUNCIACION || '').split(';').map((p) => p.split('=').map((x) => x.trim())).filter(([a, b]) => a && b))};
 const pronunciar = (t) => t.replace(/[\p{L}]+/gu, (w) => { const r = PRONUNCIACION[w.toLowerCase()]; return r ? (w[0] === w[0].toUpperCase() ? r[0].toUpperCase() + r.slice(1) : r) : w; });
+const PAUSA_ENFASIS = 160; // ms de respiro antes de la palabra clave
 const ssmlAzure = (texto, nivel = 0, xml = false) => { // xml: el texto ya es XML (varias frases con <break/>)
-  const cuerpoTxt = pronunciar(xml ? texto : escXml(texto));
+  // énfasis en la palabra clave: un respiro justo antes y <emphasis>
+  const cuerpoTxt = pronunciar(xml ? texto : escXml(texto)).replace(/\u0001/g, `<break time="${PAUSA_ENFASIS}ms"/><emphasis level="moderate">`).replace(/\u0002/g, '</emphasis>');
   const prosodia = nivel < 2 && (rate || pitch);
   const cuerpo = prosodia ? `<prosody${rate ? ` rate="${escXml(rate)}"` : ''}${pitch ? ` pitch="${escXml(pitch)}"` : ''}>${cuerpoTxt}</prosody>` : cuerpoTxt;
   const estilo = nivel === 0 && estiloAz;
@@ -175,6 +177,7 @@ const sintetizarAzure = async (texto, xml = false) => {
   }
 };
 const sintetizar = async (texto, xml = false) => {
+  if (!azure) texto = texto.replace(/[\u0001\u0002]/g, ''); // ElevenLabs no entiende las marcas de énfasis
   const hash = createHash('sha1').update(azure ? `azure48|${xml}|${JSON.stringify(PRONUNCIACION)}|${voice}|${rate}|${pitch}|${estiloAz}|${process.env.AZURE_SPEECH_STYLE_DEGREE}|${nivelAz}|${texto}` : `${voice}|${modelo}|${JSON.stringify(ajustes)}|${texto}`).digest('hex').slice(0, 16);
   const f = `out/.voz-cache/${hash}.mp3`; // misma frase + misma voz = sin gastar caracteres otra vez
   if (existsSync(f)) return f;
@@ -194,7 +197,7 @@ const sintetizar = async (texto, xml = false) => {
 // Todo el guion hablado se pide de una sola vez (la entonación fluye de una frase a otra, como un locutor), con pausas marcadas entre frases;
 // luego se localizan las frases en ese audio y se colocan en la línea de tiempo con huecos cortos y un único ajuste de velocidad para todas.
 // Los tiempos resultantes (out/<id>.tiempos.json) los usa render.mjs para que subtítulos y cortes sigan a la voz, y este script para mezclar.
-const PAUSA_AZ = 650; // ms entre frases dentro de la locución única (se recortan después)
+const PAUSA_AZ = 900; // ms entre frases dentro de la locución única (se recortan después)
 const pcmMono = (f) => {
   const b = spawnSync(FF, ['-v', 'error', '-i', f, '-vn', '-ac', '1', '-ar', '16000', '-f', 'wav', '-'], {maxBuffer: 1 << 28}).stdout;
   const i = b && b.length ? b.indexOf('data') + 8 : 0;
@@ -301,10 +304,10 @@ if (narracion) {
   } catch (e) { console.error(`✖ ${e.message}`); await salir(2); }
   if (!seg) { console.warn('⚠ No pude localizar las frases en la locución única: se usará una voz por frase con los tiempos fijos.'); await salir(2); }
   seg.forEach((x, i) => { x.dur = x.e - x.s; x.txt = frases[i]; });
-  const GAPS = seg.map((_, i) => (i === 0 ? 0.55 : i === seg.length - 2 ? 0.35 : 0.28)); // tras el gancho cabe el título; antes del cierre, un respiro
-  const FIN = 14.7; // objetivo: 15 s. Si las frases no caben ni acelerando algo (máx. ×1,12), el vídeo se alarga hasta 18 s
-  const MAX_FACTOR = 1.05, MAX_SEG = 18; // acelerar más deforma la voz: mejor alargar el vídeo
-  const colocar = (fct) => { let c = 0.1; return seg.map((x, i) => { const ini = c; c += x.dur / fct + GAPS[i]; return ini; }); };
+  const GAPS = seg.map((_, i) => (i === 0 ? 0.9 : i === seg.length - 2 ? 0.7 : 0.5)); // tras el gancho cabe el título; antes del cierre, un respiro; entre subtítulos, aire para que cada idea se asiente
+  const FIN = 17.2; // objetivo: ~18 s. La voz nunca se acelera: si no cabe, el vídeo se alarga hasta MAX_SEG
+  const MAX_FACTOR = 1, MAX_SEG = 24; // sin acelerar la voz: mejor alargar el vídeo
+  const colocar = (fct) => { let c = 0.3; return seg.map((x, i) => { const ini = c; c += x.dur / fct + GAPS[i]; return ini; }); };
   let factor = 1;
   for (let k = 0; k < 4; k++) {
     const ini = colocar(factor), fin = ini.at(-1) + seg.at(-1).dur / factor;
@@ -313,14 +316,14 @@ if (narracion) {
   }
   const ini = colocar(factor);
   const fin = ini.at(-1) + seg.at(-1).dur / factor;
-  const frames = Math.min(MAX_SEG * 30, Math.max(450, Math.ceil((fin + 0.8) * 30))); // duración del vídeo: 15 s o lo que pida la voz (con 0,8 s de cierre)
-  if (fin + 0.8 > MAX_SEG) console.warn(`⚠ La locución acaba a los ${fin.toFixed(1)} s y no cabe en ${MAX_SEG} s: acorta los textos (locucion).`);
+  const frames = Math.min(MAX_SEG * 30, Math.max(450, Math.ceil((fin + 1.4) * 30))); // duración del vídeo: 15 s o lo que pida la voz (con 1,4 s de cierre)
+  if (fin + 1.4 > MAX_SEG) console.warn(`⚠ La locución acaba a los ${fin.toFixed(1)} s y no cabe en ${MAX_SEG} s: acorta los textos (locucion).`);
   // Fotogramas (30 fps) para src/Feature.tsx: fin del gancho, entrada de cada subtítulo (3 fotogramas antes de la voz) y entrada del cierre.
   const f30 = (t) => Math.round(t * 30);
-  const hookEnd = Math.max(62, Math.ceil((ini[0] + seg[0].dur / factor + 0.12) * 30));
+  const hookEnd = Math.max(84, Math.ceil((ini[0] + seg[0].dur / factor + 0.12) * 30));
   const subs = [];
-  for (let i = 1; i < seg.length - 1; i++) subs.push(Math.max(i === 1 ? hookEnd + 16 : subs[i - 2] + 20, f30(ini[i]) - 3));
-  const cta = Math.min(frames - 45, Math.max(subs.at(-1) + 20, f30(ini.at(-1)) - 4));
+  for (let i = 1; i < seg.length - 1; i++) subs.push(Math.max(i === 1 ? hookEnd + 24 : subs[i - 2] + 36, f30(ini[i]) - 3));
+  const cta = Math.min(frames - 75, Math.max(subs.at(-1) + 36, f30(ini.at(-1)) - 4));
   seg.forEach((x, i) => { x.ini = +ini[i].toFixed(3); });
   writeFileSync(`out/${id}.tiempos.json`, JSON.stringify({mp3, factor: +factor.toFixed(4), frases: seg, hookEnd, subs, cta, frames, fin: +fin.toFixed(2)}, null, 2));
   seg.forEach((x) => console.log(`✓ ${x.ini.toFixed(1)} s · ${(x.dur / factor).toFixed(1)} s · ${x.txt}`));
@@ -328,10 +331,10 @@ if (narracion) {
   await salir(0);
 }
 
-const MARGEN = 0.15; // aire al final de cada tramo
+const MARGEN = 0.4; // aire al final de cada tramo
 const HUECO_MIN = 0.8;
-const MAX_ATEMPO = 1.3; // más rápido suena a ardilla
-const MAX_ATEMPO_FINAL = 1.5; // solo el último tramo, que no puede pasar del final del vídeo
+const MAX_ATEMPO = 1.08; // más rápido suena a ardilla
+const MAX_ATEMPO_FINAL = 1.15; // solo el último tramo, que no puede pasar del final del vídeo
 const clips = [];
 const total = duracion(video);
 const tiempos = existsSync(`out/${id}.tiempos.json`) ? JSON.parse(readFileSync(`out/${id}.tiempos.json`, 'utf8')) : null;

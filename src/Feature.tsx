@@ -9,9 +9,9 @@ import type {VideoData} from './data';
 import {C, FONT, GLOW, HERO_FILL, PAGE_BG, SAFE, TYPE, limeA} from './styles/brand';
 
 export const FPS = 30;
-export const DURATION = 450; // 15 s
-const HOOK_END_FIJO = 70;
-const CTA_FROM_FIJO = 360;
+export const DURATION = 540; // 18 s: cada escena con su tiempo
+const HOOK_END_FIJO = 84;
+const CTA_FROM_FIJO = 450;
 const PH_W = 680;
 const PH_H = 900;
 
@@ -26,19 +26,19 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   const limpio = (t: string) => t.replace(/\*/g, '');
   const clave = (t: string) => (t.match(/\*([^*]+)\*/)?.[1] ?? limpio(t).split(' ').pop() ?? '').replace(/[^\p{L}\p{N}%]/gu, '');
   const hookOut = prog(f, HOOK_END, 14);
-  const main = prog(f, HOOK_END - 6, 30);
-  const ctaIn = prog(f, CTA_FROM, 18);
+  const main = prog(f, HOOK_END - 8, 40);
+  const ctaIn = prog(f, CTA_FROM, 26);
   const sc = interpolate(f, [HOOK_END, CTA_FROM], scroll, {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const pulse = 0.55 + 0.45 * Math.sin(f / 5);
   // 3 a 5 subtítulos repartidos a partes iguales entre el título y el cierre (la misma cuenta la hace render.mjs para el guion de voz).
-  const subStart = tiempos && tiempos.subs.length === subs.length ? tiempos.subs : subs.map((_, i) => Math.round(86 + (i * (CTA_FROM - 86)) / subs.length));
+  const subStart = tiempos && tiempos.subs.length === subs.length ? tiempos.subs : subs.map((_, i) => Math.round(HOOK_END + 20 + (i * (CTA_FROM - HOOK_END - 20)) / subs.length));
   const subIdx = subStart.filter((t) => f >= t).length - 1 < 0 ? 0 : subStart.filter((t) => f >= t).length - 1;
   const subAt = subStart[subIdx];
   // Cámara 3D suave: entra girando y, en cada beat, el móvil pasa a otro ángulo (interpolación continua, sin golpes).
   const camT = [HOOK_END, ...subStart, CTA_FROM];
   const yaws = [-16, 14, -10, 12, -8];
   const pitches = [8, 3, 9, 4, 7];
-  const yaw = interpolate(f, camT, [-58, ...subStart.map((_, i) => yaws[i % 5]), 8], {easing: Easing.inOut(Easing.cubic), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const yaw = interpolate(f, camT, [-58, ...subStart.map((_, i) => yaws[i % 5]), 8], {easing: Easing.inOut(Easing.quad), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const pitch = interpolate(f, camT, [20, ...subStart.map((_, i) => pitches[i % 5]), 4], {easing: Easing.inOut(Easing.cubic), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}) + Math.sin(f / 34) * 1.5;
   const drift = interpolate(f, [HOOK_END, CTA_FROM], [0.96, 1.08], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const float = Math.sin(f / 26) * 12;
@@ -111,8 +111,8 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
         </div>
       </div>
       {/* Transiciones entre escenas y beats */}
-      <Wipe at={HOOK_END + 2} />
-      <Wipe at={CTA_FROM + 4} />
+      <Wipe at={HOOK_END + 2} dur={42} />
+      <Wipe at={CTA_FROM + 4} dur={42} />
       {creador && subtitulos && f < CTA_FROM ? subStart.map((t, i) => (i % 2 === 1 ? <KeywordCard key={i} at={t} word={clave(subs[i]).toUpperCase()} variant={Math.floor(i / 2)} /> : null)) : null}
       {creador ? <div style={{position: 'absolute', left: 0, right: 0, bottom: 150, textAlign: 'center', ...TYPE.wordmark, fontSize: 28, color: C.text, opacity: 0.45 * (1 - ctaIn), zIndex: 7}}>ZYRA</div> : null}
       {/* Cierre: la portada de la web (fondo de página, logo con halo, ZYRA en cursiva, botón principal y URL) */}
