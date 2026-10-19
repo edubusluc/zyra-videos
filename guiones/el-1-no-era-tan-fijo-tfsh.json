@@ -1,0 +1,20 @@
+{
+  "hook": [
+    "EL CAPI JURABA",
+    "QUE EL 1 GANABA"
+  ],
+  "title": "EL 1 NO ERA TAN FIJO",
+  "src": "ui/partidos-sets.png",
+  "imgW": 716,
+  "scroll": [
+    80,
+    440
+  ],
+  "subs": [
+    "El capi: «El 1 lo ganamos siempre»",
+    "Abres Zyra: % de victorias del 1 al 5",
+    "Mejor y peor partido, sin discusión"
+  ],
+  "cta": "Míralo en zyrapadel.com",
+  "subtitulos": false
+}
