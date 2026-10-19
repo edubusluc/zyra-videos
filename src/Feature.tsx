@@ -6,7 +6,7 @@ import {Phone3D, Screen} from './components/Phone';
 import {Line, prog} from './components/Reveal';
 import {useBrandFonts} from './components/fonts';
 import type {VideoData} from './data';
-import {C, FONT, SAFE} from './styles/brand';
+import {C, FONT, GLOW, HERO_FILL, PAGE_BG, SAFE, TYPE, limeA} from './styles/brand';
 
 export const FPS = 30;
 export const DURATION = 450; // 15 s
@@ -24,7 +24,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   const f = useCurrentFrame();
   const {fps} = useVideoConfig();
   const limpio = (t: string) => t.replace(/\*/g, '');
-  const clave = (t: string) => (t.match(/\*([^*]+)\*/)?.[1] ?? limpio(t).split(' ').pop() ?? '').replace(/[.,!?¡¿]/g, '');
+  const clave = (t: string) => (t.match(/\*([^*]+)\*/)?.[1] ?? limpio(t).split(' ').pop() ?? '').replace(/[^\p{L}\p{N}%]/gu, '');
   const hookOut = prog(f, HOOK_END, 14);
   const main = prog(f, HOOK_END - 6, 30);
   const ctaIn = prog(f, CTA_FROM, 18);
@@ -54,25 +54,25 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
     <AbsoluteFill>
       {creador ? <BlurBg src={src} /> : <LiveBg />}
       {/* Barra de progreso */}
-      <div style={{position: 'absolute', left: 0, top: 0, height: 8, width: `${(f / (tiempos?.frames ?? DURATION)) * 100}%`, background: C.lime, boxShadow: `0 0 20px ${C.lime}`, zIndex: 5}} />
+      <div style={{position: 'absolute', left: 0, top: 0, height: 8, width: `${(f / (tiempos?.frames ?? DURATION)) * 100}%`, background: C.lime, boxShadow: GLOW, zIndex: 5}} />
       {/* Gancho */}
       <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: 700, opacity: 1 - hookOut, transform: `scale(${0.85 + 0.15 * hookPop})`, transformOrigin: '0 50%'}}>
-        <Line text={hook[0]} at={2} out={HOOK_END} size={64} from="left" />
-        <div style={{height: 10, width: `${prog(f, 20, 22) * 100}%`, background: C.lime, margin: '14px 0 22px', boxShadow: `0 0 30px ${C.lime}`}} />
-        <Line text={hook[1]} at={26} out={HOOK_END} size={64} color={C.lime} italic from="right" />
+        <Line text={hook[0]} at={2} out={HOOK_END} size={64} from="left" extra={{...TYPE.title, ...HERO_FILL, letterSpacing: '.03em'}} />
+        <div style={{height: 10, width: `${prog(f, 20, 22) * 100}%`, background: C.lime, borderRadius: 5, margin: '14px 0 22px', boxShadow: GLOW}} />
+        <Line text={hook[1]} at={26} out={HOOK_END} size={64} color={C.lime} from="right" extra={{...TYPE.title, letterSpacing: '.03em'}} />
       </div>
       {/* Cuerpo */}
       <div style={{position: 'absolute', inset: 0, opacity: f < CTA_FROM ? main : 1 - ctaIn}}>
         <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: SAFE.top}}>
-          <Line text={title} at={HOOK_END + 4} size={44} />
-          <div style={{height: 8, width: `${prog(f, HOOK_END + 12, 20) * 38}%`, background: C.lime, marginTop: 14, boxShadow: `0 0 24px ${C.lime}`}} />
+          <Line text={title} at={HOOK_END + 4} size={44} extra={TYPE.title} />
+          <div style={{height: 8, width: `${prog(f, HOOK_END + 12, 20) * 38}%`, background: C.lime, borderRadius: 4, marginTop: 14, boxShadow: GLOW}} />
         </div>
         <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 400 + (1 - main) * 120 + float, filter: gris > 0 ? `grayscale(${gris}) contrast(1.1)` : undefined}}>
           <div style={{position: 'absolute', left: 60, right: 60, bottom: -70, height: 70, borderRadius: '50%', background: 'radial-gradient(rgba(0,0,0,.55), transparent 70%)', filter: 'blur(14px)'}} />
           <Phone3D width={PH_W} height={PH_H} yaw={yaw} pitch={pitch} roll={(1 - main) * 3} scale={drift * golpe} sheen={prog(f, HOOK_END + 10, 150)}>
             <Screen src={src} imgW={imgW} width={PH_W} scroll={sc} reveal={prog(f, HOOK_END + 4, 24)}>
               {box ? (
-                <div style={{position: 'absolute', left: box[0], top: box[1], width: box[2], height: box[3], border: `5px solid ${C.lime}`, borderRadius: 18, boxShadow: `0 0 ${40 * pulse}px ${C.lime}`, opacity: prog(f, HOOK_END + 30, 12)}} />
+                <div style={{position: 'absolute', left: box[0], top: box[1], width: box[2], height: box[3], border: `5px solid ${C.lime}`, borderRadius: 16, background: limeA(0.08), boxShadow: `0 0 ${10 + 26 * pulse}px ${limeA(0.6)}`, opacity: prog(f, HOOK_END + 30, 12)}} />
               ) : null}
             </Screen>
           </Phone3D>
@@ -81,10 +81,10 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
           <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: 1340, height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
             <div key={subIdx} style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'baseline', gap: '0 18px', opacity: prog(f, subAt, 4)}}>
               {words.map((w, i) => {
-                const esClave = w.replace(/[.,!?¡¿]/g, '').toLowerCase() === palabraClave;
+                const esClave = w.replace(/[^\p{L}\p{N}%]/gu, '').toLowerCase() === palabraClave;
                 const t = prog(f, subAt + i * 4, 8);
                 return (
-                  <span key={i} style={{fontFamily: esClave ? FONT.display : FONT.body, fontStyle: esClave ? 'italic' : 'normal', fontWeight: esClave ? 700 : 800, fontSize: esClave ? 70 : 76, lineHeight: 1.12, color: esClave ? C.lime : C.text, textShadow: '0 6px 30px rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.9)', display: 'inline-block', opacity: t, transform: `translateY(${(1 - t) * 30}px) scale(${esClave ? 0.8 + 0.2 * t + (desde < 14 ? 0.12 : 0) : 1})`}}>
+                  <span key={i} style={{fontFamily: esClave ? FONT.display : FONT.body, fontStyle: esClave ? 'italic' : 'normal', fontWeight: esClave ? 700 : 800, fontSize: esClave ? 62 : 76, textTransform: esClave ? 'uppercase' : 'none', letterSpacing: esClave ? '.02em' : 'normal', lineHeight: 1.12, color: esClave ? C.lime : C.text, textShadow: '0 6px 30px rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.9)', display: 'inline-block', opacity: t, transform: `translateY(${(1 - t) * 30}px) scale(${esClave ? 0.8 + 0.2 * t + (desde < 14 ? 0.12 : 0) : 1})`}}>
                     {w}
                   </span>
                 );
@@ -106,7 +106,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
         {/* Puntos de avance */}
         <div style={{position: 'absolute', left: 0, right: 0, top: 1545, display: 'flex', justifyContent: 'center', gap: 16}}>
           {subStart.map((_, i) => (
-            <div key={i} style={{width: i === subIdx ? 56 : 16, height: 16, borderRadius: 8, background: i === subIdx ? C.lime : C.border, boxShadow: i === subIdx ? `0 0 18px ${C.lime}` : 'none'}} />
+            <div key={i} style={{width: i === subIdx ? 56 : 16, height: 16, borderRadius: 8, background: i === subIdx ? C.lime : C.border, boxShadow: i === subIdx ? GLOW : 'none'}} />
           ))}
         </div>
       </div>
@@ -114,17 +114,19 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
       <Wipe at={HOOK_END + 2} />
       <Wipe at={CTA_FROM + 4} />
       {creador && subtitulos && f < CTA_FROM ? subStart.map((t, i) => (i % 2 === 1 ? <KeywordCard key={i} at={t} word={clave(subs[i]).toUpperCase()} variant={Math.floor(i / 2)} /> : null)) : null}
-      {creador ? <div style={{position: 'absolute', left: 0, right: 0, bottom: 150, textAlign: 'center', fontFamily: FONT.display, fontWeight: 700, fontSize: 26, letterSpacing: 10, color: C.text, opacity: 0.45, zIndex: 7}}>ZYRA</div> : null}
-      {/* Cierre */}
+      {creador ? <div style={{position: 'absolute', left: 0, right: 0, bottom: 150, textAlign: 'center', ...TYPE.wordmark, fontSize: 28, color: C.text, opacity: 0.45 * (1 - ctaIn), zIndex: 7}}>ZYRA</div> : null}
+      {/* Cierre: la portada de la web (fondo de página, logo con halo, ZYRA en cursiva, botón principal y URL) */}
+      <AbsoluteFill style={{opacity: ctaIn, background: PAGE_BG}} />
       <AbsoluteFill style={{opacity: ctaIn, alignItems: 'center', justifyContent: 'center'}}>
         <div style={{textAlign: 'center'}}>
-          <div style={{position: 'relative', display: 'inline-block', transform: `scale(${logoPop})`}}>
-            <div style={{position: 'absolute', inset: -90, borderRadius: '50%', background: `radial-gradient(${C.lime}44, transparent 65%)`}} />
+          <div style={{display: 'inline-block', transform: `scale(${logoPop})`, filter: `drop-shadow(0 30px 60px ${limeA(0.3)})`}}>
             <Logo height={220} />
           </div>
-          <div style={{fontFamily: FONT.display, fontWeight: 700, fontSize: 70, color: C.text, marginTop: 40, letterSpacing: 6 + (1 - prog(f, CTA_FROM + 8, 30)) * 30, opacity: prog(f, CTA_FROM + 8, 14)}}>ZYRA</div>
-          <div style={{display: 'inline-block', marginTop: 40, padding: '20px 56px', borderRadius: 60, background: C.lime, color: C.ink, fontFamily: FONT.body, fontWeight: 800, fontSize: 52, boxShadow: `0 0 ${30 + 30 * pulse}px ${C.lime}88`, transform: `scale(${(0.7 + 0.3 * prog(f, CTA_FROM + 18, 14)) * (1 + 0.03 * Math.sin(f / 4))})`, opacity: prog(f, CTA_FROM + 18, 10)}}>{ctaTxt}</div>
-          <div style={{fontFamily: FONT.body, fontWeight: 700, fontSize: 46, color: C.text, marginTop: 36, opacity: prog(f, CTA_FROM + 30, 14)}}>zyrapadel.com</div>
+          <div style={{...TYPE.eyebrow, fontSize: 28, marginTop: 40, opacity: prog(f, CTA_FROM + 6, 14)}}>Sube el nivel de tu equipo</div>
+          <div style={{...TYPE.wordmark, ...HERO_FILL, fontSize: 84, lineHeight: 1.1, marginTop: 10, letterSpacing: `${0.06 + (1 - prog(f, CTA_FROM + 8, 30)) * 0.3}em`, opacity: prog(f, CTA_FROM + 8, 14)}}>ZYRA</div>
+          <div style={{fontFamily: FONT.body, fontWeight: 700, fontSize: 32, letterSpacing: '.08em', color: C.text, marginTop: 6, opacity: prog(f, CTA_FROM + 14, 14)}}>Gestión de equipos de pádel</div>
+          <div style={{...TYPE.button, display: 'inline-block', marginTop: 48, padding: '24px 64px', borderRadius: 999, background: C.lime, color: C.ink, fontSize: 46, boxShadow: `inset 0 1px 0 rgba(255,255,255,.45), 0 14px 34px -8px rgba(0,0,0,.7), 0 ${12 + 8 * pulse}px ${36 + 16 * pulse}px -12px ${limeA(0.6)}`, transform: `scale(${(0.7 + 0.3 * prog(f, CTA_FROM + 18, 14)) * (1 + 0.02 * Math.sin(f / 4))})`, opacity: prog(f, CTA_FROM + 18, 10)}}>{ctaTxt}</div>
+          <div style={{fontFamily: FONT.body, fontWeight: 700, fontSize: 44, letterSpacing: '.02em', color: C.text, marginTop: 36, opacity: prog(f, CTA_FROM + 30, 14)}}>zyrapadel.com</div>
         </div>
       </AbsoluteFill>
     </AbsoluteFill>

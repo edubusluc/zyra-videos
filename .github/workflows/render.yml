@@ -16,6 +16,8 @@ jobs:
       AZURE_SPEECH_PITCH: ${{ secrets.AZURE_SPEECH_PITCH || vars.AZURE_SPEECH_PITCH }}
       AZURE_SPEECH_STYLE: ${{ secrets.AZURE_SPEECH_STYLE || vars.AZURE_SPEECH_STYLE }}
       AZURE_SPEECH_STYLE_DEGREE: ${{ secrets.AZURE_SPEECH_STYLE_DEGREE || vars.AZURE_SPEECH_STYLE_DEGREE }}
+      AZURE_SPEECH_PERFIL: ${{ vars.AZURE_SPEECH_PERFIL }}
+      VOZ_MEZCLA: ${{ vars.VOZ_MEZCLA }}
       AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
       ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
       ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
@@ -49,6 +51,9 @@ jobs:
           cache: npm
       - if: steps.que.outputs.skip != 'true'
         run: npm ci
+      - name: ffmpeg completo (ecualizador y compresor de la voz de anuncio; el de Remotion no los trae)
+        if: steps.que.outputs.skip != 'true'
+        run: command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
       - if: steps.que.outputs.skip != 'true'
         run: npx remotion browser ensure
       - name: Renderizar (solo los guiones nuevos o cambiados; todos si cambia la plantilla)
@@ -65,6 +70,8 @@ jobs:
           AZURE_SPEECH_PITCH: ${{ secrets.AZURE_SPEECH_PITCH || vars.AZURE_SPEECH_PITCH }}
           AZURE_SPEECH_STYLE: ${{ secrets.AZURE_SPEECH_STYLE || vars.AZURE_SPEECH_STYLE }}
           AZURE_SPEECH_STYLE_DEGREE: ${{ secrets.AZURE_SPEECH_STYLE_DEGREE || vars.AZURE_SPEECH_STYLE_DEGREE }}
+          AZURE_SPEECH_PERFIL: ${{ vars.AZURE_SPEECH_PERFIL }}
+          VOZ_MEZCLA: ${{ vars.VOZ_MEZCLA }}
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
           ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
           ELEVENLABS_MODEL: ${{ vars.ELEVENLABS_MODEL }}

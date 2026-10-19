@@ -176,7 +176,7 @@ El ajuste de tiempos y la música son los mismos que con ElevenLabs. Las frases 
 
 **Borrar no vuelve a renderizar.** Si un push solo elimina guiones, memes o reacciones, el CI no renderiza nada (el paso «Qué hay que renderizar» lo marca como `skip`). Se renderiza todo solo cuando cambia la plantilla (`src`, `public`…) o lanzas el workflow a mano con «Run workflow».
 
-**Tono de anuncio deportivo (Azure).** Por defecto (`AZURE_SPEECH_PERFIL=deportivo`) cada frase se pide con la misma velocidad `+7%` y tono `+1st` (y el mismo `AZURE_SPEECH_STYLE` si lo has puesto), para que todos los audios tengan el mismo tono continuo; con `AZURE_SPEECH_PERFIL=neutro` no se toca nada. `AZURE_SPEECH_RATE` y `AZURE_SPEECH_PITCH` mandan sobre el perfil. Las voces HD deciden solas el tono. Si Azure rechaza el estilo o los ajustes para una voz, el script lo avisa y reintenta sin ellos.
+**Tono de anuncio deportivo (Azure).** Por defecto (`AZURE_SPEECH_PERFIL=deportivo`) cada frase se pide con la misma velocidad `+10%` y tono `+1st` con la voz `es-ES-AlvaroNeural` (si no pones otra en `AZURE_SPEECH_VOICE`) (y el mismo `AZURE_SPEECH_STYLE` si lo has puesto), para que todos los audios tengan el mismo tono continuo; con `AZURE_SPEECH_PERFIL=neutro` no se toca nada. `AZURE_SPEECH_RATE` y `AZURE_SPEECH_PITCH` mandan sobre el perfil. Las voces HD deciden solas el tono. Si Azure rechaza el estilo o los ajustes para una voz, el script lo avisa y reintenta sin ellos.
 
 **Que no lea «punto».** Antes de hablar, el texto se limpia: sin emojis ni signos sueltos, y una frase que acaba en número se cierra con «!» (si acaba en «10.», varias voces leen «diez punto»). La web se dice «zyra pádel punto com» a propósito.
 
@@ -196,3 +196,17 @@ Con `"voz": true`, `render.mjs` pide **antes de renderizar** todo el guion habla
 - si no caben en 15 s, **alarga el vídeo** hasta 18 s en vez de apretar más la voz (avisa si tampoco cabe: acorta la `locucion`).
 
 El vídeo usa esos tiempos (`tiempos` en `src/data.ts`) para el fin del gancho, la entrada de cada subtítulo y el cierre, y los efectos de sonido caen en esos mismos cortes. Sin credenciales o si algo falla, vuelve al sistema anterior (tiempos fijos y una voz por frase). El CI pasa ahora las variables de voz también al paso de renderizado.
+
+## Tipografía y efectos: los de la web de Zyra
+
+Los vídeos usan el sistema de diseño de la web (`static/style.css` del repo Zyra), resumido en `src/styles/brand.ts`:
+
+- **Títulos** (gancho, título sobre el móvil, palabra clave): Syncopate Bold **cursiva en mayúsculas**, como los `h1` y la portada. La primera línea del gancho y el ZYRA del cierre llevan el degradado blanco → gris de `.z-hero-title`.
+- **Tildes:** Syncopate pinta mal las mayúsculas con tilde y la Ñ (el acento sale despegado). Igual que la web, esas letras se dibujan con Archivo ExtraBold al 112 % (`src/components/fonts.tsx`).
+- **Antetítulos y botón:** Archivo en mayúsculas espaciadas (`.z-eyebrow`, `.btn`). El cierre reproduce la portada: «Sube el nivel de tu equipo», ZYRA, «Gestión de equipos de pádel», botón lima y la URL.
+- **Colores y brillos:** solo los de la web (fondos `--z-bg`/`--z-surface`, lima, `--z-danger`) y el resplandor contenido `--z-glow`; sin verdes de otra paleta ni neón a pantalla completa. Curva de animación `--z-ease`.
+- La palabra clave de las tarjetas se ajusta sola al ancho de pantalla y se le quitan comillas y signos.
+
+## Voz de anuncio en la mezcla
+
+Por defecto (`VOZ_MEZCLA=anuncio`) `scripts/voz.mjs` trata la voz como en un anuncio deportivo antes de mezclarla: quita graves y retumbe, le da presencia y brillo, la comprime para que vaya siempre por delante de la música y normaliza el resultado hacia −14 LUFS, el volumen de referencia de TikTok, Reels y Shorts. Necesita un ffmpeg completo: en el CI se instala solo; en local usa el del sistema (en Windows, `winget install ffmpeg`). Con el ffmpeg mínimo de Remotion avisa y solo normaliza el volumen. `VOZ_MEZCLA=natural` deja solo el volumen y `VOZ_MEZCLA=no` la voz tal cual (en el CI, como variable del repo).

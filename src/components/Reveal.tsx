@@ -2,7 +2,8 @@ import React from 'react';
 import {Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {C, FONT} from '../styles/brand';
 
-export const ease = Easing.bezier(0.16, 1, 0.3, 1);
+/** --z-ease de la web. */
+export const ease = Easing.bezier(0.22, 1, 0.36, 1);
 
 /** Progreso 0→1 con ease-out fuerte entre dos fotogramas locales. */
 export const prog = (frame: number, start: number, dur: number) =>
@@ -19,11 +20,13 @@ type Props = {
   from?: 'up' | 'down' | 'left' | 'right';
   font?: 'display' | 'body';
   weight?: number;
-  letterSpacing?: number;
+  letterSpacing?: number | string;
+  /** Estilos de texto extra (p. ej. TYPE.title o HERO_FILL de brand.ts). */
+  extra?: React.CSSProperties;
 };
 
 /** Línea tipográfica con máscara: sube (o entra de lado) desde detrás de un recorte. */
-export const Line: React.FC<Props> = ({text, at, out, size, color = C.text, italic, align = 'left', from = 'up', font = 'display', weight = 700, letterSpacing = 0}) => {
+export const Line: React.FC<Props> = ({text, at, out, size, color = C.text, italic, align = 'left', from = 'up', font = 'display', weight = 700, letterSpacing = 0, extra}) => {
   const f = useCurrentFrame();
   const {fps} = useVideoConfig();
   const inP = spring({frame: f - at, fps, config: {damping: 200, mass: 0.7}, durationInFrames: 18});
@@ -47,6 +50,7 @@ export const Line: React.FC<Props> = ({text, at, out, size, color = C.text, ital
           color,
           whiteSpace: 'nowrap',
           transform: `translate(${tx}%, ${ty}%)`,
+          ...extra,
         }}
       >
         {text}

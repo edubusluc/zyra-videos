@@ -2,7 +2,7 @@ import React from 'react';
 import {AbsoluteFill, Img, OffthreadVideo, staticFile} from 'remotion';
 import {Court} from './components/Court';
 import {useBrandFonts} from './components/fonts';
-import {C, FONT} from './styles/brand';
+import {C, FONT, PAGE_BG} from './styles/brand';
 
 export type ReaccionData = {id: string; caption: string; emojis?: string; fondo?: string | null; recorte?: string | null; seg?: number; sonido?: boolean; pos?: 'arriba' | 'abajo'; subtitulos?: boolean};
 export const REACCION_FPS = 30;
@@ -16,7 +16,7 @@ const esVideo = (s: string) => /\.(mp4|mov|webm)$/i.test(s);
 export const Reaccion: React.FC<ReaccionData> = ({caption, emojis, fondo, recorte, sonido = true, pos = 'arriba', subtitulos = true}) => {
   useBrandFonts();
   return (
-    <AbsoluteFill style={{background: `radial-gradient(120% 70% at 50% 0%, ${C.forest} 0%, ${C.bg} 70%)`}}>
+    <AbsoluteFill style={{background: PAGE_BG}}>
       {fondo ? (
         esVideo(fondo) ? (
           <OffthreadVideo src={staticFile(fondo)} muted style={{width: '100%', height: '100%', objectFit: 'cover'}} />
