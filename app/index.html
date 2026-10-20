@@ -59,6 +59,7 @@ progress{width:100%;height:14px;margin-top:8px;accent-color:var(--lime)}
 </div>
 <details class="panel" id="mis"><summary>Mis vídeos <small>Vuelve a generarlos o elimínalos</small></summary><div class="in">
  <div class="row"><label><input type="checkbox" id="brepo" checked>Quitar también del repo si estaba subido (evita que el CI lo vuelva a generar)</label></div>
+ <div class="row" id="selbar" style="display:none"><label><input type="checkbox" id="selall">Seleccionar todo</label><button class="sec danger" id="selborrar" disabled>Eliminar seleccionados</button></div>
  <div id="cont" class="log"></div>
 </div></details>
 <details class="panel" id="pl"><summary>Plantillas <small>Recortes y fondos para los memes de reacción</small></summary><div class="in">
@@ -137,12 +138,23 @@ async function borrarItem(de,id,nombre){
   const r=await fetch('/api/borrar',{method:'POST',body:JSON.stringify({de,id,repo:$('brepo').checked,medios:de==='plantilla'})});const j=await r.json();
   if(!r.ok){estado(j.error,'err');return}
   estado('✔ Eliminado: '+j.hechos.join(', '),'ok');cargar()}
+function selActual(){return [...document.querySelectorAll('#cont .sel:checked')]}
+function selActualizar(){const t=document.querySelectorAll('#cont .sel'),n=selActual().length;$('selbar').style.display=t.length?'flex':'none';$('selall').checked=t.length>0&&n===t.length;$('selborrar').disabled=!n;$('selborrar').textContent=n?'Eliminar seleccionados ('+n+')':'Eliminar seleccionados'}
+$('selall').onchange=()=>{document.querySelectorAll('#cont .sel').forEach((c)=>c.checked=$('selall').checked);selActualizar()};
+$('selborrar').onclick=async()=>{const s=selActual();if(!s.length)return;
+  if(!confirm('¿Eliminar '+s.length+' elemento'+(s.length>1?'s':'')+'?\n\n'+s.map((c)=>'• '+c.dataset.nombre).join('\n')+($('brepo').checked?'\n\nTambién se quitarán del repositorio (se sube el cambio).':'')))return;
+  $('selborrar').disabled=true;const hechos=[],fallos=[];
+  for(const [i,c] of s.entries()){estado('Eliminando '+(i+1)+' de '+s.length+'…','busy');
+    try{const r=await fetch('/api/borrar',{method:'POST',body:JSON.stringify({de:c.dataset.de,id:c.dataset.id,repo:$('brepo').checked})});const j=await r.json();if(!r.ok)throw new Error(j.error);hechos.push(c.dataset.nombre)}catch(e){fallos.push(c.dataset.nombre+': '+e.message)}}
+  estado((hechos.length?'✔ Eliminados: '+hechos.join(', '):'')+(fallos.length?'\n✖ Fallos: '+fallos.join('; '):''),fallos.length?'err':'ok');cargar()};
 async function cargar(){try{
   const j=await (await fetch('/api/contenido')).json();const c=$('cont');c.textContent='';
   if(!j.contenido.length)c.textContent='Todavía no has creado nada. Pide una idea en el chat y aparecerá aquí.';
   const nombres={guion:'Vídeo',reaccion:'Reacción',meme:'Meme'};
-  for(const v of j.contenido)c.appendChild(fila(nombres[v.tipo]+' · '+v.titulo+(v.con_voz?' · con voz':v.renderizado?' · renderizado':' · sin renderizar'),[
-    ['Volver a generar',(e)=>crear({tipo:'regenerar',de:v.tipo,id:v.id},e.target)],['Eliminar',()=>borrarItem(v.tipo,v.id,v.titulo),1]]));
+  for(const v of j.contenido){const f=fila(nombres[v.tipo]+' · '+v.titulo+(v.con_voz?' · con voz':v.renderizado?' · renderizado':' · sin renderizar'),[
+    ['Volver a generar',(e)=>crear({tipo:'regenerar',de:v.tipo,id:v.id},e.target)],['Eliminar',()=>borrarItem(v.tipo,v.id,v.titulo),1]]);
+    const k=document.createElement('input');k.type='checkbox';k.className='sel';k.dataset.de=v.tipo;k.dataset.id=v.id;k.dataset.nombre=v.titulo;k.setAttribute('aria-label','Seleccionar '+v.titulo);k.onchange=selActualizar;f.prepend(k);c.appendChild(f)}
+  selActualizar();
   $('lista').textContent='';
   if(!j.plantillas.length)$('lista').textContent='Todavía no hay plantillas. Sube un recorte para crear la primera.';
   for(const p of j.plantillas)$('lista').appendChild(fila(p.id+(p.descripcion&&p.descripcion!==p.id?' — '+p.descripcion:''),[['Eliminar',()=>borrarItem('plantilla',p.id,p.id),1]]));
