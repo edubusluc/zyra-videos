@@ -17,7 +17,7 @@ Tras subir el guion, la app lanza ella misma el workflow (workflow_dispatch con 
 ## Formato del guion (`guiones/<id>.json`)
 | Campo | Qué es |
 | --- | --- |
-| `hook` | Dos líneas del gancho (máx. ~16 caracteres cada una) |
+| `hook` | El gancho: una sola frase repartida en dos líneas (máx. ~16 caracteres cada una; si llega en una línea o en tres, se reparte sola). La voz la dice de una vez, sin cortarla; la letra se reduce si no cabe |
 | `title` | Título sobre el móvil (máx. ~23 caracteres) |
 | `src`, `imgW` | Captura de `public/ui/` y su ancho en px |
 | `scroll` | Desplazamiento inicial y final de la captura (px) |

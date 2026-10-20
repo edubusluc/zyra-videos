@@ -124,7 +124,7 @@ export const paraVoz = (txt) => {
   t = t.replace(/\p{Extended_Pictographic}|\uFE0F/gu, '').replace(/\.{3,}/g, '…'); // sin emojis (algunas voces los leen) ni puntos suspensivos sueltos
   t = t.replace(/(^|\s)[.,;:·•\-–—]+(?=\s|$)/g, '$1').replace(/\s+/g, ' ').trim(); // signos sueltos: una voz puede deletrearlos («punto»)
   t = t.replace(/\b([a-z0-9-]+)\.(com|es|org|net)\b/gi, (_, a, b) => `${a.replace(/(zyra)(padel)/i, '$1 pádel')} punto ${b}`); // la web se dice, no se deletrea
-  t = t.replace(/(^|[.!?]\s+|[¿¡])([a-záéíóúüñ])/g, (_, a, b) => a + b.toUpperCase()); // mayúscula al empezar frase
+  t = t.replace(/(^[«"“'(]*|[.!?]\s+[«"“'(]*|[¿¡][«"“'(]*)([a-záéíóúüñ])/g, (_, a, b) => a + b.toUpperCase()); // mayúscula al empezar frase
   if (/[.!?…]$/.test(t)) return t;
   return /\d$/.test(t) ? `${t}!` : `${t}.`; // «…10.» se lee «diez punto»: tras un número se cierra con «!»
 };
@@ -193,14 +193,10 @@ const sintetizar = async (texto, xml = false) => {
   return f;
 };
 
-// ---- Locución única (--narracion) ----
-// Todo el guion hablado se pide de una sola vez (la entonación fluye de una frase a otra, como un locutor), con pausas marcadas entre frases;
-// luego se localizan las frases en ese audio y se colocan en la línea de tiempo con huecos cortos y un único ajuste de velocidad para todas.
-// Los tiempos resultantes (out/<id>.tiempos.json) los usa render.mjs para que subtítulos y cortes sigan a la voz, y este script para mezclar.
-const PAUSA_GANCHO = 350; // ms entre las dos frases del gancho: respiro corto, sin cortar la locución
-const partesGancho = (t) => t.split(/(?<=[.!?…])\s+/).filter(Boolean); // «Yo gano siempre. Tu ficha opina.» -> 2 frases
-const ssmlGancho = (t) => partesGancho(t).map(escXml).join(`<break time="${PAUSA_GANCHO}ms"/>`); // el gancho es UN bloque SSML con pausa corta, no dos tomas
-const PAUSA_AZ = 900; // ms entre frases dentro de la locución única (se recortan después)
+// ---- Locución (--narracion) ----
+// Cada frase se sintetiza por separado y se mide su habla real en el audio (sin silencios de cola): los tiempos son exactos sea cual sea el guion.
+// Antes se pedía todo de una vez y se buscaban las pausas entre frases; con guiones cortos o con comas largas se equivocaba de corte o fallaba.
+// El gancho es una sola frase y una sola toma: nunca se parte. Los tiempos (out/<id>.tiempos.json) los usa render.mjs y este script para mezclar.
 const pcmMono = (f) => {
   const b = spawnSync(FF, ['-v', 'error', '-i', f, '-vn', '-ac', '1', '-ar', '16000', '-f', 'wav', '-'], {maxBuffer: 1 << 28}).stdout;
   const i = b && b.length ? b.indexOf('data') + 8 : 0;
@@ -209,81 +205,22 @@ const pcmMono = (f) => {
   for (let k = 0; k < n; k++) x[k] = b.readInt16LE(i + k * 2) / 32768;
   return x;
 };
-/** De las pausas candidatas (ordenadas en el tiempo) elige k que reparten el habla en tramos proporcionales al texto de cada frase; null si el reparto es inverosímil. */
-const elegirPausas = (cand, k, frases, ini, fin) => {
-  if (cand.length < k) return null;
-  if (!frases) return cand.slice().sort((p, q) => (q[1] - q[0]) - (p[1] - p[0])).slice(0, k).sort((p, q) => p[0] - q[0]);
-  const w = frases.map((f) => f.replace(/[^\p{L}\p{N}]/gu, '').length || 1), W = w.reduce((a, b) => a + b, 0);
-  const objetivo = []; let c = 0;
-  for (let i = 0; i < k; i++) { c += w[i]; objetivo.push(ini + (c / W) * (fin - ini)); }
-  // programación dinámica: coste = desviación cuadrática de cada corte (punto medio de la pausa) respecto a su posición esperada
-  const memo = new Map();
-  const mejor = (i, desde) => {
-    if (i === k) return {coste: 0, ruta: []};
-    const clave = i * 1000 + desde;
-    if (memo.has(clave)) return memo.get(clave);
-    let r = {coste: Infinity, ruta: null};
-    for (let j = desde; j <= cand.length - (k - i); j++) {
-      const m = (cand[j][0] + cand[j][1]) / 2, sub = mejor(i + 1, j + 1);
-      const coste = (m - objetivo[i]) ** 2 - (cand[j][1] - cand[j][0]) * 0.5 + sub.coste;
-      if (sub.ruta && coste < r.coste) r = {coste, ruta: [j, ...sub.ruta]};
-    }
-    memo.set(clave, r);
-    return r;
-  };
-  const r = mejor(0, 0);
-  if (!r.ruta) return null;
-  const sel = r.ruta.map((j) => cand[j]);
-  // validación: ninguna frase puede durar mucho más (ni mucho menos) de lo que pide su texto
-  const cortes = [ini, ...sel.flat(), fin];
-  const ritmo = (fin - ini - sel.reduce((a, [s, e]) => a + (e - s), 0)) / W;
-  for (let i = 0; i < frases.length; i++) {
-    const d = cortes[2 * i + 1] - cortes[2 * i], esp = w[i] * ritmo;
-    if (d > esp * 1.8 + 0.5 || d < esp * 0.45 - 0.2) return null;
-  }
-  return sel;
-};
-/** Busca en el audio las n-1 pausas entre frases (las que mejor encajan con el reparto de texto)  y devuelve {s, e} de cada una de las n frases, en segundos. */
-const limitesPorSilencio = (mp3, n, frases) => {
+/** Inicio y fin del habla en un clip (en segundos), con un margen corto para no comerse ataques ni colas. */
+const limitesHabla = (mp3) => {
   const x = pcmMono(mp3), V = 160; // ventanas de 10 ms a 16 kHz
   const nv = Math.floor(x.length / V), env = new Float32Array(nv);
   let pico = 0;
   for (let v = 0; v < nv; v++) { let q = 0; for (let k = 0; k < V; k++) q += x[v * V + k] ** 2; env[v] = Math.sqrt(q / V); pico = Math.max(pico, env[v]); }
   if (!nv || pico < 0.003) return null;
-  for (const [rel, min] of [[0.02, 0.3], [0.05, 0.25], [0.1, 0.2]]) {
-    const thr = pico * rel, runs = [];
-    let a = -1;
-    for (let v = 0; v <= nv; v++) {
-      const callado = v < nv && env[v] < thr;
-      if (callado && a < 0) a = v;
-      if (!callado && a >= 0) { if ((v - a) / 100 >= min) runs.push([a / 100, v / 100]); a = -1; }
-    }
-    const ini = env.findIndex((e) => e >= thr) / 100;
-    let fin = nv - 1; while (fin > 0 && env[fin] < thr) fin--;
-    fin = (fin + 1) / 100;
-    const dentro = runs.filter(([s, e]) => s > ini + 0.05 && e < fin - 0.05);
-    if (dentro.length < n - 1) continue;
-    // Las pausas no son siempre las n-1 más largas (una coma o un respiro dentro de una frase puede ser más largo que el hueco): se eligen las que dejan
-    // cada frase con una duración proporcional a su texto, y si ni así encaja se descarta (se usará una voz por frase) en vez de cortar a media frase.
-    // Las pausas largas (la de PAUSA_AZ) mandan: la pausa corta interna del gancho no debe confundirse con el corte entre frases.
-    dentro.sort((p, q) => p[0] - q[0]);
-    const largas = dentro.filter(([s, e]) => e - s >= (PAUSA_AZ / 1000) * 0.6);
-    const pausas = (largas.length >= n - 1 && elegirPausas(largas, n - 1, frases, ini, fin)) || elegirPausas(dentro, n - 1, frases, ini, fin);
-    if (!pausas) continue;
-    const cortes = [ini, ...pausas.flat(), fin];
-    const r = Array.from({length: n}, (_, i) => ({s: Math.max(0, cortes[2 * i] - 0.03), e: cortes[2 * i + 1] + 0.05}));
-    // pausa interna más larga dentro de la primera frase (entre las dos del gancho), en segundos desde el inicio del clip
-    const interna = dentro.filter((p) => p[0] >= cortes[0] && p[1] <= cortes[1]).sort((p, q) => (q[1] - q[0]) - (p[1] - p[0]))[0];
-    if (interna) r[0].interno = (interna[0] + interna[1]) / 2 - r[0].s;
-    return r;
-  }
-  return null;
+  const thr = pico * 0.03;
+  const ini = env.findIndex((e) => e >= thr);
+  let fin = nv - 1; while (fin > 0 && env[fin] < thr) fin--;
+  return {s: Math.max(0, ini / 100 - 0.04), e: Math.min(nv / 100, (fin + 1) / 100 + 0.08)};
 };
-/** ElevenLabs con marcas de tiempo por carácter: las frases se localizan exactamente, sin buscar silencios. */
+/** ElevenLabs con marcas de tiempo por carácter: una sola toma (entonación continua) y las frases se localizan exactamente. */
 const sintetizarElevenUnico = async (frases) => {
   const brk = modelo.includes('v3') ? '\n\n' : ' <break time="0.6s" /> ';
-  const enviar = frases.map((f, i) => (i === 0 && tramos[0]?.gancho && !modelo.includes('v3') ? partesGancho(f).join(` <break time="${PAUSA_GANCHO / 1000}s" /> `) : f));
-  const texto = enviar.join(brk);
+  const texto = frases.join(brk);
   const hash = createHash('sha1').update(`eleven-unico|${voice}|${modelo}|${JSON.stringify(ajustes)}|${texto}`).digest('hex').slice(0, 16);
   const f = `out/.voz-cache/${hash}.mp3`, fj = `${f}.json`;
   if (!existsSync(fj) || !existsSync(f)) {
@@ -294,34 +231,36 @@ const sintetizarElevenUnico = async (frases) => {
     writeFileSync(fj, JSON.stringify(j.alignment || j.normalized_alignment || null));
   }
   const al = JSON.parse(readFileSync(fj, 'utf8'));
-  if (!al?.characters) return {mp3: f, seg: null};
+  if (!al?.characters) return null;
   const txt = al.characters.join('');
   let pos = 0;
   const seg = [];
-  for (const [k, fr] of frases.entries()) {
-    const partes = k === 0 && tramos[0]?.gancho ? partesGancho(fr) : [fr];
-    const i = txt.indexOf(partes[0], pos);
-    if (i < 0) return {mp3: f, seg: null};
-    let j = i + partes[0].length - 1, i2 = -1;
-    if (partes.length > 1) {
-      i2 = txt.indexOf(partes.at(-1), j + 1);
-      if (i2 < 0) return {mp3: f, seg: null};
-      j = i2 + partes.at(-1).length - 1;
-    }
-    const s0 = Math.max(0, al.character_start_times_seconds[i] - 0.03);
-    seg.push({s: s0, e: al.character_end_times_seconds[j] + 0.05, ...(i2 >= 0 ? {interno: al.character_start_times_seconds[i2] - s0} : {})});
+  for (const fr of frases) {
+    const i = txt.indexOf(fr, pos);
+    if (i < 0) return null;
+    const j = i + fr.length - 1;
+    seg.push({mp3: f, s: Math.max(0, al.character_start_times_seconds[i] - 0.04), e: al.character_end_times_seconds[j] + 0.08});
     pos = j + 1;
   }
-  return {mp3: f, seg};
+  return seg;
+};
+/** Una toma por frase (Azure, o ElevenLabs si fallan las marcas de tiempo), cada una medida en su propio audio. */
+const porFrase = async (frases) => {
+  const seg = [];
+  for (const fr of frases) {
+    const mp3 = await sintetizar(fr);
+    const l = limitesHabla(mp3);
+    if (!l) throw new Error(`la voz devolvió silencio para «${fr}»`);
+    seg.push({mp3, ...l});
+  }
+  return seg;
 };
 if (narracion) {
   const frases = entonar(tramos.map((x) => paraVoz(x.txt)));
-  let mp3, seg;
+  let seg;
   try {
-    if (azure) { mp3 = await sintetizar(frases.map((f, i) => (i === 0 && tramos[0]?.gancho ? ssmlGancho(f) : escXml(f))).join(`<break time="${PAUSA_AZ}ms"/>`), true); seg = limitesPorSilencio(mp3, frases.length, frases); }
-    else ({mp3, seg} = await sintetizarElevenUnico(frases));
+    seg = (!azure && (await sintetizarElevenUnico(frases))) || (await porFrase(frases));
   } catch (e) { console.error(`✖ ${e.message}`); await salir(2); }
-  if (!seg) { console.warn('⚠ No pude localizar las frases en la locución única: se usará una voz por frase con los tiempos fijos.'); await salir(2); }
   seg.forEach((x, i) => { x.dur = x.e - x.s; x.txt = frases[i]; });
   const GAPS = seg.map((_, i) => (i === 0 ? 0.9 : i === seg.length - 2 ? 0.7 : 0.5)); // tras el gancho cabe el título; antes del cierre, un respiro; entre subtítulos, aire para que cada idea se asiente
   const FIN = 17.2; // objetivo: ~18 s. La voz nunca se acelera: si no cabe, el vídeo se alarga hasta MAX_SEG
@@ -340,15 +279,13 @@ if (narracion) {
   // Fotogramas (30 fps) para src/Feature.tsx: fin del gancho, entrada de cada subtítulo (3 fotogramas antes de la voz) y entrada del cierre.
   const f30 = (t) => Math.round(t * 30);
   const hookEnd = Math.max(84, Math.ceil((ini[0] + seg[0].dur / factor + 0.12) * 30));
-  // Segunda línea del gancho: entra cuando la voz empieza su segunda frase (3 fotogramas antes); sin dato, el valor fijo de Feature.tsx.
-  const hookB = seg[0].interno !== undefined ? Math.min(hookEnd - 20, Math.max(12, f30(ini[0] + seg[0].interno / factor) - 3)) : undefined;
   const subs = [];
   for (let i = 1; i < seg.length - 1; i++) subs.push(Math.max(i === 1 ? hookEnd + 24 : subs[i - 2] + 36, f30(ini[i]) - 3));
   const cta = Math.min(frames - 75, Math.max(subs.at(-1) + 36, f30(ini.at(-1)) - 4));
   seg.forEach((x, i) => { x.ini = +ini[i].toFixed(3); });
-  writeFileSync(`out/${id}.tiempos.json`, JSON.stringify({mp3, factor: +factor.toFixed(4), frases: seg, hookEnd, ...(hookB !== undefined ? {hookB} : {}), subs, cta, frames, fin: +fin.toFixed(2)}, null, 2));
+  writeFileSync(`out/${id}.tiempos.json`, JSON.stringify({factor: +factor.toFixed(4), frases: seg, hookEnd, subs, cta, frames, fin: +fin.toFixed(2)}, null, 2));
   seg.forEach((x) => console.log(`✓ ${x.ini.toFixed(1)} s · ${(x.dur / factor).toFixed(1)} s · ${x.txt}`));
-  console.log(`Locución única: ${fin.toFixed(1)} s${factor > 1.001 ? ` (×${factor.toFixed(2)} en todas las frases)` : ''} → gancho ${hookEnd}, subtítulos ${subs.join('/')}, cierre ${cta}, vídeo de ${frames} (fotogramas)`);
+  console.log(`Locución: ${fin.toFixed(1)} s${factor > 1.001 ? ` (×${factor.toFixed(2)} en todas las frases)` : ''} → gancho ${hookEnd}, subtítulos ${subs.join('/')}, cierre ${cta}, vídeo de ${frames} (fotogramas)`);
   await salir(0);
 }
 
@@ -359,14 +296,14 @@ const MAX_ATEMPO_FINAL = 1.15; // solo el último tramo, que no puede pasar del 
 const clips = [];
 const total = duracion(video);
 const tiempos = existsSync(`out/${id}.tiempos.json`) ? JSON.parse(readFileSync(`out/${id}.tiempos.json`, 'utf8')) : null;
-if (tiempos && existsSync(tiempos.mp3)) {
+if (tiempos && tiempos.frases.every((x) => existsSync(x.mp3 ?? tiempos.mp3))) {
   // Locución única ya generada: cada frase se recorta de la misma toma y se coloca donde marcan los tiempos (con una sola velocidad común).
-  for (const x of tiempos.frases) clips.push({mp3: tiempos.mp3, ss: x.s, ee: x.e, ini: x.ini, atempo: tiempos.factor, dur: x.dur / tiempos.factor + 0.05, recorta: false});
-  console.log(`Voz: locución única (${tiempos.frases.length} frases${tiempos.factor > 1.001 ? `, ×${tiempos.factor}` : ''}), tiempos de out/${id}.tiempos.json`);
+  for (const x of tiempos.frases) clips.push({mp3: x.mp3 ?? tiempos.mp3, ss: x.s, ee: x.e, ini: x.ini, atempo: tiempos.factor, dur: x.dur / tiempos.factor + 0.05, recorta: false});
+  console.log(`Voz: locución medida (${tiempos.frases.length} frases${tiempos.factor > 1.001 ? `, ×${tiempos.factor}` : ''}), tiempos de out/${id}.tiempos.json`);
 } else {
 let libre = 0; // hasta cuándo está ocupada la voz: una frase nunca se corta, la siguiente espera a que acabe
 for (const [k, x] of tramos.entries()) {
-  const mp3 = await (azure && x.gancho ? sintetizar(ssmlGancho(paraVoz(x.txt)), true) : sintetizar(paraVoz(x.txt))).catch(async (e) => { console.error(`✖ ${e.message}`); await salir(1); });
+  const mp3 = await sintetizar(paraVoz(x.txt)).catch(async (e) => { console.error(`✖ ${e.message}`); await salir(1); });
   const d = duracion(mp3);
   const ini = Math.max(x.a, libre);
   const ultimo = k + 1 >= tramos.length;
@@ -419,7 +356,7 @@ if (mezcla === 'anuncio' && cadenaVoz === 'anull') console.warn('⚠ Este ffmpeg
 const normaliza = mezcla !== 'no' && filtrosFF.has('loudnorm') ? 'loudnorm=I=-14:TP=-1.5:LRA=11,' : '';
 console.log(`Mezcla de voz: ${cadenaVoz !== 'anull' ? 'anuncio (EQ + compresor)' : 'sin procesar'}${normaliza ? ' · −14 LUFS' : ''}`);
 const entradas = ['-i', video, ...clips.flatMap((c) => ['-i', c.mp3]), ...(musica ? ['-stream_loop', '-1', '-i', musica] : []), ...sfx.flatMap((e) => ['-i', `public/sfx/${e.f}.wav`])];
-const filtros = clips.map((c, i) => `[${i + 1}:a]${c.ss !== undefined ? `atrim=${c.ss.toFixed(3)}:${c.ee.toFixed(3)},asetpts=PTS-STARTPTS,` : ''}${c.atempo > 1.001 ? `atempo=${c.atempo.toFixed(4)},` : ''}atrim=0:${c.dur.toFixed(3)},${c.recorta ? `volume='clip((${c.dur.toFixed(3)}-t)/0.15,0,1)':eval=frame,` : ''}adelay=${Math.round(c.ini * 1000)}|${Math.round(c.ini * 1000)}[v${i}]`);
+const filtros = clips.map((c, i) => `[${i + 1}:a]${c.ss !== undefined ? `atrim=${c.ss.toFixed(3)}:${c.ee.toFixed(3)},asetpts=PTS-STARTPTS,` : ''}${c.atempo > 1.001 ? `atempo=${c.atempo.toFixed(4)},` : ''}atrim=0:${c.dur.toFixed(3)},volume='clip(t/0.015,0,1)*clip((${c.dur.toFixed(3)}-t)/${c.recorta ? 0.15 : 0.04},0,1)':eval=frame,adelay=${Math.round(c.ini * 1000)}|${Math.round(c.ini * 1000)}[v${i}]`);
 const vozs = clips.map((_, i) => `[v${i}]`).join('');
 const base0 = clips.length + 1 + (musica ? 1 : 0);
 sfx.forEach((e, i) => { const ms = Math.max(0, Math.round(e.t * 1000)); filtros.push(`[${base0 + i}:a]volume=${e.vol},adelay=${ms}|${ms}[s${i}]`); });
