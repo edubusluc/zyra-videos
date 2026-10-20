@@ -22,6 +22,14 @@ export type VideoData = {
   subtitulos?: boolean;
   /** Estilo visual: «base» (por defecto) o «creador» (fondo desenfocado, tarjetas de palabra clave, blanco y negro → color, subtítulos con palabra destacada). En `subs`, *así* marca la palabra a destacar. */
   estilo?: 'base' | 'creador';
+  /** Variante visual y sonora (cámara, transiciones, animación de subtítulos, gancho, efectos, música). La pone render.mjs a partir del id si no viene. */
+  variante?: number;
+  /** Fondo propio de public/ (p. ej. fondos/pista-noche.mp4); por defecto render.mjs reparte los de public/fondos/. null = el de la captura. */
+  fondo?: string | null;
+  /** Música concreta de public/ (p. ej. musica/otra.mp3); por defecto una de public/musica/ según la variante. */
+  musica?: string;
+  /** Voz grabada: un .mp3 por frase en public/ (gancho, cada subtítulo y cierre, en ese orden). Sustituye a la voz sintética. */
+  audios?: string[];
   /** Fotogramas (30 fps) en que acaba el gancho, entra cada subtítulo, entra el cierre y duración total; los pone render.mjs a partir de la locución única (out/<id>.tiempos.json). Sin esto, reparto fijo. */
   tiempos?: {hookEnd: number; subs: number[]; cta: number; frames: number};
 };

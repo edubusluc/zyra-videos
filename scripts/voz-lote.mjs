@@ -8,9 +8,11 @@ const ids = existsSync('out') ? readdirSync('out').filter((f) => f.endsWith('.vo
 let fallos = 0;
 for (const id of ids) {
   const json = id.startsWith('reaccion-') ? `reacciones/${id.slice(9)}.json` : `guiones/${id}.json`;
-  if (!existsSync(json) || !JSON.parse(readFileSync(json, 'utf8')).voz) continue;
+  const g = existsSync(json) ? JSON.parse(readFileSync(json, 'utf8')) : null;
+  if (!g?.voz) continue;
+  const grabada = Array.isArray(g.audios) && g.audios.length > 0; // audios subidos por el usuario: no hacen falta claves de voz
   const azure = (process.env.VOZ_PROVEEDOR || (process.env.AZURE_SPEECH_KEY ? 'azure' : 'elevenlabs')) === 'azure';
-  if (azure ? !process.env.AZURE_SPEECH_KEY : !process.env.ELEVENLABS_API_KEY || !process.env.ELEVENLABS_VOICE_ID) {
+  if (!grabada && (azure ? !process.env.AZURE_SPEECH_KEY : !process.env.ELEVENLABS_API_KEY || !process.env.ELEVENLABS_VOICE_ID)) {
     console.log(`::warning::Faltan los secretos ${azure ? 'AZURE_SPEECH_KEY / AZURE_SPEECH_REGION' : 'ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID'}: ${id} queda sin voz`);
     continue;
   }

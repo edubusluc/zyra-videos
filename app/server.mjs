@@ -310,7 +310,14 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       const errores = validar(g, cat);
       if (errores.length) throw new Error(`Guion no válido: ${errores.join('; ')}`);
       const c = cat.find((x) => x.src === g.src);
-      job.guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(estilo === 'base' ? {estilo} : {}), ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin};
+      // Voz grabada: un audio por frase (gancho, cada subtítulo y cierre); con ellos el vídeo lleva voz sin proveedor.
+      const audios = Array.isArray(g.audios) ? g.audios : null;
+      if (audios) {
+        if (audios.length !== g.subs.length + 2) throw new Error(`Faltan audios: hacen falta ${g.subs.length + 2} (gancho, ${g.subs.length} frases y cierre) y hay ${audios.length}.`);
+        for (const a of audios) if (!/^voz\/[a-z0-9-]+\/\d\.mp3$/.test(a) || !existsSync(join(ROOT, 'public', a))) throw new Error(`No encuentro el audio ${a}; vuelve a subirlo.`);
+        voz = true;
+      }
+      job.guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(estilo === 'base' ? {estilo} : {}), ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin, ...(audios ? {audios, voz: true} : {})};
       guardar('guiones', g.title, job.guion, '', 'mp4');
     }
     log(tipo === 'regenerar' ? `Regenerando: ${items[0].archivo}` : `Guardado: ${items.map((i) => i.archivo).join(', ')}`);
@@ -365,7 +372,7 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       job.progreso = {pct: 100, fase: 'Listo'};
       organizar();
     } else {
-      await sh('git', ['add', ...items.map((i) => i.archivo)]);
+      await sh('git', ['add', ...items.map((i) => i.archivo), ...(job.guion?.audios || []).map((a) => `public/${a}`)]);
       await sh('git', ['commit', '-m', `${tipo}: ${items.map((i) => i.id).join(', ')}`.slice(0, 120)]);
       // Si el remoto tiene cambios nuevos (otro equipo, mis actualizaciones…), los integramos y reintentamos.
       try { await sh('git', ['push']); } catch {
@@ -420,6 +427,26 @@ export const server = createServer(async (req, res) => {
     writeFileSync(join(ROOT, 'public/medios', nombre), Buffer.concat(trozos));
     return json(res, 200, {ruta: `medios/${nombre}`});
   }
+  if (req.method === 'POST' && req.url.startsWith('/api/subir-voz?')) {
+    // Una frase grabada por el usuario (cuerpo = el .mp3 en bruto). ?grupo=<carpeta del vídeo>&n=<orden de la frase: 0 = gancho>
+    const q = new URL(req.url, 'http://x').searchParams;
+    const grupo = (q.get('grupo') || '').replace(/[^a-z0-9-]+/g, '').slice(0, 40), n = Number(q.get('n'));
+    if (!grupo || !Number.isInteger(n) || n < 0 || n > 9) return json(res, 400, {error: 'Falta el grupo o el número de frase.'});
+    const ext = (/\.(mp3|wav|m4a|ogg)$/i.exec(q.get('nombre') || '') || [, 'mp3'])[1].toLowerCase();
+    const trozos = []; let tam = 0;
+    for await (const c of req) { tam += c.length; if (tam > 15 * 1024 * 1024) return json(res, 413, {error: 'El audio pesa más de 15 MB.'}); trozos.push(c); }
+    const dir = join(ROOT, 'public/voz', grupo);
+    mkdirSync(dir, {recursive: true});
+    // Se guarda siempre como .mp3 (mono, 48 kHz): el CI y la mezcla leen un único formato, venga de donde venga la grabación.
+    const origen = join(dir, `${n}.origen.${ext}`), destino = join(dir, `${n}.mp3`);
+    writeFileSync(origen, Buffer.concat(trozos));
+    try { execFileSync(process.env.FFMPEG || 'ffmpeg', ['-y', '-v', 'error', '-i', origen, '-vn', '-ac', '1', '-ar', '48000', '-b:a', '192k', destino]); } catch {
+      if (ext !== 'mp3') { rmSync(origen, {force: true}); return json(res, 400, {error: 'No pude convertir el audio: instala ffmpeg o súbelo en .mp3.'}); }
+      copyFileSync(origen, destino);
+    }
+    rmSync(origen, {force: true});
+    return json(res, 200, {ruta: `voz/${grupo}/${n}.mp3`});
+  }
   if (req.method === 'POST' && req.url === '/api/plantilla') {
     let body = '';
     for await (const c of req) body += c;
@@ -434,6 +461,17 @@ export const server = createServer(async (req, res) => {
       if (subir) await subirArchivos([`plantillas/${id}.json`, ...[fondo, recorte].filter(Boolean).map((m) => `public/${m}`)], `Plantilla: ${id}`);
       return json(res, 200, {ok: true, subida: Boolean(subir)});
     } catch (e) { return json(res, 500, {error: e.message}); }
+  }
+  if (req.method === 'POST' && req.url === '/api/frases') {
+    // Las frases que hay que grabar, en orden, tal como las dirá la voz (gancho en una sola frase, locución si la hay, cierre).
+    let body = '';
+    for await (const c of req) body += c;
+    try {
+      const g = JSON.parse(body || '{}');
+      if (!Array.isArray(g.hook) || !Array.isArray(g.subs)) return json(res, 400, {error: 'Guion sin gancho o sin subtítulos.'});
+      const gancho = g.hook.reduce((acc, h) => (!acc ? h : /[.!?…,:;]$/.test(acc) || !/^[¿¡]/.test(h) ? `${acc} ${h}` : `${acc}, ${h}`), '');
+      return json(res, 200, {frases: [gancho, ...g.subs.map((x, i) => String(g.locucion?.[i] || x).replace(/\*/g, '')), g.cta]});
+    } catch (e) { return json(res, 400, {error: e.message}); }
   }
   if (req.method === 'POST' && req.url === '/api/chat') {
     let body = '';

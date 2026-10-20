@@ -65,16 +65,19 @@ if (args.includes('--disenar') || args.includes('--guardar-voz')) {
 }
 const id = args.find((a, i) => !a.startsWith('--') && !(i && ['--musica', '--voz'].includes(args[i - 1])));
 if (!id) { console.error('Uso: node scripts/voz.mjs <id> [--musica ruta.mp3] [--voz <voice_id>] [--sin-musica]'); await salir(1); }
+// Voz grabada por el usuario: si cada tramo trae su «audio» (public/voz/…/n.mp3), no se usa ningún proveedor ni hacen falta claves.
+const tramosVoz = existsSync(`out/${id}.voz.json`) ? JSON.parse(readFileSync(`out/${id}.voz.json`, 'utf8')).filter((x) => x.leer !== false) : [];
+const grabada = tramosVoz.length > 0 && tramosVoz.every((x) => x.audio);
 // Proveedor de voz: VOZ_PROVEEDOR=azure | elevenlabs. Sin indicarlo, Azure si hay AZURE_SPEECH_KEY (aunque también haya clave de ElevenLabs).
 const proveedor = process.env.VOZ_PROVEEDOR || (process.env.AZURE_SPEECH_KEY ? 'azure' : 'elevenlabs');
 const azure = proveedor === 'azure';
 const key = azure ? process.env.AZURE_SPEECH_KEY : process.env.ELEVENLABS_API_KEY;
-if (!key) { console.error(azure ? 'Falta AZURE_SPEECH_KEY (portal.azure.com → tu recurso Speech → Claves y punto de conexión).' : 'Falta ELEVENLABS_API_KEY (tu clave de elevenlabs.io → Profile → API Keys).'); await salir(1); }
+if (!key && !grabada) { console.error(azure ? 'Falta AZURE_SPEECH_KEY (portal.azure.com → tu recurso Speech → Claves y punto de conexión).' : 'Falta ELEVENLABS_API_KEY (tu clave de elevenlabs.io → Profile → API Keys).'); await salir(1); }
 const region = process.env.AZURE_SPEECH_REGION || 'westeurope';
 if (azure && !process.env.AZURE_SPEECH_REGION) console.warn('⚠ AZURE_SPEECH_REGION sin definir: se usa westeurope. Pon la región de tu recurso (p. ej. francecentral) o dará 401/403.');
 // Por defecto es-ES-AlvaroNeural (hombre, voz con cuerpo de anuncio deportivo). Voces de España (es-ES), la más natural: es-ES-Ximena:DragonHDLatestNeural (mujer) o es-ES-Tristan:DragonHDLatestNeural (hombre); lista con --voces-azure. Estándar: ElviraNeural (mujer), AlvaroNeural (hombre), XimenaNeural, AbrilNeural, DarioNeural, EliasNeural, LaiaNeural…
 const voice = opt('--voz') || (azure ? process.env.AZURE_SPEECH_VOICE || 'es-ES-AlvaroNeural' : process.env.ELEVENLABS_VOICE_ID);
-if (!voice) { console.error('Falta el id de la voz: ELEVENLABS_VOICE_ID o --voz <id> (en elevenlabs.io → Voices → copiar ID).'); await salir(1); }
+if (!voice && !grabada) { console.error('Falta el id de la voz: ELEVENLABS_VOICE_ID o --voz <id> (en elevenlabs.io → Voices → copiar ID).'); await salir(1); }
 const base = process.env.ELEVENLABS_BASE_URL || 'https://api.elevenlabs.io';
 // Ajustes de la voz. Perfil por defecto «expresivo» (entonación marcada, poco plana); cualquier ELEVENLABS_* explícito manda sobre el perfil.
 // ELEVENLABS_PERFIL=expresivo | natural | neutro (neutro = sin tocar los ajustes de la voz).
@@ -135,7 +138,7 @@ export const paraVoz = (txt) => {
  */
 export const entonar = (frases) => frases.map((t, i) => (i === 0 ? t : t.replace(/¡/g, '').replace(/!(?=\s|$)/g, '.').replace(/(\d)\.$/, '$1!')));
 
-console.log(`Voz: ${azure ? `Azure Speech · ${voice} · ${region}` : `ElevenLabs · ${voice}`}`);
+console.log(grabada ? 'Voz: audios grabados (public/voz/)' : `Voz: ${azure ? `Azure Speech · ${voice} · ${region}` : `ElevenLabs · ${voice}`}`);
 mkdirSync('out/.voz-cache', {recursive: true});
 const escXml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // Azure Speech (REST): SSML con velocidad y tono (AZURE_SPEECH_RATE p. ej. +5%, AZURE_SPEECH_PITCH p. ej. +2st) y estilo opcional (AZURE_SPEECH_STYLE, solo si la voz lo admite).
@@ -205,17 +208,32 @@ const pcmMono = (f) => {
   for (let k = 0; k < n; k++) x[k] = b.readInt16LE(i + k * 2) / 32768;
   return x;
 };
-/** Inicio y fin del habla en un clip (en segundos), con un margen corto para no comerse ataques ni colas. */
-const limitesHabla = (mp3) => {
+/**
+ * Inicio y fin del habla en un clip (en segundos). Solo se recorta el silencio de los extremos: todo lo que hay entre la primera
+ * y la última palabra se conserva (pausas incluidas), así una frase nunca se corta por la mitad. El umbral se fija por encima del
+ * ruido de fondo de la grabación y exige 50 ms seguidos de voz, para que un clic o una respiración suelta no cuenten como inicio.
+ * `gain`: ganancia para dejar cada frase al mismo nivel (las grabaciones caseras varían mucho de una toma a otra).
+ */
+const limitesHabla = (mp3, grabado = false) => {
   const x = pcmMono(mp3), V = 160; // ventanas de 10 ms a 16 kHz
   const nv = Math.floor(x.length / V), env = new Float32Array(nv);
   let pico = 0;
   for (let v = 0; v < nv; v++) { let q = 0; for (let k = 0; k < V; k++) q += x[v * V + k] ** 2; env[v] = Math.sqrt(q / V); pico = Math.max(pico, env[v]); }
   if (!nv || pico < 0.003) return null;
-  const thr = pico * 0.03;
-  const ini = env.findIndex((e) => e >= thr);
-  let fin = nv - 1; while (fin > 0 && env[fin] < thr) fin--;
-  return {s: Math.max(0, ini / 100 - 0.04), e: Math.min(nv / 100, (fin + 1) / 100 + 0.08)};
+  const ruidoFondo = Float32Array.from(env).sort()[Math.floor(nv * 0.1)];
+  const thr = Math.max(pico * (grabado ? 0.02 : 0.03), ruidoFondo * 3);
+  const SEGUIDAS = 5;
+  const voz = (v) => { for (let k = 0; k < SEGUIDAS; k++) if (!(env[v + k] >= thr)) return false; return true; };
+  let ini = 0; while (ini < nv - SEGUIDAS && !voz(ini)) ini++;
+  let fin = nv - SEGUIDAS; while (fin > ini && !voz(fin)) fin--;
+  fin += SEGUIDAS - 1; while (fin + 1 < nv && env[fin + 1] >= thr * 0.5) fin++; // la cola de la última sílaba, que cae despacio
+  while (ini > 0 && env[ini - 1] >= thr * 0.5) ini--;
+  const [antes, despues] = grabado ? [0.12, 0.2] : [0.04, 0.08]; // margen generoso en voz grabada: el ataque y la cola nunca se pierden
+  let suma = 0;
+  for (let v = ini; v <= fin; v++) suma += env[v] ** 2;
+  const rms = Math.sqrt(suma / Math.max(1, fin - ini + 1));
+  const gain = grabado ? Math.min(4, Math.max(0.25, 0.1 / Math.max(rms, 1e-4))) : 1; // objetivo ≈ −20 dBFS de media en la frase
+  return {s: Math.max(0, ini / 100 - antes), e: Math.min(nv / 100, (fin + 1) / 100 + despues), ...(grabado ? {gain: +Math.min(gain, 0.97 / pico).toFixed(3)} : {})};
 };
 /** ElevenLabs con marcas de tiempo por carácter: una sola toma (entonación continua) y las frases se localizan exactamente. */
 const sintetizarElevenUnico = async (frases) => {
@@ -259,12 +277,20 @@ if (narracion) {
   const frases = entonar(tramos.map((x) => paraVoz(x.txt)));
   let seg;
   try {
-    seg = (!azure && (await sintetizarElevenUnico(frases))) || (await porFrase(frases));
+    if (grabada) {
+      seg = tramos.map((x) => {
+        const f = join('public', x.audio);
+        if (!existsSync(f)) throw new Error(`no existe ${f}: sube el audio de «${x.txt}»`);
+        const l = limitesHabla(f, true);
+        if (!l) throw new Error(`${f} está en silencio`);
+        return {mp3: f, ...l};
+      });
+    } else seg = (!azure && (await sintetizarElevenUnico(frases))) || (await porFrase(frases));
   } catch (e) { console.error(`✖ ${e.message}`); await salir(2); }
   seg.forEach((x, i) => { x.dur = x.e - x.s; x.txt = frases[i]; });
   const GAPS = seg.map((_, i) => (i === 0 ? 0.9 : i === seg.length - 2 ? 0.7 : 0.5)); // tras el gancho cabe el título; antes del cierre, un respiro; entre subtítulos, aire para que cada idea se asiente
   const FIN = 17.2; // objetivo: ~18 s. La voz nunca se acelera: si no cabe, el vídeo se alarga hasta MAX_SEG
-  const MAX_FACTOR = 1, MAX_SEG = 24; // sin acelerar la voz: mejor alargar el vídeo
+  const MAX_FACTOR = 1, MAX_SEG = grabada ? 45 : 24; // con voz grabada el vídeo se alarga lo que haga falta: una frase nunca se corta // sin acelerar la voz: mejor alargar el vídeo
   const colocar = (fct) => { let c = 0.3; return seg.map((x, i) => { const ini = c; c += x.dur / fct + GAPS[i]; return ini; }); };
   let factor = 1;
   for (let k = 0; k < 4; k++) {
@@ -298,7 +324,7 @@ const total = duracion(video);
 const tiempos = existsSync(`out/${id}.tiempos.json`) ? JSON.parse(readFileSync(`out/${id}.tiempos.json`, 'utf8')) : null;
 if (tiempos && tiempos.frases.every((x) => existsSync(x.mp3 ?? tiempos.mp3))) {
   // Locución única ya generada: cada frase se recorta de la misma toma y se coloca donde marcan los tiempos (con una sola velocidad común).
-  for (const x of tiempos.frases) clips.push({mp3: x.mp3 ?? tiempos.mp3, ss: x.s, ee: x.e, ini: x.ini, atempo: tiempos.factor, dur: x.dur / tiempos.factor + 0.05, recorta: false});
+  for (const x of tiempos.frases) clips.push({mp3: x.mp3 ?? tiempos.mp3, ss: x.s, ee: x.e, ini: x.ini, gain: x.gain, atempo: tiempos.factor, dur: x.dur / tiempos.factor + 0.05, recorta: false});
   console.log(`Voz: locución medida (${tiempos.frases.length} frases${tiempos.factor > 1.001 ? `, ×${tiempos.factor}` : ''}), tiempos de out/${id}.tiempos.json`);
 } else {
 let libre = 0; // hasta cuándo está ocupada la voz: una frase nunca se corta, la siguiente espera a que acabe
@@ -323,22 +349,30 @@ for (const [k, x] of tramos.entries()) {
 
 // Música: --musica, o la primera de public/musica/. Sin música si no hay o con --sin-musica.
 const dirMus = 'public/musica';
-const musica = args.includes('--sin-musica') ? null : opt('--musica') || (existsSync(dirMus) ? readdirSync(dirMus).filter((f) => /\.(mp3|wav|m4a|ogg)$/i.test(f)).map((f) => join(dirMus, f))[0] : null) || null;
+// Variedad: con varios efectos (whoosh, whoosh-2…), cada vídeo usa los suyos, elegidos por su
+// «variante» (la fija render.mjs a partir del id): el mismo vídeo suena siempre igual y dos vídeos distintos suenan distinto.
+const scriptsJson = existsSync('src/scripts.json') ? JSON.parse(readFileSync('src/scripts.json', 'utf8')) : [];
+const variante = scriptsJson.find((x) => x.id === id)?.variante ?? parseInt(createHash('sha1').update(id).digest('hex').slice(0, 8), 16);
+const elegir = (lista, salto = 0) => (lista.length ? lista[(variante + salto) % lista.length] : null);
+const pistas = existsSync(dirMus) ? readdirSync(dirMus).filter((f) => /\.(mp3|wav|m4a|ogg)$/i.test(f)).sort().map((f) => join(dirMus, f)) : [];
+const musica = args.includes('--sin-musica') ? null : opt('--musica') || scriptsJson.find((x) => x.id === id)?.musica && join('public', scriptsJson.find((x) => x.id === id).musica) || pistas.find((f) => /musica-zyra/.test(f)) || pistas[0] || null; // la música de marca siempre; otra solo si el guion la pide
+const efectos = existsSync('public/sfx') ? readdirSync('public/sfx').filter((f) => f.endsWith('.wav')).map((f) => f.slice(0, -4)).sort() : [];
+const efecto = (tipo, salto = 0) => elegir(efectos.filter((f) => f === tipo || f.startsWith(`${tipo}-`)), salto) || tipo;
 if (!musica) console.log('Sin música de fondo (pon un mp3 en public/musica/ o usa --musica).');
 
 // Efectos de sonido del estilo «creador» (public/sfx, generados con scripts/sfx.mjs): whoosh al salir del gancho y antes del cierre,
 // impacto en cada tarjeta de palabra clave y pop en los demás cambios de subtítulo. Mismos instantes que src/Feature.tsx.
 const sfx = [];
 {
-  const v = existsSync('src/scripts.json') ? JSON.parse(readFileSync('src/scripts.json', 'utf8')).find((x) => x.id === id) : null;
+  const v = scriptsJson.find((x) => x.id === id);
   if (v && v.estilo !== 'base' && v.subtitulos !== false && !args.includes('--sin-sfx') && existsSync('public/sfx/whoosh.wav')) {
     const ini = tiempos ? tiempos.subs.map((f) => f / 30) : v.subs.map((_, i) => Math.round(86 + (i * 274) / v.subs.length) / 30);
-    sfx.push({f: 'whoosh', t: (tiempos ? tiempos.hookEnd : 70) / 30 - 0.12, vol: 0.5});
+    sfx.push({f: efecto('whoosh'), t: (tiempos ? tiempos.hookEnd : 70) / 30 - 0.12, vol: 0.5});
     ini.forEach((t, i) => {
-      if (i % 2 === 1) sfx.push({f: 'impacto', t, vol: 0.55}, {f: 'whoosh', t: t - 0.1, vol: 0.4});
-      else if (i > 0) sfx.push({f: 'pop', t, vol: 0.5});
+      if (i % 2 === 1) sfx.push({f: efecto('impacto'), t, vol: 0.55}, {f: efecto('whoosh', 1), t: t - 0.1, vol: 0.4});
+      else if (i > 0) sfx.push({f: efecto('pop'), t, vol: 0.5});
     });
-    sfx.push({f: 'whoosh', t: (tiempos ? tiempos.cta : 360) / 30 - 0.12, vol: 0.5});
+    sfx.push({f: efecto('whoosh'), t: (tiempos ? tiempos.cta : 360) / 30 - 0.12, vol: 0.5});
     console.log(`Efectos de sonido (estilo creador): ${sfx.length}`);
   }
 }
@@ -356,7 +390,7 @@ if (mezcla === 'anuncio' && cadenaVoz === 'anull') console.warn('⚠ Este ffmpeg
 const normaliza = mezcla !== 'no' && filtrosFF.has('loudnorm') ? 'loudnorm=I=-14:TP=-1.5:LRA=11,' : '';
 console.log(`Mezcla de voz: ${cadenaVoz !== 'anull' ? 'anuncio (EQ + compresor)' : 'sin procesar'}${normaliza ? ' · −14 LUFS' : ''}`);
 const entradas = ['-i', video, ...clips.flatMap((c) => ['-i', c.mp3]), ...(musica ? ['-stream_loop', '-1', '-i', musica] : []), ...sfx.flatMap((e) => ['-i', `public/sfx/${e.f}.wav`])];
-const filtros = clips.map((c, i) => `[${i + 1}:a]${c.ss !== undefined ? `atrim=${c.ss.toFixed(3)}:${c.ee.toFixed(3)},asetpts=PTS-STARTPTS,` : ''}${c.atempo > 1.001 ? `atempo=${c.atempo.toFixed(4)},` : ''}atrim=0:${c.dur.toFixed(3)},volume='clip(t/0.015,0,1)*clip((${c.dur.toFixed(3)}-t)/${c.recorta ? 0.15 : 0.04},0,1)':eval=frame,adelay=${Math.round(c.ini * 1000)}|${Math.round(c.ini * 1000)}[v${i}]`);
+const filtros = clips.map((c, i) => `[${i + 1}:a]${c.ss !== undefined ? `atrim=${c.ss.toFixed(3)}:${c.ee.toFixed(3)},asetpts=PTS-STARTPTS,` : ''}${c.atempo > 1.001 ? `atempo=${c.atempo.toFixed(4)},` : ''}${c.gain && Math.abs(c.gain - 1) > 0.01 ? `volume=${c.gain},` : ''}atrim=0:${c.dur.toFixed(3)},volume='clip(t/0.015,0,1)*clip((${c.dur.toFixed(3)}-t)/${c.recorta ? 0.15 : 0.04},0,1)':eval=frame,adelay=${Math.round(c.ini * 1000)}|${Math.round(c.ini * 1000)}[v${i}]`);
 const vozs = clips.map((_, i) => `[v${i}]`).join('');
 const base0 = clips.length + 1 + (musica ? 1 : 0);
 sfx.forEach((e, i) => { const ms = Math.max(0, Math.round(e.t * 1000)); filtros.push(`[${base0 + i}:a]volume=${e.vol},adelay=${ms}|${ms}[s${i}]`); });

@@ -1,0 +1,3 @@
+Fondos propios (o con licencia) para dar a cada vídeo un aire distinto: clips verticales de pista, grada, pelota… en MP4/WebM o imágenes.
+render.mjs reparte uno por vídeo según su variante (o el que pongas en "fondo" del guion; "fondo": null usa la captura).
+No subas clips de otras cuentas: el repo es público.
