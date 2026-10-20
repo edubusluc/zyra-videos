@@ -349,13 +349,13 @@ for (const [k, x] of tramos.entries()) {
 
 // Música: --musica, o la primera de public/musica/. Sin música si no hay o con --sin-musica.
 const dirMus = 'public/musica';
-// Variedad: con varias pistas en public/musica/ y varios efectos (whoosh, whoosh-2…), cada vídeo usa los suyos, elegidos por su
+// Variedad: con varios efectos (whoosh, whoosh-2…), cada vídeo usa los suyos, elegidos por su
 // «variante» (la fija render.mjs a partir del id): el mismo vídeo suena siempre igual y dos vídeos distintos suenan distinto.
 const scriptsJson = existsSync('src/scripts.json') ? JSON.parse(readFileSync('src/scripts.json', 'utf8')) : [];
 const variante = scriptsJson.find((x) => x.id === id)?.variante ?? parseInt(createHash('sha1').update(id).digest('hex').slice(0, 8), 16);
 const elegir = (lista, salto = 0) => (lista.length ? lista[(variante + salto) % lista.length] : null);
 const pistas = existsSync(dirMus) ? readdirSync(dirMus).filter((f) => /\.(mp3|wav|m4a|ogg)$/i.test(f)).sort().map((f) => join(dirMus, f)) : [];
-const musica = args.includes('--sin-musica') ? null : opt('--musica') || scriptsJson.find((x) => x.id === id)?.musica && join('public', scriptsJson.find((x) => x.id === id).musica) || elegir(pistas) || null;
+const musica = args.includes('--sin-musica') ? null : opt('--musica') || scriptsJson.find((x) => x.id === id)?.musica && join('public', scriptsJson.find((x) => x.id === id).musica) || pistas.find((f) => /musica-zyra/.test(f)) || pistas[0] || null; // la música de marca siempre; otra solo si el guion la pide
 const efectos = existsSync('public/sfx') ? readdirSync('public/sfx').filter((f) => f.endsWith('.wav')).map((f) => f.slice(0, -4)).sort() : [];
 const efecto = (tipo, salto = 0) => elegir(efectos.filter((f) => f === tipo || f.startsWith(`${tipo}-`)), salto) || tipo;
 if (!musica) console.log('Sin música de fondo (pon un mp3 en public/musica/ o usa --musica).');

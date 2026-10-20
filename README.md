@@ -34,10 +34,10 @@ Si la voz sintética no te convence, grábala tú. En la app, en la propuesta de
 - Los audios se guardan en `public/voz/<vídeo>/` y se suben al repo con el guion, así que el CI los usa sin claves de voz. A mano: añade al guion `"audios": ["voz/mi-video/0.mp3", …]` (tantos como subtítulos + 2).
 
 ## Variedad entre vídeos
-Todos siguen la misma línea de marca, pero cada uno tiene su propia **variante** (sale del id, o pon `"variante": 7` en el guion): ángulos de cámara, posición y alineación del gancho, animación de los subtítulos, dirección de las transiciones, colores de las tarjetas de palabra clave, efectos de sonido y música.
+Todos siguen la misma línea de marca, pero cada uno tiene su propia **variante** (sale del id, o pon `"variante": 7` en el guion): ángulos de cámara, posición y alineación del gancho, animación de los subtítulos, dirección de las transiciones, colores de las tarjetas de palabra clave, efectos de sonido y un motivo de fondo de la marca (líneas de pista, partículas lima o haces de luz). La música es siempre la de la marca (`public/musica/musica-zyra.mp3`), salvo que el guion pida otra con `"musica"`.
 Para dar más variedad, añade recursos (siempre propios o con licencia, el repo es público):
-- **Fondos:** clips verticales o imágenes en `public/fondos/`. Cada vídeo usa uno (o el que pongas en `"fondo"`; `"fondo": null` usa la captura desenfocada). `node scripts/pexels.mjs "padel court"` baja clips libres a `public/medios/`; muévelos a `public/fondos/`.
-- **Música:** varias pistas en `public/musica/`; cada vídeo usa una (o la de `"musica": "musica/otra.mp3"`).
+- **Fondos automáticos:** añade el secreto `PEXELS_API_KEY` (clave gratis en pexels.com/api) al repo y el CI busca solo clips verticales de pista, pelota y red, les aplica el etalonaje Zyra (blanco y negro oscuro con luces lima y viñeta, para que no rompan la marca) y los deja en `public/fondos/auto-*.mp4` con su crédito. En local: `PEXELS_API_KEY=… node scripts/fondos-auto.mjs 6`.
+- **Fondos propios:** clips verticales o imágenes en `public/fondos/`. Cada vídeo usa uno (o el que pongas en `"fondo"`; `"fondo": null` usa la captura desenfocada). `node scripts/pexels.mjs "padel court"` baja clips libres a `public/medios/`; muévelos a `public/fondos/`.
 - **Efectos:** variantes en `public/sfx/` con el nombre `whoosh-2.wav`, `impacto-3.wav`, `pop-2.wav`… (`node scripts/sfx.mjs` genera las que hay).
 
 ## Memes
@@ -155,7 +155,7 @@ Sin tocar tu base de datos ni el repo de Zyra: crea una SQLite temporal, carga `
 ## Resultado final con voz y música (local y CI)
 
 - **Dónde está el vídeo:** en local, cada prompt crea su carpeta `salidas/<fecha>_<hora>-<texto>/`. El vídeo bueno es `…FINAL-con-voz.mp4` (voz + música); `…sin-audio.mp4` es el mismo sin sonido, junto al `.voz.txt` con los tiempos y el JSON del guion. El archivo `out/<id>.mp4` es SIEMPRE el vídeo sin audio.
-- **Música:** `public/musica/musica-zyra.mp3` (la del anuncio, sintetizada por nosotros, sin muestras externas ni licencias) se usa por defecto; baja sola mientras habla la voz y entra y sale con fundido. Otra: `--musica ruta.mp3` o deja otro mp3 en esa carpeta (se usa el primero por orden alfabético); sin música: `--sin-musica`.
+- **Música:** `public/musica/musica-zyra.mp3` (la del anuncio, sintetizada por nosotros, sin muestras externas ni licencias) se usa por defecto; baja sola mientras habla la voz y entra y sale con fundido. Otra: `--musica ruta.mp3` o `"musica"` en el guion; sin música: `--sin-musica`.
 - **En el CI:** en el repo (Settings → Secrets and variables → Actions) crea los *secrets* `ELEVENLABS_API_KEY` y `ELEVENLABS_VOICE_ID`; opcionalmente las *variables* `ELEVENLABS_MODEL`, `ELEVENLABS_STABILITY`, `ELEVENLABS_SIMILARITY`, `ELEVENLABS_STYLE` y `ELEVENLABS_SPEED`. Los guiones con `"voz": true` salen del artefacto `videos-tiktok` como `out/<id>.final.mp4`. Sin los secretos el CI avisa y deja el vídeo sin voz. Cada ejecución gasta caracteres de ElevenLabs solo de los guiones nuevos o cambiados.
 - **Voz natural (punto de partida):** `ELEVENLABS_MODEL=eleven_multilingual_v2`, `ELEVENLABS_STABILITY=0.4`, `ELEVENLABS_SIMILARITY=0.75`, `ELEVENLABS_STYLE=0.1`, `ELEVENLABS_SPEED=1.0`. Estabilidad baja = más variación y menos robótica (por debajo de 0,3 puede inventar entonaciones raras). Estilo alto la hace teatral pero la encarece y la vuelve inestable. Escribe los subtítulos como se habla (frases cortas, sin mayúsculas ni siglas) y la voz suena mejor. Una voz nativa en español suena más natural que una premade inglesa.
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
-import {BlurBg, KeywordCard, LiveBg, MediaBg, Ping, Wipe, cabe} from './components/Fx';
+import {BlurBg, KeywordCard, LiveBg, MediaBg, Motivo, Ping, Wipe, cabe} from './components/Fx';
 import {Logo} from './components/Logo';
 import {Phone3D, Screen} from './components/Phone';
 import {Line, prog} from './components/Reveal';
@@ -34,6 +34,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   const animSub = (['sube', 'pop', 'lado'] as const)[V(3, 3)];
   const dirWipe: 1 | -1 = V(2, 4) ? -1 : 1;
   const tarjeta0 = V(2, 5);
+  const motivo = V(4, 6);
   useBrandFonts();
   const f = useCurrentFrame();
   const {fps} = useVideoConfig();
@@ -71,6 +72,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   return (
     <AbsoluteFill>
       {fondo ? <MediaBg src={fondo} /> : creador ? <BlurBg src={src} /> : <LiveBg />}
+      {creador ? <Motivo tipo={motivo} /> : null}
       {/* Barra de progreso */}
       <div style={{position: 'absolute', left: 0, top: 0, height: 8, width: `${(f / (tiempos?.frames ?? DURATION)) * 100}%`, background: C.lime, boxShadow: GLOW, zIndex: 5}} />
       {/* Gancho */}

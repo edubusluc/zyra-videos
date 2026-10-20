@@ -119,3 +119,40 @@ export const MediaBg: React.FC<{src: string}> = ({src}) => {
     </AbsoluteFill>
   );
 };
+
+/**
+ * Motivo de marca sobre el fondo (sin recursos externos): da a cada vídeo un ambiente distinto sin salir de la paleta.
+ * 0 = nada, 1 = líneas de pista que derivan, 2 = partículas lima que suben, 3 = haces de luz diagonales.
+ */
+export const Motivo: React.FC<{tipo: number}> = ({tipo}) => {
+  const f = useCurrentFrame();
+  if (tipo === 1) {
+    return (
+      <AbsoluteFill style={{opacity: 0.14, pointerEvents: 'none'}}>
+        <svg width="1080" height="1920" viewBox="-540 -960 1080 1920"><g transform={`rotate(${-14 + Math.sin(f / 90) * 3}) translate(0 ${(f * 0.6) % 120}) scale(1.5)`} fill="none" stroke={C.lime} strokeWidth={4}><rect x={-300} y={-600} width={600} height={1200} /><line x1={-300} y1={0} x2={300} y2={0} /><line x1={-300} y1={-370} x2={300} y2={-370} /><line x1={-300} y1={370} x2={300} y2={370} /><line x1={0} y1={-370} x2={0} y2={370} /></g></svg>
+      </AbsoluteFill>
+    );
+  }
+  if (tipo === 2) {
+    return (
+      <AbsoluteFill style={{pointerEvents: 'none'}}>
+        {Array.from({length: 18}, (_, i) => {
+          const x = ((i * 97) % 100) * 10.8;
+          const y = 1920 - ((f * (1 + (i % 4) * 0.45) + i * 160) % 2100);
+          const s = 5 + (i % 3) * 4;
+          return <div key={i} style={{position: 'absolute', left: x, top: y, width: s, height: s, borderRadius: '50%', background: C.lime, opacity: 0.1 + (i % 4) * 0.05, filter: 'blur(1px)'}} />;
+        })}
+      </AbsoluteFill>
+    );
+  }
+  if (tipo === 3) {
+    return (
+      <AbsoluteFill style={{pointerEvents: 'none', overflow: 'hidden'}}>
+        {[0, 1, 2].map((i) => (
+          <div key={i} style={{position: 'absolute', top: -400, height: 2800, width: 140 + i * 60, left: ((f * (2 + i) + i * 420) % 1700) - 400, transform: 'rotate(24deg)', background: `linear-gradient(90deg, transparent, ${limeA(0.07 - i * 0.015)}, transparent)`}} />
+        ))}
+      </AbsoluteFill>
+    );
+  }
+  return null;
+};

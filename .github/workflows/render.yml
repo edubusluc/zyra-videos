@@ -53,6 +53,11 @@ jobs:
         run: command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
       - if: steps.que.outputs.skip != 'true'
         run: npx remotion browser ensure
+      - name: Fondos automáticos (Pexels con etalonaje Zyra; solo si existe el secreto PEXELS_API_KEY)
+        if: steps.que.outputs.skip != 'true'
+        env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: node scripts/fondos-auto.mjs 6
       - name: Renderizar (los ids indicados; todos si se deja vacío)
         if: steps.que.outputs.skip != 'true'
         run: node render.mjs ${{ steps.que.outputs.ids }}
