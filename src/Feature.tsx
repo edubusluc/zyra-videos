@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
-import {BlurBg, KeywordCard, LiveBg, Ping, Wipe, cabe} from './components/Fx';
+import {BlurBg, KeywordCard, LiveBg, MediaBg, Ping, Wipe, cabe} from './components/Fx';
 import {Logo} from './components/Logo';
 import {Phone3D, Screen} from './components/Phone';
 import {Line, prog} from './components/Reveal';
@@ -16,11 +16,24 @@ const PH_W = 680;
 const PH_H = 900;
 
 /** Plantilla «función en 15 s»: gancho → móvil con captura real y subtítulos → cierre con logo y URL. */
-export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, box, subs, cta, subtitulos = true, estilo = 'creador', tiempos}) => {
+export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, box, subs, cta, subtitulos = true, estilo = 'creador', tiempos, variante = 0, fondo}) => {
   const HOOK_END = tiempos?.hookEnd ?? HOOK_END_FIJO;
   const HOOK_B = 9; // el gancho es UNA frase: su 2.ª línea entra casi a la vez que la 1.ª y se leen juntas, no como dos golpes
   const CTA_FROM = tiempos?.cta ?? CTA_FROM_FIJO;
   const creador = estilo === 'creador';
+  // Variante: misma línea de marca, distinto toque en cada vídeo (cámara, gancho, subtítulos, transiciones y tarjetas).
+  const V = (n: number, salto: number) => Math.floor(variante / 7 ** salto) % n;
+  const CAMARAS = [
+    {yaws: [-16, 14, -10, 12, -8], pitches: [8, 3, 9, 4, 7], entra: -58},
+    {yaws: [12, -14, 8, -12, 10], pitches: [4, 9, 3, 8, 5], entra: 52},
+    {yaws: [-6, 6, -4, 8, -6], pitches: [14, 10, 16, 9, 12], entra: -36},
+  ];
+  const cam = CAMARAS[V(3, 0)];
+  const hookTop = [700, 560, 820][V(3, 1)];
+  const hookCentro = V(2, 2) === 1;
+  const animSub = (['sube', 'pop', 'lado'] as const)[V(3, 3)];
+  const dirWipe: 1 | -1 = V(2, 4) ? -1 : 1;
+  const tarjeta0 = V(2, 5);
   useBrandFonts();
   const f = useCurrentFrame();
   const {fps} = useVideoConfig();
@@ -37,9 +50,8 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   const subAt = subStart[subIdx];
   // Cámara 3D suave: entra girando y, en cada beat, el móvil pasa a otro ángulo (interpolación continua, sin golpes).
   const camT = [HOOK_END, ...subStart, CTA_FROM];
-  const yaws = [-16, 14, -10, 12, -8];
-  const pitches = [8, 3, 9, 4, 7];
-  const yaw = interpolate(f, camT, [-58, ...subStart.map((_, i) => yaws[i % 5]), 8], {easing: Easing.inOut(Easing.quad), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const {yaws, pitches} = cam;
+  const yaw = interpolate(f, camT, [cam.entra, ...subStart.map((_, i) => yaws[i % 5]), 8], {easing: Easing.inOut(Easing.quad), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const pitch = interpolate(f, camT, [20, ...subStart.map((_, i) => pitches[i % 5]), 4], {easing: Easing.inOut(Easing.cubic), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}) + Math.sin(f / 34) * 1.5;
   const drift = interpolate(f, [HOOK_END, CTA_FROM], [0.96, 1.08], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const float = Math.sin(f / 26) * 12;
@@ -58,14 +70,14 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   const logoPop = spring({frame: f - CTA_FROM - 4, fps, config: {damping: 8, stiffness: 120, mass: 0.8}, durationInFrames: 30});
   return (
     <AbsoluteFill>
-      {creador ? <BlurBg src={src} /> : <LiveBg />}
+      {fondo ? <MediaBg src={fondo} /> : creador ? <BlurBg src={src} /> : <LiveBg />}
       {/* Barra de progreso */}
       <div style={{position: 'absolute', left: 0, top: 0, height: 8, width: `${(f / (tiempos?.frames ?? DURATION)) * 100}%`, background: C.lime, boxShadow: GLOW, zIndex: 5}} />
       {/* Gancho */}
-      <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: 700, opacity: 1 - hookOut, transform: `scale(${0.85 + 0.15 * hookPop})`, transformOrigin: '0 50%'}}>
-        <Line text={hook[0]} at={2} out={HOOK_END} size={hookSize} from="left" extra={{...TYPE.title, ...HERO_FILL, letterSpacing: '.03em'}} />
-        <div style={{height: 10, width: `${prog(f, HOOK_B - 6, 22) * 100}%`, background: C.lime, borderRadius: 5, margin: '14px 0 22px', boxShadow: GLOW}} />
-        <Line text={hook[1]} at={HOOK_B} out={HOOK_END} size={hookSize} color={C.lime} from="right" extra={{...TYPE.title, letterSpacing: '.03em'}} />
+      <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: hookTop, textAlign: hookCentro ? 'center' : 'left', opacity: 1 - hookOut, transform: `scale(${0.85 + 0.15 * hookPop})`, transformOrigin: hookCentro ? '50% 50%' : '0 50%'}}>
+        <Line text={hook[0]} at={2} out={HOOK_END} size={hookSize} align={hookCentro ? 'center' : 'left'} from={hookCentro ? 'up' : 'left'} extra={{...TYPE.title, ...HERO_FILL, letterSpacing: '.03em'}} />
+        <div style={{height: 10, width: `${prog(f, HOOK_B - 6, 22) * 100}%`, background: C.lime, borderRadius: 5, margin: hookCentro ? '14px auto 22px' : '14px 0 22px', boxShadow: GLOW}} />
+        <Line text={hook[1]} at={HOOK_B} out={HOOK_END} size={hookSize} color={C.lime} align={hookCentro ? 'center' : 'left'} from={hookCentro ? 'up' : 'right'} extra={{...TYPE.title, letterSpacing: '.03em'}} />
       </div>
       {/* Cuerpo */}
       <div style={{position: 'absolute', inset: 0, opacity: f < CTA_FROM ? main : 1 - ctaIn}}>
@@ -90,7 +102,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
                 const esClave = w.replace(/[^\p{L}\p{N}%]/gu, '').toLowerCase() === palabraClave;
                 const t = prog(f, subAt + i * 4, 8);
                 return (
-                  <span key={i} style={{fontFamily: esClave ? FONT.display : FONT.body, fontStyle: esClave ? 'italic' : 'normal', fontWeight: esClave ? 700 : 800, fontSize: esClave ? Math.round(subSize * 0.82) : subSize, textTransform: esClave ? 'uppercase' : 'none', letterSpacing: esClave ? '.02em' : 'normal', lineHeight: 1.12, color: esClave ? C.lime : C.text, textShadow: '0 6px 30px rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.9)', display: 'inline-block', opacity: t, transform: `translateY(${(1 - t) * 30}px) scale(${esClave ? 0.8 + 0.2 * t + (desde < 14 ? 0.12 : 0) : 1})`}}>
+                  <span key={i} style={{fontFamily: esClave ? FONT.display : FONT.body, fontStyle: esClave ? 'italic' : 'normal', fontWeight: esClave ? 700 : 800, fontSize: esClave ? Math.round(subSize * 0.82) : subSize, textTransform: esClave ? 'uppercase' : 'none', letterSpacing: esClave ? '.02em' : 'normal', lineHeight: 1.12, color: esClave ? C.lime : C.text, textShadow: '0 6px 30px rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.9)', display: 'inline-block', opacity: t, transform: `${animSub === 'lado' ? `translateX(${(1 - t) * -40}px)` : `translateY(${(1 - t) * (animSub === 'pop' ? 0 : 30)}px)`} scale(${(esClave ? 0.8 + 0.2 * t + (desde < 14 ? 0.12 : 0) : 1) * (animSub === 'pop' ? 0.6 + 0.4 * t : 1)})`}}>
                     {w}
                   </span>
                 );
@@ -117,9 +129,9 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
         </div>
       </div>
       {/* Transiciones entre escenas y beats */}
-      <Wipe at={HOOK_END + 2} dur={42} />
-      <Wipe at={CTA_FROM + 4} dur={42} />
-      {creador && subtitulos && f < CTA_FROM ? subStart.map((t, i) => (i % 2 === 1 ? <KeywordCard key={i} at={t} word={clave(subs[i]).toUpperCase()} variant={Math.floor(i / 2)} /> : null)) : null}
+      <Wipe at={HOOK_END + 2} dur={42} dir={dirWipe} />
+      <Wipe at={CTA_FROM + 4} dur={42} dir={dirWipe === 1 ? -1 : 1} />
+      {creador && subtitulos && f < CTA_FROM ? subStart.map((t, i) => (i % 2 === 1 ? <KeywordCard key={i} at={t} word={clave(subs[i]).toUpperCase()} variant={Math.floor(i / 2) + tarjeta0} /> : null)) : null}
       {creador ? <div style={{position: 'absolute', left: 0, right: 0, bottom: 150, textAlign: 'center', ...TYPE.wordmark, fontSize: 28, color: C.text, opacity: 0.45 * (1 - ctaIn), zIndex: 7}}>ZYRA</div> : null}
       {/* Cierre: la portada de la web (fondo de página, logo con halo, ZYRA en cursiva, botón principal y URL) */}
       <AbsoluteFill style={{opacity: ctaIn, background: PAGE_BG}} />

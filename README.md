@@ -27,6 +27,19 @@ Tras subir el guion, la app lanza ella misma el workflow (workflow_dispatch con 
 
 Capturas nuevas: solo con datos de demostración (JUGADOR 1…), nunca nombres reales.
 
+## Voz grabada por ti (un .mp3 por frase)
+Si la voz sintética no te convence, grábala tú. En la app, en la propuesta de vídeo pulsa **«Grabar yo la voz»**: aparecen las frases en el orden en que suenan (gancho, una por subtítulo y cierre), cada una con su botón para subir el audio (mp3, wav, m4a u ogg). Luego pulsa **«Crear con mis audios»**.
+- Graba **cada frase entera**, con un segundo de silencio antes y después. Solo se recorta el silencio de los extremos (por encima del ruido de fondo y con margen); las pausas de dentro de la frase se respetan, así que nunca se corta a mitad.
+- Se iguala el volumen de todas las tomas y el vídeo dura lo que duren tus frases (hasta 45 s): los subtítulos y los cortes siguen a tu voz.
+- Los audios se guardan en `public/voz/<vídeo>/` y se suben al repo con el guion, así que el CI los usa sin claves de voz. A mano: añade al guion `"audios": ["voz/mi-video/0.mp3", …]` (tantos como subtítulos + 2).
+
+## Variedad entre vídeos
+Todos siguen la misma línea de marca, pero cada uno tiene su propia **variante** (sale del id, o pon `"variante": 7` en el guion): ángulos de cámara, posición y alineación del gancho, animación de los subtítulos, dirección de las transiciones, colores de las tarjetas de palabra clave, efectos de sonido y música.
+Para dar más variedad, añade recursos (siempre propios o con licencia, el repo es público):
+- **Fondos:** clips verticales o imágenes en `public/fondos/`. Cada vídeo usa uno (o el que pongas en `"fondo"`; `"fondo": null` usa la captura desenfocada). `node scripts/pexels.mjs "padel court"` baja clips libres a `public/medios/`; muévelos a `public/fondos/`.
+- **Música:** varias pistas en `public/musica/`; cada vídeo usa una (o la de `"musica": "musica/otra.mp3"`).
+- **Efectos:** variantes en `public/sfx/` con el nombre `whoosh-2.wav`, `impacto-3.wav`, `pop-2.wav`… (`node scripts/sfx.mjs` genera las que hay).
+
 ## Memes
 Formato «antes / después» con la marca (imagen 1080×1350, `memes/<id>.json`: `beforeLabel`, `before`, `afterLabel`, `after`; textos de máx. 70 caracteres). El CI los deja como PNG junto a los vídeos. Son originales de Zyra: no se usan plantillas ni fotos con derechos de terceros. Generar imágenes con IA (fotos, ilustraciones) exigiría un modelo de imagen externo, normalmente de pago, y no está incluido.
 

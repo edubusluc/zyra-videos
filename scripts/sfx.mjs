@@ -39,4 +39,35 @@ mkdirSync('public/sfx', {recursive: true});
     return Math.sin(fase) * Math.exp(-t * 28) * 0.7;
   });
 }
-console.log('Efectos en public/sfx/: whoosh, impacto, pop');
+// Variantes (whoosh-2, impacto-2, pop-2…): voz.mjs elige una por vídeo para que no todos suenen igual.
+{
+  let lp = 0, bp = 0;
+  wav('whoosh-2', 0.7, (t, p) => { // más grave y largo, baja en vez de subir
+    const fc = 3800 - 3300 * p, k = 2 * Math.sin(Math.PI * Math.min(0.45, fc / SR)), q = 0.5;
+    const x = ruido(); lp += k * bp; const hp = x - lp - q * bp; bp += k * hp;
+    return bp * 0.85 * Math.min(1, t / 0.08) * Math.sin(Math.PI * p) ** 1.2;
+  });
+}
+{
+  let lp = 0, bp = 0;
+  wav('whoosh-3', 0.4, (t, p) => { // corto y brillante
+    const fc = 1200 + 7000 * p, k = 2 * Math.sin(Math.PI * Math.min(0.45, fc / SR)), q = 0.25;
+    const x = ruido(); lp += k * bp; const hp = x - lp - q * bp; bp += k * hp;
+    return bp * 0.8 * Math.min(1, t / 0.02) * Math.sin(Math.PI * p) ** 2;
+  });
+}
+{
+  let fase = 0;
+  wav('impacto-2', 0.55, (t) => { // golpe más seco con cola metálica
+    fase += (2 * Math.PI * (60 + 140 * Math.exp(-t * 40))) / SR;
+    return Math.sin(fase) * Math.exp(-t * 12) * 0.9 + Math.sin(2 * Math.PI * 1830 * t) * Math.exp(-t * 18) * 0.12 + ruido() * Math.exp(-t * 120) * 0.4;
+  });
+}
+{
+  let fase = 0;
+  wav('pop-2', 0.14, (t) => { // clic de botón, más grave
+    fase += (2 * Math.PI * (340 + 500 * Math.exp(-t * 55))) / SR;
+    return Math.sin(fase) * Math.exp(-t * 34) * 0.75;
+  });
+}
+console.log('Efectos en public/sfx/: whoosh, impacto, pop y sus variantes -2/-3');

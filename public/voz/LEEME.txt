@@ -1,0 +1,1 @@
+Aquí la app guarda las frases grabadas por el usuario (public/voz/<vídeo>/<n>.mp3; 0 = gancho, el último = cierre).

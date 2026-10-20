@@ -2,6 +2,7 @@
 // Uso: npm run render [id…]   (los memes se llaman meme-<nombre>)
 // Localmente puedes fijar CHROME=/ruta/a/chrome; en CI Remotion descarga su navegador.
 import {execFileSync, spawnSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import {existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync} from 'node:fs';
 
 const ids = process.argv.slice(2);
@@ -24,6 +25,8 @@ const guionVoz = (nombre, tramos) => {
   writeFileSync(`out/${nombre}.voz.json`, JSON.stringify(tramos, null, 2)); // lo lee scripts/voz.mjs
 };
 const quiere = (id) => !ids.length || ids.includes(id);
+// Fondos de vídeo o imagen propios (o con licencia) para dar a cada vídeo un aire distinto; sin ninguno, el de la captura.
+const FONDOS = existsSync('public/fondos') ? readdirSync('public/fondos').filter((f) => /\.(mp4|webm|mov|png|jpe?g|webp)$/i.test(f)).sort().map((f) => `fondos/${f}`) : [];
 // Reparte un texto en dos líneas de largo parecido (por palabras), para el gancho.
 const enDos = (t) => {
   const w = t.split(/\s+/).filter(Boolean);
@@ -42,6 +45,17 @@ const normalizar = (v) => {
   if (!v.subs.length) v.subs = [v.title];
   if (v.locucion) v.locucion = v.subs.map((_, i) => limpio(v.locucion[i]) || undefined);
   v.cta = limpio(v.cta) || 'Pruébalo gratis en zyrapadel.com';
+  // Variedad: cada vídeo tiene su «variante» (cámara, transiciones, animación de subtítulos, colocación del gancho, efectos y música)
+  // y, si hay clips en public/fondos/, su propio fondo. Se derivan del id, así que un vídeo sale siempre igual; se pueden fijar en el JSON.
+  v.variante ??= parseInt(createHash('sha1').update(v.id).digest('hex').slice(0, 8), 16);
+  if (v.fondo === undefined && FONDOS.length) v.fondo = FONDOS[v.variante % FONDOS.length];
+  if (v.fondo && !existsSync(`public/${v.fondo}`)) { console.warn(`⚠ ${v.id}: no existe public/${v.fondo}; se usa el fondo de la captura.`); delete v.fondo; }
+  // Voz grabada: un .mp3 por frase (gancho, cada subtítulo y cierre), en ese orden.
+  if (v.audios) {
+    const n = v.subs.length + 2, falta = v.audios.find((a) => !a || !existsSync(`public/${a}`));
+    if (v.audios.length !== n || falta !== undefined) { console.warn(`⚠ ${v.id}: hacen falta ${n} audios (gancho, ${v.subs.length} subtítulos y cierre)${falta ? `; no existe public/${falta}` : ''}. Se usa la voz sintética.`); delete v.audios; }
+    else v.voz = true;
+  }
   for (const [n, x, max] of [['gancho', v.hook[0], 18], ['gancho', v.hook[1], 18], ['título', v.title, 24], ...v.subs.map((x) => ['subtítulo', x, 40])]) if (x.length > max) console.warn(`⚠ ${v.id}: ${n} largo (${x.length} > ${max} caracteres), se reduce la letra: «${x}»`);
   return v;
 };
@@ -58,7 +72,8 @@ for (const v of videos) if (quiere(v.id)) {
   if (conVoz) {
     // Mismo reparto que src/Feature.tsx (sin locución única): los subtítulos van de 104 a 450 fotogramas a partes iguales.
     const ini = v.subs.map((_, i) => Math.round(104 + (i * 346) / v.subs.length) / 30);
-    guionVoz(v.id, [{...linea(0.1, 2.3, textoGancho(v.hook)), gancho: true}, linea(2.3, 2.9, `(título en pantalla: ${v.title})`, false), ...v.subs.map((x, i) => linea(ini[i], ini[i + 1] ?? 15, (v.locucion?.[i] || x))), linea(15, 18, v.cta)]);
+    const a = (i) => (v.audios ? {audio: v.audios[i]} : {});
+    guionVoz(v.id, [{...linea(0.1, 2.3, textoGancho(v.hook)), gancho: true, ...a(0)}, linea(2.3, 2.9, `(título en pantalla: ${v.title})`, false), ...v.subs.map((x, i) => ({...linea(ini[i], ini[i + 1] ?? 15, (v.locucion?.[i] || x)), ...a(i + 1)})), {...linea(15, 18, v.cta), ...a(v.subs.length + 1)}]);
   }
   if (v.voz) {
     // Con voz: primero la locución única; los subtítulos y cortes del vídeo siguen a la voz. Si no hay credenciales o falla, tiempos fijos y una voz por frase (scripts/voz.mjs).
