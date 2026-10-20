@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
-import {BlurBg, KeywordCard, LiveBg, Ping, Wipe} from './components/Fx';
+import {BlurBg, KeywordCard, LiveBg, Ping, Wipe, cabe} from './components/Fx';
 import {Logo} from './components/Logo';
 import {Phone3D, Screen} from './components/Phone';
 import {Line, prog} from './components/Reveal';
@@ -18,7 +18,7 @@ const PH_H = 900;
 /** Plantilla «función en 15 s»: gancho → móvil con captura real y subtítulos → cierre con logo y URL. */
 export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, box, subs, cta, subtitulos = true, estilo = 'creador', tiempos}) => {
   const HOOK_END = tiempos?.hookEnd ?? HOOK_END_FIJO;
-  const HOOK_B = tiempos?.hookB ?? 26; // la 2.ª línea del gancho entra con la 2.ª frase de la voz (que es un solo clip)
+  const HOOK_B = 9; // el gancho es UNA frase: su 2.ª línea entra casi a la vez que la 1.ª y se leen juntas, no como dos golpes
   const CTA_FROM = tiempos?.cta ?? CTA_FROM_FIJO;
   const creador = estilo === 'creador';
   useBrandFonts();
@@ -45,6 +45,12 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   const float = Math.sin(f / 26) * 12;
   const hookPop = spring({frame: f, fps, config: {damping: 11, stiffness: 140, mass: 0.7}, durationInFrames: 24});
   const words = limpio(subs[subIdx]).split(' ');
+  // Cuerpos que siempre caben, sea cual sea el texto: el gancho y el título en una línea; el subtítulo en dos como mucho; el botón del cierre en una.
+  const hookSize = Math.min(...hook.map((h) => cabe(h, 64, 920)));
+  const titleSize = cabe(title, 44, 920);
+  const subLen = limpio(subs[subIdx]).length;
+  const subSize = Math.max(46, Math.min(76, Math.floor(1700 / Math.max(1, subLen * 0.56))));
+  const subSizeBase = Math.max(34, Math.min(46, Math.floor(1500 / Math.max(1, subLen * 0.56))));
   const palabraClave = clave(subs[subIdx]).toLowerCase();
   const desde = f - subAt;
   const golpe = creador ? 1 + 0.06 * Math.max(0, 1 - desde / 12) ** 2 : 1; // cada corte entra con un golpe de zoom
@@ -57,14 +63,14 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
       <div style={{position: 'absolute', left: 0, top: 0, height: 8, width: `${(f / (tiempos?.frames ?? DURATION)) * 100}%`, background: C.lime, boxShadow: GLOW, zIndex: 5}} />
       {/* Gancho */}
       <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: 700, opacity: 1 - hookOut, transform: `scale(${0.85 + 0.15 * hookPop})`, transformOrigin: '0 50%'}}>
-        <Line text={hook[0]} at={2} out={HOOK_END} size={64} from="left" extra={{...TYPE.title, ...HERO_FILL, letterSpacing: '.03em'}} />
+        <Line text={hook[0]} at={2} out={HOOK_END} size={hookSize} from="left" extra={{...TYPE.title, ...HERO_FILL, letterSpacing: '.03em'}} />
         <div style={{height: 10, width: `${prog(f, HOOK_B - 6, 22) * 100}%`, background: C.lime, borderRadius: 5, margin: '14px 0 22px', boxShadow: GLOW}} />
-        <Line text={hook[1]} at={HOOK_B} out={HOOK_END} size={64} color={C.lime} from="right" extra={{...TYPE.title, letterSpacing: '.03em'}} />
+        <Line text={hook[1]} at={HOOK_B} out={HOOK_END} size={hookSize} color={C.lime} from="right" extra={{...TYPE.title, letterSpacing: '.03em'}} />
       </div>
       {/* Cuerpo */}
       <div style={{position: 'absolute', inset: 0, opacity: f < CTA_FROM ? main : 1 - ctaIn}}>
         <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: SAFE.top}}>
-          <Line text={title} at={HOOK_END + 4} size={44} extra={TYPE.title} />
+          <Line text={title} at={HOOK_END + 4} size={titleSize} extra={TYPE.title} />
           <div style={{height: 8, width: `${prog(f, HOOK_END + 12, 20) * 38}%`, background: C.lime, borderRadius: 4, marginTop: 14, boxShadow: GLOW}} />
         </div>
         <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 400 + (1 - main) * 120 + float}}>
@@ -84,7 +90,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
                 const esClave = w.replace(/[^\p{L}\p{N}%]/gu, '').toLowerCase() === palabraClave;
                 const t = prog(f, subAt + i * 4, 8);
                 return (
-                  <span key={i} style={{fontFamily: esClave ? FONT.display : FONT.body, fontStyle: esClave ? 'italic' : 'normal', fontWeight: esClave ? 700 : 800, fontSize: esClave ? 62 : 76, textTransform: esClave ? 'uppercase' : 'none', letterSpacing: esClave ? '.02em' : 'normal', lineHeight: 1.12, color: esClave ? C.lime : C.text, textShadow: '0 6px 30px rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.9)', display: 'inline-block', opacity: t, transform: `translateY(${(1 - t) * 30}px) scale(${esClave ? 0.8 + 0.2 * t + (desde < 14 ? 0.12 : 0) : 1})`}}>
+                  <span key={i} style={{fontFamily: esClave ? FONT.display : FONT.body, fontStyle: esClave ? 'italic' : 'normal', fontWeight: esClave ? 700 : 800, fontSize: esClave ? Math.round(subSize * 0.82) : subSize, textTransform: esClave ? 'uppercase' : 'none', letterSpacing: esClave ? '.02em' : 'normal', lineHeight: 1.12, color: esClave ? C.lime : C.text, textShadow: '0 6px 30px rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.9)', display: 'inline-block', opacity: t, transform: `translateY(${(1 - t) * 30}px) scale(${esClave ? 0.8 + 0.2 * t + (desde < 14 ? 0.12 : 0) : 1})`}}>
                     {w}
                   </span>
                 );
@@ -96,7 +102,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
           <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: 1370, height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
             <div key={subIdx} style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0 14px', padding: '14px 30px', borderRadius: 28, background: 'rgba(10,11,9,.72)', border: `2px solid ${C.border}`, borderLeft: `8px solid ${C.lime}`, boxShadow: '0 20px 50px rgba(0,0,0,.5)', opacity: prog(f, subAt, 6), transform: `scale(${0.9 + 0.1 * prog(f, subAt, 10)})`}}>
               {words.map((w, i) => (
-                <span key={i} style={{fontFamily: FONT.body, fontWeight: 800, fontSize: 46, lineHeight: 1.15, color: i === words.length - 1 ? C.lime : C.text, opacity: prog(f, subAt + i * 3, 8), transform: `translateY(${(1 - prog(f, subAt + i * 3, 10)) * 26}px)`, display: 'inline-block'}}>
+                <span key={i} style={{fontFamily: FONT.body, fontWeight: 800, fontSize: subSizeBase, lineHeight: 1.15, color: i === words.length - 1 ? C.lime : C.text, opacity: prog(f, subAt + i * 3, 8), transform: `translateY(${(1 - prog(f, subAt + i * 3, 10)) * 26}px)`, display: 'inline-block'}}>
                   {w}
                 </span>
               ))}
@@ -125,7 +131,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
           <div style={{...TYPE.eyebrow, fontSize: 28, marginTop: 40, opacity: prog(f, CTA_FROM + 6, 14)}}>Sube el nivel de tu equipo</div>
           <div style={{...TYPE.wordmark, ...HERO_FILL, fontSize: 84, lineHeight: 1.1, marginTop: 10, letterSpacing: `${0.06 + (1 - prog(f, CTA_FROM + 8, 30)) * 0.3}em`, opacity: prog(f, CTA_FROM + 8, 14)}}>ZYRA</div>
           <div style={{fontFamily: FONT.body, fontWeight: 700, fontSize: 32, letterSpacing: '.08em', color: C.text, marginTop: 6, opacity: prog(f, CTA_FROM + 14, 14)}}>Gestión de equipos de pádel</div>
-          <div style={{...TYPE.button, display: 'inline-block', marginTop: 48, padding: '24px 64px', borderRadius: 999, background: C.lime, color: C.ink, fontSize: 46, boxShadow: `inset 0 1px 0 rgba(255,255,255,.45), 0 14px 34px -8px rgba(0,0,0,.7), 0 ${12 + 8 * pulse}px ${36 + 16 * pulse}px -12px ${limeA(0.6)}`, transform: `scale(${(0.7 + 0.3 * prog(f, CTA_FROM + 18, 14)) * (1 + 0.02 * Math.sin(f / 4))})`, opacity: prog(f, CTA_FROM + 18, 10)}}>{ctaTxt}</div>
+          <div style={{...TYPE.button, display: 'inline-block', marginTop: 48, padding: '24px 64px', borderRadius: 999, background: C.lime, color: C.ink, fontSize: Math.min(46, Math.floor(800 / Math.max(1, ctaTxt.length * 0.72))), whiteSpace: 'nowrap', boxShadow: `inset 0 1px 0 rgba(255,255,255,.45), 0 14px 34px -8px rgba(0,0,0,.7), 0 ${12 + 8 * pulse}px ${36 + 16 * pulse}px -12px ${limeA(0.6)}`, transform: `scale(${(0.7 + 0.3 * prog(f, CTA_FROM + 18, 14)) * (1 + 0.02 * Math.sin(f / 4))})`, opacity: prog(f, CTA_FROM + 18, 10)}}>{ctaTxt}</div>
           <div style={{fontFamily: FONT.body, fontWeight: 700, fontSize: 44, letterSpacing: '.02em', color: C.text, marginTop: 36, opacity: prog(f, CTA_FROM + 30, 14)}}>zyrapadel.com</div>
         </div>
       </AbsoluteFill>
