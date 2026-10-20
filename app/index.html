@@ -40,7 +40,7 @@ details.panel small{display:block;color:var(--m);font-weight:400;font-size:13px}
 .hint{color:var(--m);font-size:13px;margin:6px 0 0}
 .opts{margin-top:10px}.opts summary{color:var(--m);cursor:pointer;font-size:14px;min-height:36px}
 .opts .row{margin:6px 0}
-.voz{margin-top:10px;border-top:1px solid var(--b);padding-top:10px;white-space:normal}.voz ol{margin:6px 0;padding-left:22px}.voz li{margin:8px 0}.voz li q{display:block;color:var(--t)}.voz input{max-width:100%}
+.voz{margin-top:10px;border-top:1px solid var(--b);padding-top:10px;white-space:normal}.voz ol{margin:6px 0;padding-left:22px}.voz li{margin:8px 0}.voz li q{display:block;color:var(--t)}.voz input{max-width:100%}.voz .el{display:flex;gap:8px;align-items:center;margin:4px 0}.voz .el code{flex:1;white-space:normal;color:var(--t)}
 .log{color:var(--m);font-size:14px;margin-top:8px;white-space:pre-wrap}.log:empty{display:none}
 .log.err{color:var(--red)}.log.ok{color:var(--lime)}.log.busy::before{content:"⏳ "}
 progress{width:100%;height:14px;margin-top:8px;accent-color:var(--lime)}
@@ -112,14 +112,22 @@ async function crear(b,bt){
     if(s.estado==='error'){clearInterval(t);$('barra').style.display='none';$('log').className='log err';$('log').textContent+='\n✖ '+s.error;bt.disabled=false}},1500)}
 // Voz grabada: lista de frases (en el orden en que suenan) con un .mp3 por frase. Cada archivo se recorta solo en sus silencios
 // de los extremos y el vídeo se ajusta a su duración, así que no hace falta cuadrar nada: graba cada frase entera y con calma.
+// Etiqueta de tono para ElevenLabs según el papel de la frase (gancho, subtítulo, cierre) y su puntuación.
+function etiquetaTono(t,i,n){
+  if(i===0)return /[¿?]/.test(t)?'Curious, intense, confident':'Energetic, bold, attention-grabbing';
+  if(i===n-1)return /\d/.test(t)?'Warm, inspiring, confident':'Warm, inspiring, confident, closing';
+  if(/[¿?]/.test(t))return 'Curious, engaging, confident';
+  if(/[¡!]/.test(t))return 'Excited, energetic, confident';
+  if(/\d/.test(t))return 'Confident, clear, proud';
+  return 'Calm, confident, upbeat'}
 async function panelVoz(b,d,gb){
   gb.disabled=true;
   const r=await fetch('/api/frases',{method:'POST',body:JSON.stringify(b)});const j=await r.json();if(!r.ok){estado(j.error,'err');gb.disabled=false;return}
   const grupo=(b.title||'video').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,28)+'-'+Date.now().toString(36).slice(-5);
   const p=document.createElement('div');p.className='voz';
-  p.innerHTML='<h2>Tu voz: un audio por frase</h2><p class="hint">Graba cada frase entera, con un segundo de silencio antes y después. Se recorta solo el silencio de los extremos (nunca a mitad de frase), se iguala el volumen y el vídeo dura lo que duren tus frases.</p>';
+  p.innerHTML='<h2>Tu voz: un audio por frase</h2><p class="hint">Copia el texto con su etiqueta de tono en ElevenLabs para una mejor entonación. Graba cada frase entera, con un segundo de silencio antes y después. Se recorta solo el silencio de los extremos (nunca a mitad de frase), se iguala el volumen y el vídeo dura lo que duren tus frases.</p>';
   const ol=document.createElement('ol');const ins=[];
-  j.frases.forEach((t,i)=>{const li=document.createElement('li');const q=document.createElement('q');q.textContent=t;const l=document.createElement('label');l.textContent=(i===0?'Gancho':i===j.frases.length-1?'Cierre':'Frase '+i)+' ';const inp=document.createElement('input');inp.type='file';inp.accept='.mp3,.wav,.m4a,.ogg,audio/*';inp.setAttribute('aria-label','Audio de: '+t);l.appendChild(inp);li.append(q,l);ol.appendChild(li);ins.push(inp)});
+  j.frases.forEach((t,i)=>{const li=document.createElement('li');const q=document.createElement('q');q.textContent=t;const l=document.createElement('label');l.textContent=(i===0?'Gancho':i===j.frases.length-1?'Cierre':'Frase '+i)+' ';const inp=document.createElement('input');inp.type='file';inp.accept='.mp3,.wav,.m4a,.ogg,audio/*';inp.setAttribute('aria-label','Audio de: '+t);l.appendChild(inp);const tx='['+etiquetaTono(t,i,j.frases.length)+'] '+t;const el=document.createElement('div');el.className='el';const cd=document.createElement('code');cd.textContent=tx;const cb=document.createElement('button');cb.className='go sec';cb.textContent='Copiar';cb.onclick=async()=>{try{await navigator.clipboard.writeText(tx);cb.textContent='Copiado'}catch(e){const r=document.createRange();r.selectNodeContents(cd);const se=getSelection();se.removeAllRanges();se.addRange(r);cb.textContent='Selecciona y copia'}setTimeout(()=>cb.textContent='Copiar',1500)};el.append(cd,cb);li.append(q,el,l);ol.appendChild(li);ins.push(inp)});
   const go=document.createElement('button');go.className='go';go.textContent='Crear con mis audios';
   go.onclick=async()=>{
     if(ins.some((x)=>!x.files[0])){estado('Falta algún audio: sube uno por frase ('+ins.length+' en total).','err');return}
