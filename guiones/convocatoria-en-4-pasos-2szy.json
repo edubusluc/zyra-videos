@@ -1,0 +1,27 @@
+{
+  "hook": [
+    "«VOY… SI PUEDO»",
+    "¿Y AHORA QUÉ?"
+  ],
+  "title": "CONVOCATORIA EN 4 PASOS",
+  "src": "ui/enfrentamiento-borrador.png",
+  "imgW": 780,
+  "scroll": [
+    124,
+    1238
+  ],
+  "subs": [
+    "Crea el enfrentamiento",
+    "Convoca y monta parejas",
+    "4 pasos y PDF listo",
+    "Comparte y a jugar"
+  ],
+  "locucion": [
+    "crea el *enfrentamiento*",
+    "convoca y monta *parejas*",
+    "cuatro pasos y *listo*",
+    "comparte y a *jugar*"
+  ],
+  "cta": "Gratis en zyrapadel.com",
+  "voz": true
+}
