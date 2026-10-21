@@ -29,7 +29,6 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
     {yaws: [-6, 6, -4, 8, -6], pitches: [14, 10, 16, 9, 12], entra: -36},
   ];
   const cam = CAMARAS[V(3, 0)];
-  const hookTop = [700, 560, 820][V(3, 1)];
   const hookCentro = V(2, 2) === 1;
   const animSub = (['sube', 'pop', 'lado'] as const)[V(3, 3)];
   const dirWipe: 1 | -1 = V(2, 4) ? -1 : 1;
@@ -59,7 +58,11 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   const hookPop = spring({frame: f, fps, config: {damping: 11, stiffness: 140, mass: 0.7}, durationInFrames: 24});
   const words = limpio(subs[subIdx]).split(' ');
   // Cuerpos que siempre caben, sea cual sea el texto: el gancho y el título en una línea; el subtítulo en dos como mucho; el botón del cierre en una.
-  const hookSize = Math.min(...hook.map((h) => cabe(h, 64, 920)));
+  // 1.ª línea del gancho en dos renglones de largo parecido (p. ej. «GESTIONA / TU EQUIPO») para poder ponerla muy grande.
+  const hookW = hook[0].split(/\s+/).filter(Boolean);
+  const corte = hookW.length < 2 ? 0 : Array.from({length: hookW.length - 1}, (_, i) => i + 1).reduce((m, i) => (Math.max(hookW.slice(0, i).join(' ').length, hookW.slice(i).join(' ').length) < Math.max(hookW.slice(0, m).join(' ').length, hookW.slice(m).join(' ').length) ? i : m), 1);
+  const hookL1 = corte ? [hookW.slice(0, corte).join(' '), hookW.slice(corte).join(' ')] : [hook[0]];
+  const hookSize = Math.min(...hookL1.map((h) => cabe(h, 112, 920)));
   const titleSize = cabe(title, 44, 920);
   const subLen = limpio(subs[subIdx]).length;
   const subSize = Math.max(46, Math.min(76, Math.floor(1700 / Math.max(1, subLen * 0.56))));
@@ -75,11 +78,22 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
       {creador ? <Motivo tipo={motivo} /> : null}
       {/* Barra de progreso */}
       <div style={{position: 'absolute', left: 0, top: 0, height: 8, width: `${(f / (tiempos?.frames ?? DURATION)) * 100}%`, background: C.lime, boxShadow: GLOW, zIndex: 5}} />
-      {/* Gancho */}
-      <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: hookTop, textAlign: hookCentro ? 'center' : 'left', opacity: 1 - hookOut, transform: `scale(${0.85 + 0.15 * hookPop})`, transformOrigin: hookCentro ? '50% 50%' : '0 50%'}}>
-        <Line text={hook[0]} at={2} out={HOOK_END} size={hookSize} align={hookCentro ? 'center' : 'left'} from={hookCentro ? 'up' : 'left'} extra={{...TYPE.title, ...HERO_FILL, letterSpacing: '.03em'}} />
-        <div style={{height: 10, width: `${prog(f, HOOK_B - 6, 22) * 100}%`, background: C.lime, borderRadius: 5, margin: hookCentro ? '14px auto 22px' : '14px 0 22px', boxShadow: GLOW}} />
-        <Line text={hook[1]} at={HOOK_B} out={HOOK_END} size={hookSize} color={C.lime} align={hookCentro ? 'center' : 'left'} from={hookCentro ? 'up' : 'right'} extra={{...TYPE.title, letterSpacing: '.03em'}} />
+      {/* Gancho: la web ya en pantalla desde el fotograma 0 (inclinada y con zoom), título grande y la 2.ª línea en una tarjeta lima */}
+      <div style={{position: 'absolute', inset: 0, opacity: 1 - hookOut}}>
+        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 560 + (1 - hookPop) * 80}}>
+          <div style={{position: 'absolute', left: -40, right: -40, top: -40, bottom: -40, borderRadius: 90, background: `radial-gradient(${limeA(0.45)}, transparent 70%)`}} />
+          <Phone3D width={PH_W} height={PH_H} yaw={-14 + (1 - hookPop) * 18} pitch={10} roll={-3} scale={1.04 + 0.22 * (1 - prog(f, 0, 34))} sheen={prog(f, 0, 60)}>
+            <Screen src={src} imgW={imgW} width={PH_W} scroll={scroll[0]} reveal={1} />
+          </Phone3D>
+        </div>
+        <div style={{position: 'absolute', left: SAFE.side - 30, right: SAFE.side - 30, top: 170, textAlign: hookCentro ? 'center' : 'left'}}>
+          {hookL1.map((t, i) => (
+            <Line key={i} text={t} at={1 + i * 3} out={HOOK_END} size={hookSize} align={hookCentro ? 'center' : 'left'} from={hookCentro ? 'up' : 'left'} extra={{...TYPE.title, ...HERO_FILL, letterSpacing: '.03em', lineHeight: 1.02, paddingLeft: 30, paddingRight: 30, textShadow: '0 6px 30px rgba(0,0,0,.7)'}} />
+          ))}
+          <div style={{display: 'inline-block', marginTop: 26, marginLeft: 30, padding: '10px 28px', background: C.lime, color: C.ink, borderRadius: 14, boxShadow: `8px 8px 0 ${C.ink}, ${GLOW}`, transform: `rotate(-2deg) scale(${0.6 + 0.4 * prog(f, HOOK_B, 14)})`, transformOrigin: '0 50%', opacity: prog(f, HOOK_B, 6), fontSize: cabe(hook[1], 62, 880), whiteSpace: 'nowrap', ...TYPE.title}}>
+            {hook[1]}
+          </div>
+        </div>
       </div>
       {/* Cuerpo */}
       <div style={{position: 'absolute', inset: 0, opacity: f < CTA_FROM ? main : 1 - ctaIn}}>
@@ -134,7 +148,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
       <Wipe at={HOOK_END + 2} dur={42} dir={dirWipe} />
       <Wipe at={CTA_FROM + 4} dur={42} dir={dirWipe === 1 ? -1 : 1} />
       {creador && subtitulos && f < CTA_FROM ? subStart.map((t, i) => (i % 2 === 1 ? <KeywordCard key={i} at={t} word={clave(subs[i]).toUpperCase()} variant={Math.floor(i / 2) + tarjeta0} /> : null)) : null}
-      {creador ? <div style={{position: 'absolute', left: 0, right: 0, bottom: 150, textAlign: 'center', ...TYPE.wordmark, fontSize: 28, color: C.text, opacity: 0.45 * (1 - ctaIn), zIndex: 7}}>ZYRA</div> : null}
+      {creador ? <div style={{position: 'absolute', left: 0, right: 0, bottom: 150, textAlign: 'center', fontFamily: FONT.body, fontWeight: 700, letterSpacing: '.04em', fontSize: 34, color: C.text, opacity: 0.75 * (1 - ctaIn), textShadow: '0 2px 12px rgba(0,0,0,.8)', zIndex: 7}}>zyrapadel.com</div> : null}
       {/* Cierre: la portada de la web (fondo de página, logo con halo, ZYRA en cursiva, botón principal y URL) */}
       <AbsoluteFill style={{opacity: ctaIn, background: PAGE_BG}} />
       <AbsoluteFill style={{opacity: ctaIn, alignItems: 'center', justifyContent: 'center'}}>

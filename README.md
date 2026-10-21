@@ -17,7 +17,7 @@ Tras subir el guion, la app lanza ella misma el workflow (workflow_dispatch con 
 ## Formato del guion (`guiones/<id>.json`)
 | Campo | Qué es |
 | --- | --- |
-| `hook` | El gancho: una sola frase repartida en dos líneas (máx. ~16 caracteres cada una; si llega en una línea o en tres, se reparte sola). La voz la dice de una vez, sin cortarla; la letra se reduce si no cabe |
+| `hook` | El gancho: una sola frase repartida en dos líneas (máx. ~16 caracteres cada una; si llega en una línea o en tres, se reparte sola). La voz la dice de una vez, sin cortarla; la letra se reduce si no cabe. En los guiones que genera la app la primera línea es siempre «GESTIONA TU EQUIPO» (así se entiende al instante que Zyra es una web para gestionar equipos de pádel) y la segunda la escribe el guionista según el vídeo, p. ej. «SIN LÍOS DE WHATSAPP». En pantalla: la web ya visible desde el primer fotograma (inclinada, con zoom), título grande en dos renglones y la segunda línea en una tarjeta lima; abajo, solo «zyrapadel.com» |
 | `title` | Título sobre el móvil (máx. ~23 caracteres) |
 | `src`, `imgW` | Captura de `public/ui/` y su ancho en px |
 | `scroll` | Desplazamiento inicial y final de la captura (px) |

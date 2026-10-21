@@ -36,13 +36,18 @@ const slug = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').rep
 const pngWidth = (rel) => readFileSync(join(ROOT, 'public', rel)).readUInt32BE(16);
 
 const LIMITES = {hook: 16, title: 23, sub: 42, cta: 28};
+/** Primera línea del gancho, siempre la misma: dice de entrada que Zyra sirve para gestionar equipos. La segunda la escribe el guionista según el vídeo. */
+export const HOOK_FIJO = 'GESTIONA TU EQUIPO';
 
 /** Valida el guion que devuelve el modelo; devuelve la lista de problemas (vacía si está bien). */
 export function validar(g, cat) {
   const e = [];
   const txt = (v, max, n) => (typeof v === 'string' && v.trim() && v.length <= max ? null : `${n}: obligatorio y de máx. ${max} caracteres`);
   if (!Array.isArray(g.hook) || g.hook.length !== 2) e.push('hook: dos líneas');
-  else g.hook.forEach((h, i) => { const m = txt(h, LIMITES.hook, `hook[${i}]`); if (m) e.push(m); });
+  else {
+    if (String(g.hook[0]).trim().toUpperCase() !== HOOK_FIJO) e.push(`hook[0]: debe ser exactamente «${HOOK_FIJO}»`);
+    const m = txt(g.hook[1], LIMITES.hook, 'hook[1]'); if (m) e.push(m);
+  }
   [txt(g.title, LIMITES.title, 'title'), txt(g.cta, LIMITES.cta, 'cta')].forEach((m) => m && e.push(m));
   if (!Array.isArray(g.subs) || g.subs.length < 3 || g.subs.length > 5) e.push(`subs: de 3 a 5 subtítulos (traía ${Array.isArray(g.subs) ? g.subs.length : 'ninguno'})`);
   else g.subs.forEach((s, i) => { const m = txt(String(s).replace(/\*/g, ''), LIMITES.sub, `subs[${i}]`); if (m) e.push(m); });
@@ -131,7 +136,7 @@ ${hechos.join('\n') || '(nada todavía)'}
 Capturas de la app disponibles para vídeos:
 ${cat.map((c) => `- ${c.src}: ${c.descripcion}`).join('\n')}
 Cuando propongas una pieza concreta lista para producir, añade AL FINAL de tu respuesta un único bloque \`\`\`json con uno de estos formatos (el usuario lo convertirá con un botón):
-vídeo: {"tipo":"video","hook":["MÁX 16 CARACTERES","MÁX 16 CARACTERES"],"title":"MÁX 23, MAYÚSCULAS","src":"<una captura>","subs":["máx 30","máx 30","máx 30 (de 3 a 5 en total; mejor 3 o 4 si el vídeo lleva voz, porque cada uno dura 2 o 3 s)"],"locucion":["lo que se DIRÍA en voz alta para cada subtítulo, en el mismo orden y cantidad: frase hablada en tono de locutor deportivo seguro y pausado, sin prisas (verbos de acción, frases cortas), con coma o ¿? donde dé entonación y la palabra clave entre *asteriscos* para que la voz la acentúe, sin puntos ni signos sueltos y sin terminar en número, MÁX 28 caracteres (la voz dice unos 8 caracteres por segundo y cada subtítulo dura unos 3 s con pausa antes y después: si es más larga el vídeo se alarga), sin MAYÚSCULAS ni emojis"],"cta":"máx 28"}
+vídeo: {"tipo":"video","hook":["GESTIONA TU EQUIPO","SEGUNDA LÍNEA, MÁX 16 CARACTERES"],"title":"MÁX 23, MAYÚSCULAS","src":"<una captura>","subs":["máx 30","máx 30","máx 30 (de 3 a 5 en total; mejor 3 o 4 si el vídeo lleva voz, porque cada uno dura 2 o 3 s)"],"locucion":["lo que se DIRÍA en voz alta para cada subtítulo, en el mismo orden y cantidad: frase hablada en tono de locutor deportivo seguro y pausado, sin prisas (verbos de acción, frases cortas), con coma o ¿? donde dé entonación y la palabra clave entre *asteriscos* para que la voz la acentúe, sin puntos ni signos sueltos y sin terminar en número, MÁX 28 caracteres (la voz dice unos 8 caracteres por segundo y cada subtítulo dura unos 3 s con pausa antes y después: si es más larga el vídeo se alarga), sin MAYÚSCULAS ni emojis"],"cta":"máx 28"}
 meme antes/después: {"tipo":"meme","beforeLabel":"ANTES","before":"máx 70 caracteres","afterLabel":"CON ZYRA","after":"máx 70 caracteres"}
 meme de reacción (texto tipo «Tu compañero cuando…» sobre fondo y recorte): {"tipo":"reaccion","plantilla":"<id de plantilla o null>","caption":"máx 90 caracteres","emojis":"🎾😂"}  (sin plantilla, fondo y recorte: null usa la pista de Zyra sin personaje, o uno de los medios disponibles)
 varios memes con la misma plantilla de una vez: {"tipo":"lote","plantilla":"<id>","captions":["máx 90","máx 90", … hasta 8]}
@@ -143,7 +148,7 @@ Formatos de referencia que funcionan en redes (fichas analizadas; inspírate en 
 
 async function pedirGuion(peticion, log) {
   const cat = catalogo();
-  const sistema = `Eres el guionista de vídeos de TikTok de Zyra, una app web para que capitanes de equipos de pádel organicen convocatorias, parejas, alineaciones y estadísticas. Escribes en español de España, directo y sin exagerar. Devuelve SOLO un objeto JSON (sin texto alrededor) con: hook (array de 2 textos EN MAYÚSCULAS, máx. ${LIMITES.hook} caracteres cada uno, que formen una pregunta o frase gancho), title (MAYÚSCULAS, máx. ${LIMITES.title}), src (una de las capturas), subs (array de 3 a 5 subtítulos; en cada uno envuelve entre asteriscos la palabra clave que más importa, p. ej. «Convoca en *10 segundos*»; máx. ${LIMITES.sub} caracteres, que cuenten la función en orden), cta (máx. ${LIMITES.cta}, p. ej. «Pruébalo gratis»). Ritmo pausado, sin prisas: el vídeo se lee con calma, así que cuenta UNA sola idea por subtítulo, con frases cortas (6 a 8 palabras) y como mucho 3 subtítulos salvo que la función exija más; si dudas entre añadir contenido o dejar aire, deja aire. No inventes funciones que no aparezcan en la descripción de la captura. Capturas disponibles:\n${cat.map((c) => `- ${c.src}: ${c.descripcion}`).join('\n')}`;
+  const sistema = `Eres el guionista de vídeos de TikTok de Zyra, una app web para que capitanes de equipos de pádel organicen convocatorias, parejas, alineaciones y estadísticas. Escribes en español de España, directo y sin exagerar. Devuelve SOLO un objeto JSON (sin texto alrededor) con: hook (array de 2 textos EN MAYÚSCULAS: el primero SIEMPRE es «${HOOK_FIJO}», para que el espectador entienda al instante que Zyra es una web para gestionar equipos de pádel; el segundo, máx. ${LIMITES.hook} caracteres, concreta lo que se ve en ESTE vídeo y continúa la frase del primero, p. ej. «SIN LÍOS DE WHATSAPP» o «EN 10 SEGUNDOS»; las dos líneas se locutan seguidas como una sola frase, así que el segundo no debe empezar con mayúscula propia ni cerrar con punto), title (MAYÚSCULAS, máx. ${LIMITES.title}), src (una de las capturas), subs (array de 3 a 5 subtítulos; en cada uno envuelve entre asteriscos la palabra clave que más importa, p. ej. «Convoca en *10 segundos*»; máx. ${LIMITES.sub} caracteres, que cuenten la función en orden), cta (máx. ${LIMITES.cta}, p. ej. «Pruébalo gratis»). Ritmo pausado, sin prisas: el vídeo se lee con calma, así que cuenta UNA sola idea por subtítulo, con frases cortas (6 a 8 palabras) y como mucho 3 subtítulos salvo que la función exija más; si dudas entre añadir contenido o dejar aire, deja aire. No inventes funciones que no aparezcan en la descripción de la captura. Capturas disponibles:\n${cat.map((c) => `- ${c.src}: ${c.descripcion}`).join('\n')}`;
   let mensajes = [{role: 'user', content: peticion}];
   for (let intento = 1; intento <= 2; intento++) {
     log(`Pidiendo el guion a Claude (intento ${intento})…`);
@@ -151,7 +156,7 @@ async function pedirGuion(peticion, log) {
     let g;
     try { g = JSON.parse(texto.slice(texto.indexOf('{'), texto.lastIndexOf('}') + 1)); } catch { g = null; }
     const errores = g ? validar(g, cat) : ['la respuesta no es JSON'];
-    if (!errores.length) return g;
+    if (!errores.length) { g.hook[0] = HOOK_FIJO; return g; }
     log(`Guion no válido (${errores.join('; ')}); reintento.`);
     mensajes = [...mensajes, {role: 'assistant', content: texto}, {role: 'user', content: `Corrige estos problemas y devuelve solo el JSON: ${errores.join('; ')}`}];
   }
