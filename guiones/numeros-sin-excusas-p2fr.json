@@ -1,0 +1,35 @@
+{
+  "hook": [
+    "¿QUIÉN RINDE",
+    "DE VERDAD?"
+  ],
+  "title": "NÚMEROS SIN EXCUSAS",
+  "src": "ui/estadisticas-jugador-ficha.png",
+  "imgW": 780,
+  "scroll": [
+    124,
+    1238
+  ],
+  "subs": [
+    "Elige jugador y temporada",
+    "Partidos y % de victorias",
+    "Racha actual y rendimiento",
+    "Y su histórico global"
+  ],
+  "locucion": [
+    "elige jugador y *temporada*",
+    "¿cuánto gana de *verdad*?",
+    "mira su *racha* actual",
+    "y su histórico *global*"
+  ],
+  "cta": "Gratis en zyrapadel.com",
+  "voz": true,
+  "audios": [
+    "voz/numeros-sin-excusas-dmc6a/0.mp3",
+    "voz/numeros-sin-excusas-dmc6a/1.mp3",
+    "voz/numeros-sin-excusas-dmc6a/2.mp3",
+    "voz/numeros-sin-excusas-dmc6a/3.mp3",
+    "voz/numeros-sin-excusas-dmc6a/4.mp3",
+    "voz/numeros-sin-excusas-dmc6a/5.mp3"
+  ]
+}
