@@ -2,7 +2,7 @@ import React from 'react';
 import {AbsoluteFill, Img, OffthreadVideo, staticFile} from 'remotion';
 import {Court} from './components/Court';
 import {useBrandFonts} from './components/fonts';
-import {C, FONT, PAGE_BG} from './styles/brand';
+import {C, FONT, PAGE_BG, SAFE} from './styles/brand';
 
 export type ReaccionData = {id: string; caption: string; emojis?: string; fondo?: string | null; recorte?: string | null; seg?: number; sonido?: boolean; pos?: 'arriba' | 'abajo'; subtitulos?: boolean};
 export const REACCION_FPS = 30;
@@ -38,7 +38,7 @@ export const Reaccion: React.FC<ReaccionData> = ({caption, emojis, fondo, recort
           <Img src={staticFile(recorte)} style={{position: 'absolute', left: 0, bottom: 150, width: '100%', height: 1100, objectFit: 'contain', objectPosition: '50% 100%'}} />
         )
       ) : null}
-      {subtitulos ? <div style={{position: 'absolute', left: 64, right: 64, textAlign: 'center', ...(pos === 'abajo' ? {bottom: 300} : {top: 330})}}>
+      {subtitulos ? <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, textAlign: 'center', ...(pos === 'abajo' ? {bottom: SAFE.bottom + 90} : {top: 330})}}>
         <div
           style={{
             fontFamily: FONT.body,
@@ -55,7 +55,7 @@ export const Reaccion: React.FC<ReaccionData> = ({caption, emojis, fondo, recort
         </div>
         {emojis ? <div style={{fontSize: 84, marginTop: 18}}>{emojis}</div> : null}
       </div> : null}
-      <div style={{position: 'absolute', bottom: 120, left: 0, right: 0, textAlign: 'center', fontFamily: FONT.body, fontWeight: 800, fontSize: 38, color: C.lime, opacity: 0.9, textShadow: '0 2px 12px #000'}}>zyrapadel.com</div>
+      <div style={{position: 'absolute', bottom: SAFE.bottom, left: 0, right: 0, textAlign: 'center', fontFamily: FONT.body, fontWeight: 800, fontSize: 38, color: C.lime, opacity: 0.9, textShadow: '0 2px 12px #000'}}>zyrapadel.com</div>
     </AbsoluteFill>
   );
 };
