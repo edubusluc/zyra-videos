@@ -1,0 +1,35 @@
+{
+  "hook": [
+    "¿Y EL PARTIDO 3?",
+    "SIEMPRE PERDEMOS"
+  ],
+  "title": "EL PARTIDO MALDITO",
+  "src": "ui/partidos-sets.png",
+  "imgW": 716,
+  "scroll": [
+    80,
+    440
+  ],
+  "subs": [
+    "Del 1 al 5, ¿cuál ganáis?",
+    "% de victorias por partido",
+    "Ahí está: vuestro peor partido",
+    "No es gafe, son datos"
+  ],
+  "locucion": [
+    "¿cuál de los *cinco* ganáis?",
+    "tu *porcentaje* en cada uno",
+    "y aquí está, el *maldito*",
+    "no es gafe, son *datos*"
+  ],
+  "cta": "Descúbrelo en zyrapadel.com",
+  "audios": [
+    "voz/el-partido-maldito-e69kz/0.mp3",
+    "voz/el-partido-maldito-e69kz/1.mp3",
+    "voz/el-partido-maldito-e69kz/2.mp3",
+    "voz/el-partido-maldito-e69kz/3.mp3",
+    "voz/el-partido-maldito-e69kz/4.mp3",
+    "voz/el-partido-maldito-e69kz/5.mp3"
+  ],
+  "voz": true
+}
