@@ -47,5 +47,5 @@ export const SHADOW_POP = '0 24px 48px -16px rgba(0, 0, 0, .75), 0 0 0 1px rgba(
 /** Fondo de página de la web: halo lima arriba sobre el degradado oscuro. */
 export const PAGE_BG = `radial-gradient(50% 35% at 50% -8%, ${limeA(0.09)} 0%, ${limeA(0)} 100%), radial-gradient(120% 60% at 50% 0%, ${C.bgTop} 0%, ${C.bg} 70%)`;
 
-/** Zona segura de Reels/Stories/TikTok (px sobre 1080×1920). */
-export const SAFE = {top: 240, bottom: 420, side: 72};
+/** Zona segura de TikTok/Reels (px sobre 1080×1920): arriba queda la UI de la app (mín. 120) y abajo la descripción y los botones (~300). */
+export const SAFE = {top: 240, bottom: 300, side: 72};

@@ -62,7 +62,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   const hookW = hook[0].split(/\s+/).filter(Boolean);
   const corte = hookW.length < 2 ? 0 : Array.from({length: hookW.length - 1}, (_, i) => i + 1).reduce((m, i) => (Math.max(hookW.slice(0, i).join(' ').length, hookW.slice(i).join(' ').length) < Math.max(hookW.slice(0, m).join(' ').length, hookW.slice(m).join(' ').length) ? i : m), 1);
   const hookL1 = corte ? [hookW.slice(0, corte).join(' '), hookW.slice(corte).join(' ')] : [hook[0]];
-  const hookSize = Math.min(...hookL1.map((h) => cabe(h, 112, 920)));
+  const hookSize = Math.min(...hookL1.map((h) => cabe(h, 112, 1080 - 2 * SAFE.side - 90)));
   const titleSize = cabe(title, 44, 920);
   const subLen = limpio(subs[subIdx]).length;
   const subSize = Math.max(46, Math.min(76, Math.floor(1700 / Math.max(1, subLen * 0.56))));
@@ -80,9 +80,9 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
       <div style={{position: 'absolute', left: 0, top: 0, height: 8, width: `${(f / (tiempos?.frames ?? DURATION)) * 100}%`, background: C.lime, boxShadow: GLOW, zIndex: 5}} />
       {/* Gancho: la web ya en pantalla desde el fotograma 0 (inclinada y con zoom), título grande y la 2.ª línea en una tarjeta lima */}
       <div style={{position: 'absolute', inset: 0, opacity: 1 - hookOut}}>
-        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 560 + (1 - hookPop) * 80}}>
+        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 470 + (1 - hookPop) * 80}}>
           <div style={{position: 'absolute', left: -40, right: -40, top: -40, bottom: -40, borderRadius: 90, background: `radial-gradient(${limeA(0.45)}, transparent 70%)`}} />
-          <Phone3D width={PH_W} height={PH_H} yaw={-14 + (1 - hookPop) * 18} pitch={10} roll={-3} scale={1.04 + 0.22 * (1 - prog(f, 0, 34))} sheen={prog(f, 0, 60)}>
+          <Phone3D width={PH_W} height={PH_H} yaw={-14 + (1 - hookPop) * 18} pitch={10} roll={-3} scale={0.98 + 0.2 * (1 - prog(f, 0, 34))} sheen={prog(f, 0, 60)}>
             <Screen src={src} imgW={imgW} width={PH_W} scroll={scroll[0]} reveal={1} />
           </Phone3D>
         </div>
@@ -138,7 +138,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
           </div>
         ) : null}
         {/* Puntos de avance */}
-        <div style={{position: 'absolute', left: 0, right: 0, top: 1545, display: 'flex', justifyContent: 'center', gap: 16}}>
+        <div style={{position: 'absolute', left: 0, right: 0, top: 1530, display: 'flex', justifyContent: 'center', gap: 16}}>
           {subStart.map((_, i) => (
             <div key={i} style={{width: i === subIdx ? 56 : 16, height: 16, borderRadius: 8, background: i === subIdx ? C.lime : C.border, boxShadow: i === subIdx ? GLOW : 'none'}} />
           ))}
@@ -148,7 +148,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
       <Wipe at={HOOK_END + 2} dur={42} dir={dirWipe} />
       <Wipe at={CTA_FROM + 4} dur={42} dir={dirWipe === 1 ? -1 : 1} />
       {creador && subtitulos && f < CTA_FROM ? subStart.map((t, i) => (i % 2 === 1 ? <KeywordCard key={i} at={t} word={clave(subs[i]).toUpperCase()} variant={Math.floor(i / 2) + tarjeta0} /> : null)) : null}
-      {creador ? <div style={{position: 'absolute', left: 0, right: 0, bottom: 150, textAlign: 'center', fontFamily: FONT.body, fontWeight: 700, letterSpacing: '.04em', fontSize: 34, color: C.text, opacity: 0.75 * (1 - ctaIn), textShadow: '0 2px 12px rgba(0,0,0,.8)', zIndex: 7}}>zyrapadel.com</div> : null}
+      {creador ? <div style={{position: 'absolute', left: 0, right: 0, bottom: SAFE.bottom, textAlign: 'center', fontFamily: FONT.body, fontWeight: 700, letterSpacing: '.04em', fontSize: 34, color: C.text, opacity: 0.75 * (1 - ctaIn), textShadow: '0 2px 12px rgba(0,0,0,.8)', zIndex: 7}}>zyrapadel.com</div> : null}
       {/* Cierre: la portada de la web (fondo de página, logo con halo, ZYRA en cursiva, botón principal y URL) */}
       <AbsoluteFill style={{opacity: ctaIn, background: PAGE_BG}} />
       <AbsoluteFill style={{opacity: ctaIn, alignItems: 'center', justifyContent: 'center'}}>
