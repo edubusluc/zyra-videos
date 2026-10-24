@@ -164,6 +164,16 @@ async function pedirGuion(peticion, log) {
 /** Listado de ideas de tácticas (ideas/tacticas.json): fichas con fuentes, de las que salen los vídeos de tácticas. */
 export const ideasTacticas = () => (existsSync(join(ROOT, 'ideas/tacticas.json')) ? JSON.parse(readFileSync(join(ROOT, 'ideas/tacticas.json'), 'utf8')) : []);
 
+/** Vídeos de táctica ya generados para cada idea (tacticas/<id>.json con revision.ficha = id de la idea), con su estado de voz y render. */
+export function ideasConVideos() {
+  const hechos = (existsSync(join(ROOT, 'tacticas')) ? readdirSync(join(ROOT, 'tacticas')).filter((f) => f.endsWith('.json')).sort() : []).map((f) => {
+    const id = f.replace(/\.json$/, '');
+    const g = JSON.parse(readFileSync(join(ROOT, 'tacticas', f), 'utf8'));
+    return {id, ficha: g.revision?.ficha, titulo: g.titulo, voz: Boolean(g.voz && g.audios), renderizado: existsSync(join(ROOT, 'out', `tactica-${id}.mp4`)), con_voz: existsSync(join(ROOT, 'out', `tactica-${id}.final.mp4`))};
+  });
+  return ideasTacticas().map((i) => ({...i, videos: hechos.filter((h) => h.ficha === i.id)}));
+}
+
 /** Valida el guion de una táctica (pista de 10×20 m, x 0–10, y 0–20, red en y = 10); devuelve los problemas. */
 export function validarTactica(g) {
   const e = [];
@@ -377,6 +387,20 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       if (errores.length) throw new Error(`Reacción no válida: ${errores.join('; ')}`);
       job.guion = {...resolverReaccion(borrador), ...sin};
       guardar('reacciones', borrador.caption, job.guion, 'reaccion-', 'mp4');
+    } else if (tipo === 'tactica-voz') {
+      // Añade tus audios (uno por frase: gancho, cada paso y cierre) a una táctica ya generada y la vuelve a renderizar con la voz.
+      if (!ID_OK.test(borrador.id || '')) throw new Error('Qué táctica: falta el id.');
+      const archivo = `tacticas/${borrador.id}.json`;
+      if (!existsSync(join(ROOT, archivo))) throw new Error(`No existe ${archivo}.`);
+      const obj = JSON.parse(readFileSync(join(ROOT, archivo), 'utf8'));
+      const audios = Array.isArray(borrador.audios) ? borrador.audios : [];
+      if (audios.length !== obj.pasos.length + 2) throw new Error(`Faltan audios: hacen falta ${obj.pasos.length + 2} (gancho, ${obj.pasos.length} pasos y cierre) y hay ${audios.length}.`);
+      for (const a of audios) if (!/^voz\/[a-z0-9-]+\/\d\.mp3$/.test(a) || !existsSync(join(ROOT, 'public', a))) throw new Error(`No encuentro el audio ${a}; vuelve a subirlo.`);
+      obj.audios = audios; obj.voz = true; voz = true;
+      writeFileSync(join(ROOT, archivo), JSON.stringify(obj, null, 2) + '\n');
+      job.guion = obj; job.videoId = borrador.id;
+      items.push({archivo, id: `tactica-${borrador.id}`, resultado: `out/tactica-${borrador.id}.mp4, out/tactica-${borrador.id}.final.mp4`});
+      peticion = `voz ${borrador.id}`;
     } else if (tipo === 'tactica') {
       // Una idea del listado (ideas/tacticas.json) → animación de la jugada, guardada con su estado de revisión y sus fuentes.
       const idea = ideasTacticas().find((x) => x.id === borrador.idea);
@@ -388,6 +412,7 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       if (voz) { log('Las tácticas aún no llevan voz sintética: se genera el guion de voz (.voz.txt) con los tiempos para que grabes tú.'); voz = false; }
       job.guion = g;
       guardar('tacticas', g.titulo, g, 'tactica-', 'mp4');
+      job.videoId = items.at(-1).id.replace(/^tactica-/, '');
       items[items.length - 1].resultado += `, out/tactica-${items[items.length - 1].id.replace(/^tactica-/, '')}.voz.txt`;
     } else if (tipo === 'meme') {
       const errores = validarMeme(borrador);
@@ -499,7 +524,7 @@ async function subirArchivos(archivos, mensaje) {
 export const server = createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/') { res.writeHead(200, {'content-type': 'text/html; charset=utf-8'}); return res.end(PAGINA); }
   if (req.method === 'GET' && req.url.startsWith('/api/job/')) { const j = jobs.get(req.url.split('/').pop()); return j ? json(res, 200, j) : json(res, 404, {error: 'no existe'}); }
-  if (req.method === 'GET' && req.url === '/api/ideas-tacticas') return json(res, 200, {ideas: ideasTacticas()});
+  if (req.method === 'GET' && req.url === '/api/ideas-tacticas') return json(res, 200, {ideas: ideasConVideos()});
   if (req.method === 'GET' && req.url === '/api/contenido') return json(res, 200, {contenido: contenido(), plantillas: plantillas().map((p) => ({id: p.id, descripcion: p.descripcion, fondo: p.fondo, recorte: p.recorte}))});
   if (req.method === 'POST' && req.url === '/api/borrar') {
     let body = '';
@@ -557,7 +582,12 @@ export const server = createServer(async (req, res) => {
     let body = '';
     for await (const c of req) body += c;
     try {
-      const g = JSON.parse(body || '{}');
+      let g = JSON.parse(body || '{}');
+      if (g.tipo === 'tactica-voz') { // las frases de una táctica ya generada: gancho, un paso por frase y cierre
+        if (!ID_OK.test(g.id || '') || !existsSync(join(ROOT, 'tacticas', `${g.id}.json`))) return json(res, 400, {error: 'Esa táctica no existe.'});
+        const t = JSON.parse(readFileSync(join(ROOT, 'tacticas', `${g.id}.json`), 'utf8'));
+        g = {hook: t.hook, subs: t.pasos.map((p) => p.texto), locucion: t.pasos.map((p) => p.locucion || String(p.texto).replace(/\*/g, '')), cta: t.cta};
+      }
       if (!Array.isArray(g.hook) || !Array.isArray(g.subs)) return json(res, 400, {error: 'Guion sin gancho o sin subtítulos.'});
       const gancho = g.hook.reduce((acc, h) => (!acc ? h : /[.!?…,:;]$/.test(acc) || !/^[¿¡]/.test(h) ? `${acc} ${h}` : `${acc}, ${h}`), '');
       return json(res, 200, {frases: [gancho, ...g.subs.map((x, i) => String(g.locucion?.[i] || x).replace(/\*/g, '')), g.cta]});

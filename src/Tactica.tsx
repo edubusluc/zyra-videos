@@ -28,6 +28,10 @@ export type TacticaData = {
   pasos: {t: number; texto: string; clave?: boolean}[];
   ctaDesde: number;
   seg: number;
+  /** Con voz grabada: segundos reales de entrada de cada paso y del cierre, y fotogramas totales (los pone render.mjs a partir de la voz). */
+  tiempos?: {pasos: number[]; cta: number; frames: number};
+  /** Un audio por frase (gancho, cada paso y cierre) en public/. */
+  audios?: string[];
 };
 
 // Pista de pádel 10×20 m en vertical: x de 0 a 10 (izquierda→derecha), y de 0 (fondo rival) a 20 (nuestro fondo); la red está en y = 10.
@@ -123,17 +127,19 @@ const Texto: React.FC<{t: string; size: number}> = ({t, size}) => (
 );
 
 /** Plantilla «táctica»: pista cenital con cámara, fichas redondas para jugadores, ficha pequeña para la pelota (con estela), flechas, zonas y subtítulos por paso. */
-export const Tactica: React.FC<TacticaData> = ({eyebrow, titulo, hook, cta, fichas, pelota, flechas, zonas = [], etiquetas = [], resalta = [], foco, juntos, pasos, ctaDesde}) => {
+export const Tactica: React.FC<TacticaData> = ({eyebrow, titulo, hook, cta, fichas, pelota, flechas, zonas = [], etiquetas = [], resalta = [], foco, juntos, pasos, ctaDesde, seg, tiempos}) => {
   useBrandFonts();
   const f = useCurrentFrame();
-  const t = f / TACTICA_FPS;
+  // Con voz, la animación se estira o se comprime entre los instantes de cada frase: t es siempre el tiempo «de guion» (el de pasos[].t).
+  const real = f / TACTICA_FPS;
+  const t = tiempos && tiempos.pasos.length === pasos.length ? interpolate(real, [0, ...tiempos.pasos, tiempos.cta, tiempos.frames / TACTICA_FPS], [0, ...pasos.map((p) => p.t), ctaDesde, seg], clamp) : real;
   const hookT = pasos[0].t;
   const hookIn = prog(f, 0, 14);
   const hookOut = interpolate(t, [hookT - 0.4, hookT], [1, 0], clamp);
-  const ctaIn = prog(f, ctaDesde * TACTICA_FPS, 24);
+  const ctaIn = prog(t * TACTICA_FPS, ctaDesde * TACTICA_FPS, 24);
   const idx = Math.max(0, pasos.filter((p) => t >= p.t).length - 1);
   const paso = pasos[idx];
-  const pasoIn = prog(f, paso.t * TACTICA_FPS, 12);
+  const pasoIn = prog(t * TACTICA_FPS, paso.t * TACTICA_FPS, 12);
   const base = Math.min(52, Math.floor(920 / (titulo.length * 0.92)));
   const b = posPelota(pelota, t);
   const [lx0, ly0] = px([0, 0]);

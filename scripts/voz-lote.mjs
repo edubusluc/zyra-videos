@@ -7,7 +7,7 @@ import {existsSync, mkdirSync, readFileSync, readdirSync, renameSync} from 'node
 const ids = existsSync('out') ? readdirSync('out').filter((f) => f.endsWith('.voz.json')).map((f) => f.replace(/\.voz\.json$/, '')) : [];
 let fallos = 0;
 for (const id of ids) {
-  const json = id.startsWith('reaccion-') ? `reacciones/${id.slice(9)}.json` : `guiones/${id}.json`;
+  const json = id.startsWith('reaccion-') ? `reacciones/${id.slice(9)}.json` : id.startsWith('tactica-') ? `tacticas/${id.slice(8)}.json` : `guiones/${id}.json`;
   const g = existsSync(json) ? JSON.parse(readFileSync(json, 'utf8')) : null;
   if (!g?.voz) continue;
   const grabada = Array.isArray(g.audios) && g.audios.length > 0; // audios subidos por el usuario: no hacen falta claves de voz

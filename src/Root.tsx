@@ -22,7 +22,7 @@ export const RemotionRoot: React.FC = () => (
       <Composition key={r.id} id={`reaccion-${r.id}`} component={Reaccion} durationInFrames={Math.round((r.seg ?? 7) * REACCION_FPS)} fps={REACCION_FPS} width={1080} height={1920} defaultProps={r} />
     ))}
     {(tacticas as unknown as TacticaData[]).map((x) => (
-      <Composition key={x.id} id={`tactica-${x.id}`} component={Tactica} durationInFrames={Math.round(x.seg * TACTICA_FPS)} fps={TACTICA_FPS} width={1080} height={1920} defaultProps={x} />
+      <Composition key={x.id} id={`tactica-${x.id}`} component={Tactica} durationInFrames={x.tiempos?.frames ?? Math.round(x.seg * TACTICA_FPS)} fps={TACTICA_FPS} width={1080} height={1920} defaultProps={x} />
     ))}
   </>
 );

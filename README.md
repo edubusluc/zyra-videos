@@ -80,7 +80,7 @@ Un tercer tipo de vídeo: pista vista desde arriba con fichas redondas (jugadore
 - **App:** abre el panel «Ideas de tácticas» (o pide una táctica en el chat) y pulsa «Crear vídeo de esta táctica»: Claude convierte la ficha en la animación (posiciones, movimientos, flechas), se valida (jugadores dentro de la pista, tiempos crecientes, textos cortos) y se renderiza en local o en el CI como los demás.
 - **Revisión:** cada vídeo guarda en `revision` el estado y las fuentes de su ficha. Con una sola fuente avisa de que no se publique sin segunda fuente o revisión de un entrenador.
 - **Coordenadas:** pista de 10×20 m, `x` de 0 a 10, `y` de 0 (fondo rival) a 20 (nuestro fondo), red en `y = 10`.
-- **Voz:** de momento solo el guion de voz con tiempos (tú grabas); la voz sintética y «Grabar yo la voz» aún no están conectadas a este tipo.
+- **Registro y voz:** en el panel, cada idea muestra «✔ generado» (y si lleva tu voz). Bajo el vídeo generado pulsa «Añadir mi voz»: te pide un audio por frase (gancho, cada paso y cierre), la animación se ajusta a la duración de tus frases (se estira o se comprime entre pasos) y sale `tactica-<id>.final.mp4` con tu voz y la música. Funciona en local y en el CI. La voz sintética no está conectada a este tipo.
 
 ## App local: «genera un vídeo para mostrar…»
     git clone https://github.com/edubusluc/zyra-videos && cd zyra-videos && npm install

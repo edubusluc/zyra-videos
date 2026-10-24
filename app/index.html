@@ -113,7 +113,7 @@ async function crear(b,bt){
   bt.disabled=true;estado('Preparando la creación…','busy');
   const r=await fetch('/api/generar',{method:'POST',body:JSON.stringify({borrador:b,modo:$('m').value,subtitulos:$('subt').checked,voz:$('voz').checked,estilo:$('creador').checked?'creador':'base'})});const j=await r.json();if(!r.ok){estado(j.error,'err');bt.disabled=false;return}
   const t=setInterval(async()=>{const s=await (await fetch('/api/job/'+j.id)).json();$('log').textContent=s.log.join('\n');const pr=s.progreso;$('barra').style.display=pr?'block':'none';if(pr){$('barra').value=pr.pct;$('fase').textContent=pr.pct+' % · '+pr.fase}
-    if(s.estado==='hecho'){clearInterval(t);cargar();$('fase').textContent='';$('barra').style.display='none';$('log').className='log ok';$('log').textContent+='\n✔ Listo: '+s.resultado;bt.disabled=false}
+    if(s.estado==='hecho'){clearInterval(t);cargar();cargarIdeas(s.videoId&&b.tipo==='tactica'?s.videoId:null);$('fase').textContent='';$('barra').style.display='none';$('log').className='log ok';$('log').textContent+='\n✔ Listo: '+s.resultado;bt.disabled=false}
     if(s.estado==='error'){clearInterval(t);$('barra').style.display='none';$('log').className='log err';$('log').textContent+='\n✖ '+s.error;bt.disabled=false}},1500)}
 // Voz grabada: lista de frases (en el orden en que suenan) con un .mp3 por frase. Cada archivo se recorta solo en sus silencios
 // de los extremos y el vídeo se ajusta a su duración, así que no hace falta cuadrar nada: graba cada frase entera y con calma.
@@ -173,17 +173,27 @@ async function cargar(){try{
   for(const p of j.plantillas)$('lista').appendChild(fila(p.id+(p.descripcion&&p.descripcion!==p.id?' — '+p.descripcion:''),[['Eliminar',()=>borrarItem('plantilla',p.id,p.id),1]]));
 }catch{}}
 
-async function cargarIdeas(){try{
-  const j=await (await fetch('/api/ideas-tacticas')).json();const c=$('ideast');c.textContent='';
+async function cargarIdeas(abrirVoz){try{
+  const j=await (await fetch('/api/ideas-tacticas')).json();const c=$('ideast');
+  const abiertas=new Set([...c.querySelectorAll('details[open]')].map((d)=>d.dataset.id));c.textContent='';
   if(!j.ideas.length)c.textContent='Todavía no hay ideas: añádelas en ideas/tacticas.json.';
   for(const i of j.ideas){
-    const d=document.createElement('details');d.style.borderBottom='1px solid var(--b)';
+    const d=document.createElement('details');d.dataset.id=i.id;d.style.borderBottom='1px solid var(--b)';
+    if(abiertas.has(i.id)||(abrirVoz&&i.videos.some((v)=>v.id===abrirVoz)))d.open=true;
     const sm=document.createElement('summary');sm.style.cssText='cursor:pointer;padding:8px 0;min-height:40px';
-    sm.textContent=i.titulo+' · '+i.nivel+' · '+i.estado+(i.fuentesCoinciden?' · 2 fuentes':' · 1 fuente');d.appendChild(sm);
+    const n=i.videos.length,conVoz=i.videos.filter((v)=>v.voz).length;
+    sm.textContent=(n?'✔ ':'')+i.titulo+' · '+i.nivel+' · '+i.estado+(i.fuentesCoinciden?' · 2 fuentes':' · 1 fuente')+(n?' · generado'+(n>1?' ('+n+')':'')+(conVoz?' · con tu voz':' · sin voz'):'');d.appendChild(sm);
     const t=document.createElement('div');t.className='hint';t.style.whiteSpace='pre-wrap';
     t.textContent='Situación: '+i.situacion+'\n\nQué enseña:\n'+i.pasos.map((x)=>'• '+x).join('\n')+'\n\nCuándo NO: '+i.cuandoNo+'\n\nFuentes:\n'+i.fuentes.map((x)=>'• '+x).join('\n');
     d.appendChild(t);
-    const bt=document.createElement('button');bt.className='go';bt.textContent='Crear vídeo de esta táctica';bt.onclick=()=>crear({tipo:'tactica',idea:i.id},bt);d.appendChild(bt);
+    for(const v of i.videos){
+      const caja=document.createElement('div');caja.style.cssText='border:1px solid var(--b);border-radius:10px;padding:10px;margin-top:10px';
+      const f=fila('Vídeo generado · '+v.titulo+(v.con_voz?' · con voz':v.voz?' · con tu voz (sin renderizar)':v.renderizado?' · renderizado, sin voz':' · sin renderizar')+' · '+v.id,[]);
+      const bv=document.createElement('button');bv.className='sec';bv.textContent=v.voz?'Cambiar mi voz':'Añadir mi voz';
+      bv.onclick=()=>{bv.disabled=true;panelVoz({tipo:'tactica-voz',id:v.id,title:v.titulo},caja,bv)};
+      f.appendChild(bv);caja.appendChild(f);d.appendChild(caja);
+      if(abrirVoz===v.id)setTimeout(()=>{bv.click();caja.scrollIntoView({behavior:'smooth',block:'nearest'})},0)}
+    const bt=document.createElement('button');bt.className='go';bt.textContent=n?'Generar otra versión':'Crear vídeo de esta táctica';bt.onclick=()=>crear({tipo:'tactica',idea:i.id},bt);d.appendChild(bt);
     c.appendChild(d)}
 }catch{}}
 const listar=cargar;cargarIdeas();

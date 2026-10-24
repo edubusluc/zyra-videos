@@ -94,10 +94,29 @@ for (const r of reacciones) if (quiere(`reaccion-${r.id}`)) {
   if (r.subtitulos === false || r.voz) guionVoz(`reaccion-${r.id}`, [linea(0, r.seg ?? 6, r.caption)]);
 }
 for (const x of tacticas) if (quiere(`tactica-${x.id}`)) {
-  remotion(['render', `tactica-${x.id}`, `out/tactica-${x.id}.mp4`, '--codec=h264', ...browser]);
+  const nombre = `tactica-${x.id}`;
   // Guion para grabar la voz: gancho, un tramo por paso (con sus segundos) y cierre.
   const quitar = (t) => String(t).replace(/\*/g, '');
   const ini = [...x.pasos.map((p) => p.t), x.ctaDesde];
-  guionVoz(`tactica-${x.id}`, [{...linea(0.1, x.pasos[0].t, textoGancho(x.hook)), gancho: true}, ...x.pasos.map((p, i) => linea(p.t, ini[i + 1], quitar(p.locucion || p.texto))), linea(x.ctaDesde, x.seg, x.cta)]);
+  // Voz grabada: un .mp3 por frase (gancho, cada paso y cierre). Con ellos la animación sigue a la voz (src/Tactica.tsx).
+  const n = x.pasos.length + 2, falta = (x.audios || []).find((a) => !a || !existsSync(`public/${a}`));
+  if (x.audios && (x.audios.length !== n || falta !== undefined)) { console.warn(`⚠ ${nombre}: hacen falta ${n} audios (gancho, ${x.pasos.length} pasos y cierre)${falta ? `; no existe public/${falta}` : ''}. Sin voz.`); delete x.audios; }
+  x.voz = Boolean(x.audios);
+  const a = (i) => (x.voz ? {audio: x.audios[i]} : {});
+  guionVoz(nombre, [{...linea(0.1, x.pasos[0].t, textoGancho(x.hook)), gancho: true, ...a(0)}, ...x.pasos.map((p, i) => ({...linea(p.t, ini[i + 1], quitar(p.locucion || p.texto)), ...a(i + 1)})), {...linea(x.ctaDesde, x.seg, x.cta), ...a(n - 1)}]);
+  rmSync(`out/${nombre}.tiempos.json`, {force: true});
+  delete x.tiempos;
+  if (x.voz) {
+    spawnSync(process.execPath, ['scripts/voz.mjs', nombre, '--narracion'], {stdio: 'inherit'});
+    if (existsSync(`out/${nombre}.tiempos.json`)) {
+      const {frases, frames} = JSON.parse(readFileSync(`out/${nombre}.tiempos.json`, 'utf8'));
+      // Cada paso entra justo antes de su frase; los pasos duran al menos 1,8 s para que la animación se vea.
+      const pasos = [];
+      x.pasos.forEach((_, i) => pasos.push(Math.max(i ? pasos[i - 1] + 1.8 : 1.5, frases[i + 1].ini - 0.15)));
+      x.tiempos = {pasos: pasos.map((v) => +v.toFixed(2)), cta: +Math.max(pasos.at(-1) + 1.8, frases.at(-1).ini - 0.2).toFixed(2), frames};
+    }
+    writeFileSync('src/tacticas.json', JSON.stringify(tacticas, null, 2));
+  }
+  remotion(['render', nombre, `out/${nombre}.mp4`, '--codec=h264', ...browser]);
 }
 for (const {id} of memes) if (quiere(`meme-${id}`)) remotion(['still', `meme-${id}`, `out/meme-${id}.png`, ...browser]);
