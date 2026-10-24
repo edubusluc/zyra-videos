@@ -1,0 +1,333 @@
+{
+  "eyebrow": "TÁCTICA Nº 1 · EL RESTO",
+  "titulo": "Resta al sacador",
+  "hook": [
+    "¿SACAN Y SUBEN",
+    "SIN QUE LO PARES?"
+  ],
+  "cta": "Pruébalo gratis en zyrapadel.com",
+  "revision": {
+    "estado": "borrador",
+    "ficha": "docs/tacticas-catalogo.md#t1",
+    "fuentes": [
+      "PadelStar Guía 3, «Técnica y táctica para el resto» y «¿Cómo y hacia dónde restar?»",
+      "Manu Martín, Ebook, cap. 4 (el restador) y 8"
+    ],
+    "porValidar": [
+      "posición del compañero del restador",
+      "alcance: nivel intermedio, rivales diestros"
+    ]
+  },
+  "fichas": [
+    {
+      "id": "s",
+      "equipo": "r",
+      "etq": "S",
+      "pos": [
+        6.6,
+        2.4
+      ],
+      "mov": [
+        {
+          "t0": 3.0,
+          "t1": 5.4,
+          "a": [
+            6.4,
+            5.4
+          ]
+        },
+        {
+          "t0": 7.2,
+          "t1": 8.4,
+          "a": [
+            6.0,
+            6.6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rp",
+      "equipo": "r",
+      "etq": "2",
+      "pos": [
+        3.0,
+        8.0
+      ]
+    },
+    {
+      "id": "n1",
+      "equipo": "n",
+      "etq": "R",
+      "pos": [
+        2.2,
+        18.3
+      ],
+      "mov": [
+        {
+          "t0": 4.3,
+          "t1": 5.2,
+          "a": [
+            2.6,
+            17.4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n2",
+      "equipo": "n",
+      "etq": "2",
+      "pos": [
+        7.2,
+        12.6
+      ],
+      "mov": [
+        {
+          "t0": 9.6,
+          "t1": 11.0,
+          "a": [
+            5.4,
+            11.4
+          ]
+        }
+      ]
+    }
+  ],
+  "pelota": {
+    "pos": [
+      6.6,
+      2.4
+    ],
+    "tramos": [
+      {
+        "t0": 2.6,
+        "t1": 3.5,
+        "a": [
+          3.2,
+          13.6
+        ],
+        "altura": 0.35
+      },
+      {
+        "t0": 3.5,
+        "t1": 4.5,
+        "a": [
+          2.5,
+          17.5
+        ],
+        "altura": 0.4
+      },
+      {
+        "t0": 5.6,
+        "t1": 6.9,
+        "a": [
+          5.9,
+          6.6
+        ],
+        "altura": 0.15
+      },
+      {
+        "t0": 8.4,
+        "t1": 9.6,
+        "a": [
+          4.6,
+          11.0
+        ],
+        "altura": 0.2
+      }
+    ]
+  },
+  "flechas": [
+    {
+      "de": [
+        6.6,
+        3.0
+      ],
+      "a": [
+        3.3,
+        13.0
+      ],
+      "t0": 2.7,
+      "hasta": 4.8,
+      "tipo": "bola"
+    },
+    {
+      "de": [
+        6.6,
+        3.4
+      ],
+      "a": [
+        6.5,
+        5.0
+      ],
+      "t0": 3.2,
+      "hasta": 5.2,
+      "tipo": "mov"
+    },
+    {
+      "de": [
+        2.6,
+        17.0
+      ],
+      "a": [
+        5.8,
+        7.2
+      ],
+      "t0": 5.7,
+      "hasta": 8.0,
+      "tipo": "bola",
+      "curva": 1.2
+    },
+    {
+      "de": [
+        5.9,
+        6.2
+      ],
+      "a": [
+        4.7,
+        10.4
+      ],
+      "t0": 8.5,
+      "hasta": 10.4,
+      "tipo": "bola"
+    },
+    {
+      "de": [
+        7.0,
+        12.2
+      ],
+      "a": [
+        5.7,
+        11.6
+      ],
+      "t0": 9.7,
+      "hasta": 11.4,
+      "tipo": "mov"
+    }
+  ],
+  "zonas": [
+    {
+      "rect": [
+        4.6,
+        4.2,
+        8.6,
+        8.4
+      ],
+      "etq": "SUS PIES",
+      "t0": 5.2,
+      "t1": 9.0
+    }
+  ],
+  "etiquetas": [
+    {
+      "pos": [
+        3.2,
+        13.6
+      ],
+      "texto": "BOTE",
+      "t0": 3.4,
+      "t1": 4.6
+    },
+    {
+      "pos": [
+        6.0,
+        3.7
+      ],
+      "texto": "EN CARRERA",
+      "t0": 5.6,
+      "t1": 8.2
+    }
+  ],
+  "resalta": [
+    {
+      "id": "s",
+      "t0": 4.6,
+      "t1": 8.6
+    },
+    {
+      "id": "n1",
+      "t0": 5.0,
+      "t1": 6.6
+    }
+  ],
+  "foco": [
+    {
+      "t": 0,
+      "p": [
+        5,
+        10
+      ],
+      "z": 1
+    },
+    {
+      "t": 2.4,
+      "p": [
+        5,
+        10
+      ],
+      "z": 1
+    },
+    {
+      "t": 4.6,
+      "p": [
+        4.5,
+        11
+      ],
+      "z": 1.1
+    },
+    {
+      "t": 6.4,
+      "p": [
+        4.5,
+        11.5
+      ],
+      "z": 1.16
+    },
+    {
+      "t": 9.4,
+      "p": [
+        5,
+        10.5
+      ],
+      "z": 1.1
+    },
+    {
+      "t": 12.4,
+      "p": [
+        5,
+        10
+      ],
+      "z": 1
+    },
+    {
+      "t": 15.5,
+      "p": [
+        5,
+        10
+      ],
+      "z": 1
+    }
+  ],
+  "pasos": [
+    {
+      "t": 2.4,
+      "texto": "Tras el saque, *él* corre a la red"
+    },
+    {
+      "t": 5.0,
+      "texto": "Resta *a sus pies*, por abajo"
+    },
+    {
+      "t": 8.0,
+      "texto": "Su volea sale *en carrera*: floja"
+    },
+    {
+      "t": 10.6,
+      "texto": "1.º saque, *abajo*. Globo: 2.º saque",
+      "clave": true
+    }
+  ],
+  "ctaDesde": 15.8,
+  "seg": 18.4
+}
