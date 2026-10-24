@@ -14,9 +14,10 @@
       "Manu Martín, Ebook, cap. 4 (el restador) y 8"
     ],
     "porValidar": [
-      "posición del compañero del restador",
-      "alcance: nivel intermedio, rivales diestros"
-    ]
+      "alcance: nivel intermedio, rivales diestros",
+      "subir juntos tras un buen resto: la fuente dice que permite tomar la red, pero conviene matizar con la ficha de defensa"
+    ],
+    "confirmado": "Edu (24-10-2026): en el resto, las dos piezas del restador empiezan al fondo"
   },
   "fichas": [
     {
@@ -71,6 +72,14 @@
             2.6,
             17.4
           ]
+        },
+        {
+          "t0": 9.6,
+          "t1": 11.2,
+          "a": [
+            3.0,
+            12.8
+          ]
         }
       ]
     },
@@ -79,16 +88,16 @@
       "equipo": "n",
       "etq": "2",
       "pos": [
-        7.2,
-        12.6
+        7.4,
+        18.3
       ],
       "mov": [
         {
           "t0": 9.6,
-          "t1": 11.0,
+          "t1": 11.2,
           "a": [
-            5.4,
-            11.4
+            7.0,
+            12.8
           ]
         }
       ]
@@ -194,12 +203,25 @@
     },
     {
       "de": [
-        7.0,
-        12.2
+        3.0,
+        16.2
       ],
       "a": [
-        5.7,
-        11.6
+        3.0,
+        13.6
+      ],
+      "t0": 9.7,
+      "hasta": 11.4,
+      "tipo": "mov"
+    },
+    {
+      "de": [
+        7.0,
+        16.2
+      ],
+      "a": [
+        7.0,
+        13.6
       ],
       "t0": 9.7,
       "hasta": 11.4,
@@ -293,7 +315,7 @@
       "z": 1.1
     },
     {
-      "t": 12.4,
+      "t": 12.0,
       "p": [
         5,
         10
@@ -323,11 +345,24 @@
       "texto": "Su volea sale *en carrera*: floja"
     },
     {
-      "t": 10.6,
+      "t": 9.9,
+      "texto": "Si te sale bien, *subid* juntos"
+    },
+    {
+      "t": 12.8,
       "texto": "1.º saque, *abajo*. Globo: 2.º saque",
       "clave": true
     }
   ],
   "ctaDesde": 15.8,
-  "seg": 18.4
+  "seg": 18.4,
+  "juntos": {
+    "t0": 10.4,
+    "t1": 12.0,
+    "y": 12.8,
+    "x": [
+      3.0,
+      7.0
+    ]
+  }
 }

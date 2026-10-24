@@ -1,5 +1,7 @@
 # Catálogo de tácticas (borrador para revisar)
 
+> El listado de ideas que alimenta la app está en `ideas/tacticas.json` (14 ideas); este documento es su resumen y registro de decisiones.
+
 Material de partida que aportó Edu (todo parafraseado, nunca copiado):
 - **PG1** = PadelStar, *Guía 1: Mandamientos de pádel* (52 págs.).
 - **PG3** = PadelStar, *Guía 3: Saque, resto y golpes fundamentales* (76 págs.).
@@ -18,7 +20,8 @@ Estados: `borrador` (redactada por Claude desde las fuentes) → `revisada` (Edu
 - **Por qué:** la bola baja le obliga a volear desde abajo en movimiento; además es la dirección más segura. Con efecto cortado la pelota flota y te da tiempo a colocarte; liftada baja rápido a los pies.
 - **Cuándo NO:** el globo en el resto solo si estás muy seguro (si queda corto, remate). Con el 1.º saque (más peligroso) mejor por abajo; con el 2.º, el globo es una alternativa para ganar la red.
 - **Fuentes:** PG3 «Técnica y táctica para el resto» (pp. 24-28) y «¿Cómo y hacia dónde restar?» (pp. 29-33); MM cap. 4, «El rol del restador» (p. 27 y ss.), que coincide: buscar al sacador en movimiento y restos bajos.
-- **Por validar:** (a) dónde se coloca el compañero del restador (en el mockup, en la red al otro lado); (b) el alcance (rivales diestros, nivel intermedio); (c) el matiz de PG3 sobre variar la dirección para que no te lean.
+- **Confirmado por Edu (24-10-2026):** en el resto, las dos piezas del restador empiezan al fondo de la pista.
+- **Por validar:** (a) que subir juntos tras un buen resto no contradiga la cautela de T2; (b) el alcance (rivales diestros, nivel intermedio); (c) el matiz de PG3 sobre variar la dirección para que no te lean.
 - **Estado:** borrador (2 fuentes coinciden).
 
 ## T2 · Defensa: dónde colocarte y cuándo subir

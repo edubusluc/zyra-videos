@@ -93,5 +93,11 @@ for (const r of reacciones) if (quiere(`reaccion-${r.id}`)) {
   remotion(['render', `reaccion-${r.id}`, `out/reaccion-${r.id}.mp4`, '--codec=h264', '--image-format=png', ...browser]);
   if (r.subtitulos === false || r.voz) guionVoz(`reaccion-${r.id}`, [linea(0, r.seg ?? 6, r.caption)]);
 }
-for (const {id} of tacticas) if (quiere(`tactica-${id}`)) remotion(['render', `tactica-${id}`, `out/tactica-${id}.mp4`, '--codec=h264', ...browser]);
+for (const x of tacticas) if (quiere(`tactica-${x.id}`)) {
+  remotion(['render', `tactica-${x.id}`, `out/tactica-${x.id}.mp4`, '--codec=h264', ...browser]);
+  // Guion para grabar la voz: gancho, un tramo por paso (con sus segundos) y cierre.
+  const quitar = (t) => String(t).replace(/\*/g, '');
+  const ini = [...x.pasos.map((p) => p.t), x.ctaDesde];
+  guionVoz(`tactica-${x.id}`, [{...linea(0.1, x.pasos[0].t, textoGancho(x.hook)), gancho: true}, ...x.pasos.map((p, i) => linea(p.t, ini[i + 1], quitar(p.locucion || p.texto))), linea(x.ctaDesde, x.seg, x.cta)]);
+}
 for (const {id} of memes) if (quiere(`meme-${id}`)) remotion(['still', `meme-${id}`, `out/meme-${id}.png`, ...browser]);

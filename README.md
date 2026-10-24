@@ -74,6 +74,14 @@ Antes copia los archivos a `public/medios/`.
     npm run render [id]       # CHROME=/ruta/a/chrome si Remotion no descarga navegador
     npm run studio            # previsualizar
 
+## Tácticas de pádel (listado de ideas → vídeo)
+Un tercer tipo de vídeo: pista vista desde arriba con fichas redondas (jugadores) y una ficha pequeña (pelota), flechas, zonas, cámara que se acerca y subtítulos por paso. Todo en un JSON de `tacticas/<id>.json` (se renderiza como `out/tactica-<id>.mp4`, con `out/tactica-<id>.voz.txt` con los tiempos para grabar tu voz).
+- **Listado de ideas:** `ideas/tacticas.json`. Cada idea es una ficha con situación, pasos, cuándo NO aplicarla, fuentes con página, nivel y estado (`borrador` → `revisada` → `validada`). Solo se crean vídeos desde estas fichas; Claude no inventa tácticas.
+- **App:** abre el panel «Ideas de tácticas» (o pide una táctica en el chat) y pulsa «Crear vídeo de esta táctica»: Claude convierte la ficha en la animación (posiciones, movimientos, flechas), se valida (jugadores dentro de la pista, tiempos crecientes, textos cortos) y se renderiza en local o en el CI como los demás.
+- **Revisión:** cada vídeo guarda en `revision` el estado y las fuentes de su ficha. Con una sola fuente avisa de que no se publique sin segunda fuente o revisión de un entrenador.
+- **Coordenadas:** pista de 10×20 m, `x` de 0 a 10, `y` de 0 (fondo rival) a 20 (nuestro fondo), red en `y = 10`.
+- **Voz:** de momento solo el guion de voz con tiempos (tú grabas); la voz sintética y «Grabar yo la voz» aún no están conectadas a este tipo.
+
 ## App local: «genera un vídeo para mostrar…»
     git clone https://github.com/edubusluc/zyra-videos && cd zyra-videos && npm install
     export GITHUB_TOKEN=...        # solo modo CI; o usa `gh auth login` (CLI de GitHub) y no hace falta

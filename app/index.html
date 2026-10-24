@@ -54,9 +54,14 @@ progress{width:100%;height:14px;margin-top:8px;accent-color:var(--lime)}
  <button class="sec" data-q="Con la plantilla que mejor encaje, propón un lote de 5 memes de reacción distintos para capitanes y créalos todos.">Lote de memes</button>
  <button class="sec" data-q="Propón 2 memes de reacción tipo «Tu compañero cuando…» para capitanes y jugadores de pádel y déjame crear el mejor.">Reacciones</button>
  <button class="sec" data-q="Propón 3 memes antes/después para capitanes de pádel y déjame crear el mejor.">Memes antes/después</button>
+ <button class="sec" data-q="Del listado de ideas de tácticas, propón las 3 mejores para empezar (di su estado y fuentes) y déjame crear la mejor.">Táctica de pádel</button>
  <button class="sec" data-q="Busca tendencias actuales de TikTok de pádel que podamos aprovechar para Zyra.">Tendencias</button>
  <button class="sec" data-q="Dame un guion para el vídeo de la alineación sugerida con un enfoque distinto al que hicimos.">Otro guion</button>
 </div>
+<details class="panel" id="idt"><summary>Ideas de tácticas <small>Listado con fuentes: elige una y crea el vídeo</small></summary><div class="in">
+ <p class="hint">Cada idea sale de una ficha con sus fuentes. Los vídeos nacen en estado «borrador»: revísalos tú (o un entrenador) antes de publicar. Edita el listado en <code>ideas/tacticas.json</code>.</p>
+ <div id="ideast" class="log"></div>
+</div></details>
 <details class="panel" id="mis"><summary>Mis vídeos <small>Vuelve a generarlos o elimínalos</small></summary><div class="in">
  <div class="row"><label><input type="checkbox" id="brepo" checked>Quitar también del repo si estaba subido (evita que el CI lo vuelva a generar)</label></div>
  <div class="row" id="selbar" style="display:none"><label><input type="checkbox" id="selall">Seleccionar todo</label><button class="sec danger" id="selborrar" disabled>Eliminar seleccionados</button></div>
@@ -101,7 +106,7 @@ async function enviar(texto){
   try{
     const r=await fetch('/api/chat',{method:'POST',body:JSON.stringify({mensajes:hist,web:$('web').checked})});const j=await r.json();if(!r.ok)throw new Error(j.error);
     hist.push({role:'assistant',content:j.respuesta});const d=add('a',j.respuesta);const b=bloque(j.respuesta);
-    if(b&&(['video','meme','reaccion','lote'].includes(b.tipo))){const bt=document.createElement('button');bt.className='go';bt.textContent=b.tipo==='meme'?'Crear este meme':b.tipo==='reaccion'?'Crear esta reacción':b.tipo==='lote'?'Crear los '+(b.captions||[]).length+' memes':'Crear este vídeo';bt.onclick=()=>crear(b,bt);d.appendChild(document.createElement('br'));d.appendChild(bt);if(b.tipo==='video'){const gb=document.createElement('button');gb.className='go sec';gb.style.marginLeft='8px';gb.textContent='Grabar yo la voz';gb.onclick=()=>panelVoz(b,d,gb);d.appendChild(gb)}}
+    if(b&&(['video','meme','reaccion','lote','tactica'].includes(b.tipo))){const bt=document.createElement('button');bt.className='go';bt.textContent=b.tipo==='tactica'?'Crear esta táctica':b.tipo==='meme'?'Crear este meme':b.tipo==='reaccion'?'Crear esta reacción':b.tipo==='lote'?'Crear los '+(b.captions||[]).length+' memes':'Crear este vídeo';bt.onclick=()=>crear(b,bt);d.appendChild(document.createElement('br'));d.appendChild(bt);if(b.tipo==='video'){const gb=document.createElement('button');gb.className='go sec';gb.style.marginLeft='8px';gb.textContent='Grabar yo la voz';gb.onclick=()=>panelVoz(b,d,gb);d.appendChild(gb)}}
     estado('');
   }catch(e){estado('No se pudo obtener respuesta: '+e.message,'err')}$('send').disabled=false;$('send').textContent='Enviar';$('p').focus()}
 async function crear(b,bt){
@@ -158,7 +163,7 @@ $('selborrar').onclick=async()=>{const s=selActual();if(!s.length)return;
 async function cargar(){try{
   const j=await (await fetch('/api/contenido')).json();const c=$('cont');c.textContent='';
   if(!j.contenido.length)c.textContent='Todavía no has creado nada. Pide una idea en el chat y aparecerá aquí.';
-  const nombres={guion:'Vídeo',reaccion:'Reacción',meme:'Meme'};
+  const nombres={guion:'Vídeo',reaccion:'Reacción',meme:'Meme',tactica:'Táctica'};
   for(const v of j.contenido){const f=fila(nombres[v.tipo]+' · '+v.titulo+(v.con_voz?' · con voz':v.renderizado?' · renderizado':' · sin renderizar'),[
     ['Volver a generar',(e)=>crear({tipo:'regenerar',de:v.tipo,id:v.id},e.target)],['Eliminar',()=>borrarItem(v.tipo,v.id,v.titulo),1]]);
     const k=document.createElement('input');k.type='checkbox';k.className='sel';k.dataset.de=v.tipo;k.dataset.id=v.id;k.dataset.nombre=v.titulo;k.setAttribute('aria-label','Seleccionar '+v.titulo);k.onchange=selActualizar;f.prepend(k);c.appendChild(f)}
@@ -167,7 +172,21 @@ async function cargar(){try{
   if(!j.plantillas.length)$('lista').textContent='Todavía no hay plantillas. Sube un recorte para crear la primera.';
   for(const p of j.plantillas)$('lista').appendChild(fila(p.id+(p.descripcion&&p.descripcion!==p.id?' — '+p.descripcion:''),[['Eliminar',()=>borrarItem('plantilla',p.id,p.id),1]]));
 }catch{}}
-const listar=cargar;
+
+async function cargarIdeas(){try{
+  const j=await (await fetch('/api/ideas-tacticas')).json();const c=$('ideast');c.textContent='';
+  if(!j.ideas.length)c.textContent='Todavía no hay ideas: añádelas en ideas/tacticas.json.';
+  for(const i of j.ideas){
+    const d=document.createElement('details');d.style.borderBottom='1px solid var(--b)';
+    const sm=document.createElement('summary');sm.style.cssText='cursor:pointer;padding:8px 0;min-height:40px';
+    sm.textContent=i.titulo+' · '+i.nivel+' · '+i.estado+(i.fuentesCoinciden?' · 2 fuentes':' · 1 fuente');d.appendChild(sm);
+    const t=document.createElement('div');t.className='hint';t.style.whiteSpace='pre-wrap';
+    t.textContent='Situación: '+i.situacion+'\n\nQué enseña:\n'+i.pasos.map((x)=>'• '+x).join('\n')+'\n\nCuándo NO: '+i.cuandoNo+'\n\nFuentes:\n'+i.fuentes.map((x)=>'• '+x).join('\n');
+    d.appendChild(t);
+    const bt=document.createElement('button');bt.className='go';bt.textContent='Crear vídeo de esta táctica';bt.onclick=()=>crear({tipo:'tactica',idea:i.id},bt);d.appendChild(bt);
+    c.appendChild(d)}
+}catch{}}
+const listar=cargar;cargarIdeas();
 async function subirArchivo(f){const r=await fetch('/api/subir?nombre='+encodeURIComponent(f.name),{method:'POST',body:f});const j=await r.json();if(!r.ok)throw new Error(j.error);return j.ruta}
 $('pgo').onclick=async()=>{
   $('pgo').disabled=true;estado('Guardando plantilla…','busy');
