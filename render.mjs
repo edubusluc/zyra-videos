@@ -10,9 +10,11 @@ const leer = (dir) => (existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWi
 const videos = leer('guiones');
 const memes = leer('memes');
 const reacciones = leer('reacciones');
+const tacticas = leer('tacticas');
 writeFileSync('src/scripts.json', JSON.stringify(videos, null, 2));
 writeFileSync('src/memes.json', JSON.stringify(memes, null, 2));
 writeFileSync('src/reacciones.json', JSON.stringify(reacciones, null, 2));
+writeFileSync('src/tacticas.json', JSON.stringify(tacticas, null, 2));
 mkdirSync('out', {recursive: true});
 const browser = process.env.CHROME ? [`--browser-executable=${process.env.CHROME}`, '--chrome-mode=chrome-for-testing'] : [];
 // Se llama al CLI de Remotion con node directamente: `npx` no se puede lanzar sin shell en Windows.
@@ -91,4 +93,5 @@ for (const r of reacciones) if (quiere(`reaccion-${r.id}`)) {
   remotion(['render', `reaccion-${r.id}`, `out/reaccion-${r.id}.mp4`, '--codec=h264', '--image-format=png', ...browser]);
   if (r.subtitulos === false || r.voz) guionVoz(`reaccion-${r.id}`, [linea(0, r.seg ?? 6, r.caption)]);
 }
+for (const {id} of tacticas) if (quiere(`tactica-${id}`)) remotion(['render', `tactica-${id}`, `out/tactica-${id}.mp4`, '--codec=h264', ...browser]);
 for (const {id} of memes) if (quiere(`meme-${id}`)) remotion(['still', `meme-${id}`, `out/meme-${id}.png`, ...browser]);
