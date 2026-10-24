@@ -1,7 +1,7 @@
 # Vídeos de tácticas de pádel: estudio de viabilidad
 
 ## Veredicto
-Es viable y encaja bien con lo que ya hay. Es un tercer tipo de vídeo (junto a *guiones* y *reacciones*) con su propia plantilla de Remotion. El mockup (`tacticas/globo-y-sube.json` + `src/Tactica.tsx`) ya renderiza una táctica completa con la marca, la zona segura de TikTok y el pie solo `zyrapadel.com`. Lo difícil no es la técnica, es **garantizar que lo que se enseña es correcto**. Eso se resuelve con proceso, no con código (ver más abajo).
+Es viable y encaja bien con lo que ya hay. Es un tercer tipo de vídeo (junto a *guiones* y *reacciones*) con su propia plantilla de Remotion. El mockup (`tacticas/resto-al-sacador.json` + `src/Tactica.tsx`) ya renderiza una táctica completa con la marca, la zona segura de TikTok y el pie solo `zyrapadel.com`. Lo difícil no es la técnica, es **garantizar que lo que se enseña es correcto**. Eso se resuelve con proceso, no con código (ver más abajo).
 
 ## 1. Encaje con la arquitectura actual
 - Un vídeo = un JSON en una carpeta (`tacticas/<id>.json`), igual que `guiones/`, `memes/` y `reacciones/`. `render.mjs` lo recoge, `Root.tsx` registra la composición `tactica-<id>`, y el flujo de CI y la app local lo renderizan igual.
@@ -28,7 +28,7 @@ Esto encaja con el generador actual de guiones de `app/server.mjs` (mismo patró
 Yo no puedo certificar que una táctica sea «lo que enseñan los entrenadores de hoy»: mi conocimiento puede estar desfasado o simplificar demasiado. Propuesta:
 - **Fuentes**: cada táctica del catálogo cita al menos dos fuentes independientes (material de formación de entrenadores titulados, federación/escuelas reconocidas, análisis de partidos profesionales del circuito). Las fuentes las elige Edu; yo las busco y las resumo, pero no las doy por buenas por mi cuenta.
 - **Catálogo cerrado**: solo se generan vídeos de tácticas que estén aprobadas en el catálogo. Estado de cada ficha: `borrador → revisada por Edu → validada por un entrenador`.
-- **Revisión humana antes de publicar**: el JSON lleva `revision.estado`; el render de producción se niega si no es `validada` (el mockup está en `borrador`). Edu ve el vídeo y la ficha antes de grabar la voz.
+- **Revisión humana antes de publicar**: el JSON lleva `revision.estado`; el render de producción se niega si no es `validada` (el mockup está en `borrador`; catálogo en `docs/tacticas-catalogo.md`). Edu ve el vídeo y la ficha antes de grabar la voz.
 - **Lenguaje con matices**: la mayoría de tácticas dependen de nivel, posición y estilo. Los vídeos dicen «lo habitual», «suele funcionar», y siempre incluyen cuándo NO aplicarla (como el paso final del mockup).
 - **Sin afirmaciones numéricas** (porcentajes, «el 80% de los puntos…») salvo que vengan de una fuente citada.
 - **Recomendación fuerte**: que un entrenador titulado revise las primeras 5–10 tácticas; después, el catálogo sirve de base y la revisión de cada vídeo nuevo es más ligera.
