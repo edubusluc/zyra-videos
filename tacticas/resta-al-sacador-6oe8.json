@@ -414,5 +414,15 @@
       "PadelStar Guía 3, «Técnica y táctica para el resto» (pp. 24-28) y «¿Cómo y hacia dónde restar?» (pp. 29-33)",
       "Manu Martín, ebook, cap. 4, «El rol del restador» (p. 27 y ss.)"
     ]
-  }
+  },
+  "audios": [
+    "voz/resta-al-sacador-18mzo/0.mp3",
+    "voz/resta-al-sacador-18mzo/1.mp3",
+    "voz/resta-al-sacador-18mzo/2.mp3",
+    "voz/resta-al-sacador-18mzo/3.mp3",
+    "voz/resta-al-sacador-18mzo/4.mp3",
+    "voz/resta-al-sacador-18mzo/5.mp3",
+    "voz/resta-al-sacador-18mzo/6.mp3"
+  ],
+  "voz": true
 }
