@@ -124,7 +124,7 @@ const referencias = () => (existsSync(join(ROOT, 'referencias')) ? readdirSync(j
 /** Respuesta del chat de ideas: conoce lo ya creado y las capturas disponibles. */
 async function chatear(mensajes, web) {
   const cat = catalogo();
-  const hechos = listar('guiones').map((g) => `- vídeo «${g.title}»: ${g.hook.join(' ')}`).concat(listar('memes').map((m) => `- meme: ${m.before} / ${m.after}`));
+  const hechos = listar('guiones').map((g) => `- vídeo «${g.title}»: ${g.hook.join(' ')}`).concat(listar('tacticas').map((t) => `- táctica: ${t.titulo}`)).concat(listar('memes').map((m) => `- meme: ${m.before} / ${m.after}`));
   const sistema = `Eres el estratega de contenido de TikTok de Zyra (zyrapadel.com), una web gratuita para que capitanes de equipos de pádel organicen convocatorias en PDF, parejas, alineación sugerida, puntos SNP y estadísticas. Público: capitanes y jugadores de ligas por equipos en España. Tono: cercano, de pádel, con humor sano. Responde en español, breve y concreto.
 Lo que ya está creado (no lo repitas, propón cosas distintas):
 ${hechos.join('\n') || '(nada todavía)'}
@@ -132,9 +132,11 @@ Capturas de la app disponibles para vídeos:
 ${cat.map((c) => `- ${c.src}: ${c.descripcion}`).join('\n')}
 Cuando propongas una pieza concreta lista para producir, añade AL FINAL de tu respuesta un único bloque \`\`\`json con uno de estos formatos (el usuario lo convertirá con un botón):
 vídeo: {"tipo":"video","hook":["MÁX 16 CARACTERES","MÁX 16 CARACTERES"],"title":"MÁX 23, MAYÚSCULAS","src":"<una captura>","subs":["máx 30","máx 30","máx 30 (de 3 a 5 en total; mejor 3 o 4 si el vídeo lleva voz, porque cada uno dura 2 o 3 s)"],"locucion":["lo que se DIRÍA en voz alta para cada subtítulo, en el mismo orden y cantidad: frase hablada en tono de locutor deportivo seguro y pausado, sin prisas (verbos de acción, frases cortas), con coma o ¿? donde dé entonación y la palabra clave entre *asteriscos* para que la voz la acentúe, sin puntos ni signos sueltos y sin terminar en número, MÁX 28 caracteres (la voz dice unos 8 caracteres por segundo y cada subtítulo dura unos 3 s con pausa antes y después: si es más larga el vídeo se alarga), sin MAYÚSCULAS ni emojis"],"cta":"máx 28"}
+táctica de pádel (SOLO una de la lista de ideas de tácticas; no inventes tácticas): {"tipo":"tactica","idea":"<id de la lista>"}
 meme antes/después: {"tipo":"meme","beforeLabel":"ANTES","before":"máx 70 caracteres","afterLabel":"CON ZYRA","after":"máx 70 caracteres"}
 meme de reacción (texto tipo «Tu compañero cuando…» sobre fondo y recorte): {"tipo":"reaccion","plantilla":"<id de plantilla o null>","caption":"máx 90 caracteres","emojis":"🎾😂"}  (sin plantilla, fondo y recorte: null usa la pista de Zyra sin personaje, o uno de los medios disponibles)
 varios memes con la misma plantilla de una vez: {"tipo":"lote","plantilla":"<id>","captions":["máx 90","máx 90", … hasta 8]}
+Ideas de tácticas de pádel disponibles (cada una tiene su ficha con fuentes; para crear el vídeo basta el id; di siempre su estado y si tiene una sola fuente): ${ideasTacticas().map((i) => `${i.id}: ${i.titulo} [${i.nivel}, ${i.estado}${i.fuentesCoinciden ? '' : ', una sola fuente'}]`).join(' | ') || 'ninguna'}.
 Plantillas disponibles (elígelas por su id según cuándo encajan): ${plantillas().map((t) => `${t.id}: ${t.descripcion || t.nombre}${t.etiquetas?.length ? ` [${t.etiquetas.join(', ')}]` : ''}`).join(' | ') || 'ninguna'}. Regla: elige la plantilla cuya descripción y etiquetas encajen con la emoción y la situación del chiste; si ninguna encaja claramente, usa «pista-zyra». No inventes ids.
 Medios disponibles en public/medios: ${medios().join(', ') || 'ninguno (usa null)'}.
 Formatos de referencia que funcionan en redes (fichas analizadas; inspírate en el formato, nunca copies el material de terceros):\n${referencias() || '(ninguno todavía)'}\nPara ideas sueltas no hace falta bloque. No inventes funciones que Zyra no tenga. Los memes son originales con la marca de Zyra; no uses plantillas ni imágenes con derechos de terceros. ${web ? 'Puedes buscar en la web tendencias o ideas si ayuda; cita de dónde sale lo que encuentres.' : ''}`;
@@ -156,6 +158,90 @@ async function pedirGuion(peticion, log) {
     mensajes = [...mensajes, {role: 'assistant', content: texto}, {role: 'user', content: `Corrige estos problemas y devuelve solo el JSON: ${errores.join('; ')}`}];
   }
   throw new Error('Claude no devolvió un guion válido tras 2 intentos.');
+}
+
+
+/** Listado de ideas de tácticas (ideas/tacticas.json): fichas con fuentes, de las que salen los vídeos de tácticas. */
+export const ideasTacticas = () => (existsSync(join(ROOT, 'ideas/tacticas.json')) ? JSON.parse(readFileSync(join(ROOT, 'ideas/tacticas.json'), 'utf8')) : []);
+
+/** Vídeos de táctica ya generados para cada idea (tacticas/<id>.json con revision.ficha = id de la idea), con su estado de voz y render. */
+export function ideasConVideos() {
+  const hechos = (existsSync(join(ROOT, 'tacticas')) ? readdirSync(join(ROOT, 'tacticas')).filter((f) => f.endsWith('.json')).sort() : []).map((f) => {
+    const id = f.replace(/\.json$/, '');
+    const g = JSON.parse(readFileSync(join(ROOT, 'tacticas', f), 'utf8'));
+    return {id, ficha: g.revision?.ficha, titulo: g.titulo, voz: Boolean(g.voz && g.audios), renderizado: existsSync(join(ROOT, 'out', `tactica-${id}.mp4`)), con_voz: existsSync(join(ROOT, 'out', `tactica-${id}.final.mp4`))};
+  });
+  return ideasTacticas().map((i) => ({...i, videos: hechos.filter((h) => h.ficha === i.id)}));
+}
+
+/** Valida el guion de una táctica (pista de 10×20 m, x 0–10, y 0–20, red en y = 10); devuelve los problemas. */
+export function validarTactica(g) {
+  const e = [];
+  const txt = (v, max, n) => (typeof v === 'string' && v.trim() && v.replace(/\*/g, '').length <= max ? null : `${n}: obligatorio y de máx. ${max} caracteres`);
+  [txt(g.titulo, 28, 'titulo'), txt(g.eyebrow, 34, 'eyebrow')].forEach((m) => m && e.push(m));
+  if (!Array.isArray(g.hook) || g.hook.length !== 2) e.push('hook: dos líneas');
+  else g.hook.forEach((h, i) => { const m = txt(h, 20, `hook[${i}]`); if (m) e.push(m); });
+  const en = (p) => Array.isArray(p) && p.length === 2 && p[0] >= 0 && p[0] <= 10 && p[1] >= 0 && p[1] <= 20;
+  const seg = Number(g.seg);
+  if (!(seg >= 10 && seg <= 30)) e.push('seg: entre 10 y 30 segundos');
+  if (!Array.isArray(g.fichas) || g.fichas.length < 2 || g.fichas.length > 4) e.push('fichas: de 2 a 4');
+  else {
+    const ids = new Set();
+    for (const f of g.fichas) {
+      if (!f.id || ids.has(f.id)) e.push(`fichas: id repetido o vacío (${f.id})`);
+      ids.add(f.id);
+      if (!['n', 'r'].includes(f.equipo)) e.push(`ficha ${f.id}: equipo debe ser n (nosotros) o r (rivales)`);
+      if (typeof f.etq !== 'string' || !f.etq || f.etq.length > 2) e.push(`ficha ${f.id}: etq de 1 o 2 caracteres`);
+      if (!en(f.pos)) e.push(`ficha ${f.id}: pos fuera de la pista (x 0–10, y 0–20)`);
+      let t = -1;
+      for (const m of f.mov || []) {
+        if (!(m.t0 >= t && m.t1 > m.t0 && m.t1 <= seg) || !en(m.a)) e.push(`ficha ${f.id}: movimiento no válido (tiempos crecientes y dentro de la pista)`);
+        t = m.t1;
+      }
+    }
+    if (!g.fichas.some((f) => f.equipo === 'n') || !g.fichas.some((f) => f.equipo === 'r')) e.push('fichas: hacen falta jugadores de los dos equipos');
+  }
+  const b = g.pelota;
+  if (!b || !en(b.pos) || !Array.isArray(b.tramos) || !b.tramos.length) e.push('pelota: pos y al menos un tramo');
+  else {
+    let t = -1;
+    for (const r of b.tramos) {
+      if (!(r.t0 >= t && r.t1 > r.t0 && r.t1 <= seg) || !en(r.a) || (r.altura != null && !(r.altura >= 0 && r.altura <= 1))) e.push('pelota: tramo no válido (tiempos crecientes, dentro de la pista, altura 0–1)');
+      t = r.t1;
+    }
+  }
+  for (const a of g.flechas || []) if (!en(a.de) || !en(a.a) || !(a.hasta > a.t0) || !['mov', 'bola'].includes(a.tipo)) e.push('flechas: de/a dentro de la pista, hasta > t0 y tipo mov o bola');
+  if (!Array.isArray(g.pasos) || g.pasos.length < 3 || g.pasos.length > 6) e.push('pasos: de 3 a 6');
+  else {
+    g.pasos.forEach((p, i) => {
+      const m = txt(p.texto, 46, `pasos[${i}].texto`); if (m) e.push(m);
+      if (i && !(p.t > g.pasos[i - 1].t + 1.5)) e.push(`pasos[${i}]: cada paso dura al menos 2 s`);
+      if (p.clave && i !== g.pasos.length - 1) e.push('solo el último paso puede ser la idea clave');
+    });
+    if (!(g.pasos[0].t >= 1.8)) e.push('pasos[0].t: el gancho necesita al menos 1,8 s');
+    if (!(g.ctaDesde >= g.pasos[g.pasos.length - 1].t + 2.5) || !(seg >= g.ctaDesde + 2)) e.push('ctaDesde: al menos 2,5 s tras el último paso, y el vídeo dura 2 s más');
+  }
+  return e;
+}
+
+const EJEMPLO_TACTICA = () => { const t = JSON.parse(readFileSync(join(ROOT, 'tacticas/resto-al-sacador.json'), 'utf8')); delete t.revision; return t; };
+
+async function pedirTactica(idea, log) {
+  const sistema = `Eres el guionista de vídeos de tácticas de pádel de Zyra (zyrapadel.com). El vídeo muestra la pista desde arriba (10×20 m): x de 0 (izquierda) a 10, y de 0 (fondo del rival, arriba) a 20 (nuestro fondo, abajo); la red está en y=10; la línea de saque, en y=3,05 y y=16,95. Nosotros somos el equipo «n» (fichas blancas, siempre en la mitad de abajo al empezar) y los rivales «r» (rojas, arriba). Cada jugador es una ficha redonda con 1 o 2 caracteres; la pelota es una ficha pequeña.
+Debes convertir la IDEA (ficha táctica con fuentes) en un guion de animación. REGLAS INNEGOCIABLES: usa solo el contenido de la ficha, no inventes tácticas ni afirmaciones ni cifras; los pasos del vídeo siguen los de la ficha y, si el último dice cuándo NO aplicarla, queda como idea clave (clave:true). Respeta las posiciones de la «escena». Los textos en español de España, cortos (máx. 46 caracteres por paso, con *palabra clave* entre asteriscos), el hook en dos líneas MAYÚSCULAS (máx. 20 caracteres cada una, una pregunta o frase gancho). Mueve las fichas y la pelota para que la animación de cada paso ocurra dentro de su ventana de tiempo [t del paso, t del siguiente]; las flechas aparecen al empezar el movimiento. Cada paso dura 2,5-3,5 s; el gancho dura 2,4 s; la pelota solo se mueve en tramos {t0,t1,a,altura 0-1} (altura 1 = globo). Opcionales: zonas, etiquetas, resalta (anillo sobre una ficha), foco (cámara: zoom 1–1,3 centrado en un punto) y juntos. Devuelve SOLO un objeto JSON (sin texto alrededor) con exactamente la forma del ejemplo (sin «revision»).
+EJEMPLO:\n${JSON.stringify(EJEMPLO_TACTICA())}`;
+  let mensajes = [{role: 'user', content: `IDEA:\n${JSON.stringify({titulo: idea.titulo, nivel: idea.nivel, situacion: idea.situacion, pasos: idea.pasos, cuandoNo: idea.cuandoNo, escena: idea.escena})}`}];
+  for (let intento = 1; intento <= 2; intento++) {
+    log(`Pidiendo la animación a Claude (intento ${intento})…`);
+    const texto = await llamar(sistema, mensajes, {max: 3500});
+    let g;
+    try { g = JSON.parse(texto.slice(texto.indexOf('{'), texto.lastIndexOf('}') + 1)); } catch { g = null; }
+    const errores = g ? validarTactica(g) : ['la respuesta no es JSON'];
+    if (!errores.length) return g;
+    log(`Animación no válida (${errores.join('; ')}); reintento.`);
+    mensajes = [...mensajes, {role: 'assistant', content: texto}, {role: 'user', content: `Corrige estos problemas y devuelve solo el JSON: ${errores.join('; ')}`}];
+  }
+  throw new Error('Claude no devolvió una animación válida tras 2 intentos.');
 }
 
 const repoSlug = async () => (await sh('git', ['remote', 'get-url', 'origin'])).replace(/\.git$/, '').split(/github\.com[/:]/)[1];
@@ -212,6 +298,7 @@ const TIPOS = {
   guion: {dir: 'guiones', prefijo: '', ext: 'mp4', titulo: (g) => g.title},
   reaccion: {dir: 'reacciones', prefijo: 'reaccion-', ext: 'mp4', titulo: (g) => g.caption},
   meme: {dir: 'memes', prefijo: 'meme-', ext: 'png', titulo: (g) => `${g.before} → ${g.after}`},
+  tactica: {dir: 'tacticas', prefijo: 'tactica-', ext: 'mp4', titulo: (g) => g.titulo},
 };
 const ID_OK = /^[a-z0-9-]{2,80}$/;
 const contenido = () => Object.entries(TIPOS).flatMap(([tipo, {dir, prefijo, ext, titulo}]) =>
@@ -300,6 +387,33 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       if (errores.length) throw new Error(`Reacción no válida: ${errores.join('; ')}`);
       job.guion = {...resolverReaccion(borrador), ...sin};
       guardar('reacciones', borrador.caption, job.guion, 'reaccion-', 'mp4');
+    } else if (tipo === 'tactica-voz') {
+      // Añade tus audios (uno por frase: gancho, cada paso y cierre) a una táctica ya generada y la vuelve a renderizar con la voz.
+      if (!ID_OK.test(borrador.id || '')) throw new Error('Qué táctica: falta el id.');
+      const archivo = `tacticas/${borrador.id}.json`;
+      if (!existsSync(join(ROOT, archivo))) throw new Error(`No existe ${archivo}.`);
+      const obj = JSON.parse(readFileSync(join(ROOT, archivo), 'utf8'));
+      const audios = Array.isArray(borrador.audios) ? borrador.audios : [];
+      if (audios.length !== obj.pasos.length + 2) throw new Error(`Faltan audios: hacen falta ${obj.pasos.length + 2} (gancho, ${obj.pasos.length} pasos y cierre) y hay ${audios.length}.`);
+      for (const a of audios) if (!/^voz\/[a-z0-9-]+\/\d\.mp3$/.test(a) || !existsSync(join(ROOT, 'public', a))) throw new Error(`No encuentro el audio ${a}; vuelve a subirlo.`);
+      obj.audios = audios; obj.voz = true; voz = true;
+      writeFileSync(join(ROOT, archivo), JSON.stringify(obj, null, 2) + '\n');
+      job.guion = obj; job.videoId = borrador.id;
+      items.push({archivo, id: `tactica-${borrador.id}`, resultado: `out/tactica-${borrador.id}.mp4, out/tactica-${borrador.id}.final.mp4`});
+      peticion = `voz ${borrador.id}`;
+    } else if (tipo === 'tactica') {
+      // Una idea del listado (ideas/tacticas.json) → animación de la jugada, guardada con su estado de revisión y sus fuentes.
+      const idea = ideasTacticas().find((x) => x.id === borrador.idea);
+      if (!idea) throw new Error(`No existe la idea «${borrador.idea}» en ideas/tacticas.json.`);
+      const g = await pedirTactica(idea, log);
+      g.cta = String(g.cta || 'Pruébalo gratis en zyrapadel.com');
+      g.revision = {estado: idea.estado, ficha: idea.id, fuentes: idea.fuentes, ...(idea.fuentesCoinciden ? {} : {aviso: 'una sola fuente: no publicar sin segunda fuente o revisión de un entrenador'})};
+      if (idea.estado !== 'validada') log(`Aviso: la idea está en estado «${idea.estado}»${idea.fuentesCoinciden ? '' : ' y con una sola fuente'}. Revísala antes de publicar.`);
+      if (voz) { log('Las tácticas aún no llevan voz sintética: se genera el guion de voz (.voz.txt) con los tiempos para que grabes tú.'); voz = false; }
+      job.guion = g;
+      guardar('tacticas', g.titulo, g, 'tactica-', 'mp4');
+      job.videoId = items.at(-1).id.replace(/^tactica-/, '');
+      items[items.length - 1].resultado += `, out/tactica-${items[items.length - 1].id.replace(/^tactica-/, '')}.voz.txt`;
     } else if (tipo === 'meme') {
       const errores = validarMeme(borrador);
       if (errores.length) throw new Error(`Meme no válido: ${errores.join('; ')}`);
@@ -410,6 +524,7 @@ async function subirArchivos(archivos, mensaje) {
 export const server = createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/') { res.writeHead(200, {'content-type': 'text/html; charset=utf-8'}); return res.end(PAGINA); }
   if (req.method === 'GET' && req.url.startsWith('/api/job/')) { const j = jobs.get(req.url.split('/').pop()); return j ? json(res, 200, j) : json(res, 404, {error: 'no existe'}); }
+  if (req.method === 'GET' && req.url === '/api/ideas-tacticas') return json(res, 200, {ideas: ideasConVideos()});
   if (req.method === 'GET' && req.url === '/api/contenido') return json(res, 200, {contenido: contenido(), plantillas: plantillas().map((p) => ({id: p.id, descripcion: p.descripcion, fondo: p.fondo, recorte: p.recorte}))});
   if (req.method === 'POST' && req.url === '/api/borrar') {
     let body = '';
@@ -467,7 +582,12 @@ export const server = createServer(async (req, res) => {
     let body = '';
     for await (const c of req) body += c;
     try {
-      const g = JSON.parse(body || '{}');
+      let g = JSON.parse(body || '{}');
+      if (g.tipo === 'tactica-voz') { // las frases de una táctica ya generada: gancho, un paso por frase y cierre
+        if (!ID_OK.test(g.id || '') || !existsSync(join(ROOT, 'tacticas', `${g.id}.json`))) return json(res, 400, {error: 'Esa táctica no existe.'});
+        const t = JSON.parse(readFileSync(join(ROOT, 'tacticas', `${g.id}.json`), 'utf8'));
+        g = {hook: t.hook, subs: t.pasos.map((p) => p.texto), locucion: t.pasos.map((p) => p.locucion || String(p.texto).replace(/\*/g, '')), cta: t.cta};
+      }
       if (!Array.isArray(g.hook) || !Array.isArray(g.subs)) return json(res, 400, {error: 'Guion sin gancho o sin subtítulos.'});
       const gancho = g.hook.reduce((acc, h) => (!acc ? h : /[.!?…,:;]$/.test(acc) || !/^[¿¡]/.test(h) ? `${acc} ${h}` : `${acc}, ${h}`), '');
       return json(res, 200, {frases: [gancho, ...g.subs.map((x, i) => String(g.locucion?.[i] || x).replace(/\*/g, '')), g.cta]});

@@ -1,0 +1,268 @@
+[
+  {
+    "id": "resto-al-sacador",
+    "titulo": "Resta al sacador",
+    "nivel": "intermedio",
+    "situacion": "Recibes el saque. El sacador corre hacia la red y su compañero ya está en ella. Los dos del resto están al fondo.",
+    "pasos": [
+      "El sacador sube en carrera: su volea es la más débil de los cuatro.",
+      "Resta por abajo y hacia él, a sus pies (cortado para ganar tiempo, liftado para bajarla rápido).",
+      "Su volea sale en carrera, más floja que la de su compañero.",
+      "Con el 1.º saque, siempre abajo; el globo solo con el 2.º y si estás seguro."
+    ],
+    "cuandoNo": "No restes globo si no estás muy seguro: si queda corto, remate. No resta siempre igual: varía la dirección para que no te lean.",
+    "escena": "Rivales: sacador S al fondo (sale a la red), compañero en la red. Nosotros: restador R y compañero, ambos al fondo.",
+    "fuentes": [
+      "PadelStar Guía 3, «Técnica y táctica para el resto» (pp. 24-28) y «¿Cómo y hacia dónde restar?» (pp. 29-33)",
+      "Manu Martín, ebook, cap. 4, «El rol del restador» (p. 27 y ss.)"
+    ],
+    "estado": "borrador",
+    "fuentesCoinciden": true
+  },
+  {
+    "id": "primer-y-segundo-saque",
+    "titulo": "Resto: 1.º saque abajo, 2.º con globo",
+    "nivel": "intermedio",
+    "situacion": "Recibes un saque y dudas entre jugarlo bajo o con globo.",
+    "pasos": [
+      "El 1.º saque llega con más peligro: resta por abajo al sacador.",
+      "Con el 2.º saque la bola es menos dañina: el globo es una opción para ganar la red.",
+      "Si el globo queda corto, el sacador tendrá una volea alta de revés: no es mala situación."
+    ],
+    "cuandoNo": "El globo en el resto solo si estás muy seguro de hacerlo bien.",
+    "escena": "Dos mini-jugadas seguidas: 1.º saque (bola baja) y 2.º saque (globo).",
+    "fuentes": [
+      "PadelStar Guía 3, «Técnica y táctica para el resto», «¿Cuándo tirar un globo desde el resto?» (p. 27)"
+    ],
+    "estado": "borrador",
+    "fuentesCoinciden": false
+  },
+  {
+    "id": "defensa-cuando-subir",
+    "titulo": "Defensa: dónde colocarte y cuándo subir",
+    "nivel": "iniciación",
+    "situacion": "Defiendes al fondo y el rival ataca desde la red.",
+    "pasos": [
+      "Colócate un paso detrás de la línea de saque: evita la «zona de nadie».",
+      "Golpea y recupera la posición defensiva sin quedarte mirando.",
+      "Juega cruzado: la trayectoria es más larga y arriesgas menos.",
+      "Sube solo si la chiquita sale bien o el globo pasa a los rivales; si no, quédate atrás."
+    ],
+    "cuandoNo": "No lances el globo con prisa tras una bola rápida y no subas enseguida tras el globo (sobre todo en iniciación): te exponen a una bandeja agresiva.",
+    "escena": "Nosotros al fondo; rivales en la red. Tras el globo, muestra primero que se espera a ver cómo devuelven y luego, solo si es débil, se sube.",
+    "fuentes": [
+      "PadelStar Guía 3, «Consejos para una buena defensa» (p. 68 y ss.)",
+      "Manu Martín, ebook, cap. 7 (p. 50)",
+      "PadelStar Guía 1, consejos de oro (p. 4)"
+    ],
+    "estado": "borrador",
+    "fuentesCoinciden": true
+  },
+  {
+    "id": "globo-profundo-contra-la-red",
+    "titulo": "El globo que te da tiempo",
+    "nivel": "iniciación",
+    "situacion": "La pareja rival presiona desde la red y necesitas respirar.",
+    "pasos": [
+      "No lances el globo con prisa: espera el momento.",
+      "Alto y profundo, para que no puedan rematar con potencia.",
+      "No avances de inmediato: obliga al rival a retroceder y reorganízate.",
+      "Varios globos seguidos cansan al rival; cuando pierda precisión, juega a sus pies."
+    ],
+    "cuandoNo": "Con techo bajo el globo pierde utilidad. Un globo corto es remate fácil.",
+    "escena": "Rivales en la red; nosotros al fondo; el globo pasa por encima y los rivales retroceden mientras nosotros mantenemos posición.",
+    "fuentes": [
+      "Manu Martín, ebook, cap. 7 (p. 50 y ss.)",
+      "PadelStar Guía 1, «Juega con globos y más globos» (p. 4)"
+    ],
+    "estado": "borrador",
+    "fuentesCoinciden": true
+  },
+  {
+    "id": "pelota-roja-a-naranja",
+    "titulo": "Del ataque rival a la pelota «naranja»",
+    "nivel": "intermedio",
+    "situacion": "Un rival que domina la red te manda pelotas rápidas (rojas).",
+    "pasos": [
+      "Con la roja, solo asegura: defiende por abajo con intensidad.",
+      "Golpea rápido al cuerpo o al centro para quitarle comodidad.",
+      "Busca su volea alta de revés o la chiquita para que volee por debajo de la red.",
+      "Con una pelota naranja o verde, ya puedes cambiar la dinámica."
+    ],
+    "cuandoNo": "No intentes atacar una pelota roja.",
+    "escena": "Rivales en la red, nosotros al fondo; las bolas al cuerpo/centro y la chiquita.",
+    "fuentes": [
+      "Manu Martín, ebook, cap. 6 (p. 42 y ss.)"
+    ],
+    "estado": "borrador",
+    "fuentesCoinciden": false
+  },
+  {
+    "id": "remate-cuando-y-adonde",
+    "titulo": "Remate: cuándo y adónde",
+    "nivel": "intermedio",
+    "situacion": "Estás en la red y la pelota queda delante de ti.",
+    "pasos": [
+      "Remata solo si estás cómodo y cerca de la red.",
+      "Apunta a la pared de fondo del rival, en línea recta: la bola recorre menos y vuelve a tu campo.",
+      "Contacto en el punto más alto, brazo extendido.",
+      "Pasa la red alta para que el rival no llegue si sale."
+    ],
+    "cuandoNo": "Si retrocedes o estás incómodo, no remates: es un error de elección.",
+    "escena": "Nosotros en la red, rivales al fondo; el remate recto a la pared de fondo.",
+    "fuentes": [
+      "PadelStar Guía 4, «El remate en pádel es un golpe de potencia» (p. 9)"
+    ],
+    "estado": "borrador",
+    "fuentesCoinciden": false
+  },
+  {
+    "id": "remate-por-3-y-por-4",
+    "titulo": "Remate «por 4» y «por 3»",
+    "nivel": "avanzado",
+    "situacion": "Te dan una bola fácil cerca de la red y quieres cerrar el punto.",
+    "pasos": [
+      "«Por 4»: remate fuerte con bote cerca de la red para que salga por el fondo (pared y reja suman 4 m).",
+      "«Por 3»: remate liftado y cruzado; rebota en la pared de fondo y sale por el lateral (3 m).",
+      "Adelántate en el momento justo y usa la muñeca."
+    ],
+    "cuandoNo": "Si no dominas la técnica, no lo intentes: son golpes de nivel avanzado.",
+    "escena": "Rebote de la bola en la pared de fondo y salida por el lateral.",
+    "fuentes": [
+      "PadelStar Guía 4, «Diferentes tipos de remates» (pp. 11-13)"
+    ],
+    "estado": "borrador",
+    "fuentesCoinciden": false
+  },
+  {
+    "id": "pelotas-en-pack",
+    "titulo": "Contra defensivos: las «pelotas en pack»",
+    "nivel": "intermedio",
+    "situacion": "El rival devuelve globo tras globo y no puedes definir.",
+    "pasos": [
+      "Paciencia: de cada 4-5 pelotas, una es la que hay que apretar.",
+      "Señal: un globo más corto de lo habitual.",
+      "Si no puedes ejecutarla con precisión, sigue construyendo el punto.",
+      "Fuérzale a volear: pelotas medias a la pared lateral, o la dejada si la pista es lenta."
+    ],
+    "cuandoNo": "No definas demasiado pronto: genera errores no forzados.",
+    "escena": "Rally de globos; resalta la pelota «buena» entre varias.",
+    "fuentes": [
+      "Manu Martín, ebook, cap. 8 (p. 57 y ss.)"
+    ],
+    "estado": "borrador",
+    "fuentesCoinciden": false
+  },
+  {
+    "id": "australiana",
+    "titulo": "Jugar a la australiana",
+    "nivel": "avanzado",
+    "situacion": "Pareja zurdo-diestro, o jugadores con un lado muy marcado.",
+    "pasos": [
+      "El sacador saca a la T y corre a la red.",
+      "El compañero se coloca en la zona de ataque, inclinado hacia donde volverá la pelota.",
+      "Cada uno se queda en su lado fuerte durante todo el punto.",
+      "Aviso: el lado libre queda expuesto hasta que el sacador llega."
+    ],
+    "cuandoNo": "La propia fuente la sitúa en partidos de alto nivel.",
+    "escena": "Sacador a la T y carrera a la red; el compañero cubre el lado libre.",
+    "fuentes": [
+      "Manu Martín, ebook, cap. 4 (p. 27 y ss.)"
+    ],
+    "estado": "borrador",
+    "fuentesCoinciden": false
+  },
+  {
+    "id": "que-lado-jugar",
+    "titulo": "¿En qué lado juego?",
+    "nivel": "iniciación",
+    "situacion": "No sabes si jugar de derecha o de revés con tu pareja.",
+    "pasos": [
+      "Principiantes: practicad los dos lados antes de especializaros.",
+      "Un zurdo juega en el lado derecho.",
+      "Mejor juego aéreo, mejor resto y más nivel suelen ir al lado del revés.",
+      "Son recomendaciones: comentadlas en pareja."
+    ],
+    "cuandoNo": "No lo presentes como regla fija: depende de los objetivos y de las características de cada pareja.",
+    "escena": "La pista dividida por la mitad; fichas que se colocan según cada característica.",
+    "fuentes": [
+      "PadelStar Guía 3, «En qué lado jugar» (pp. 59-62)"
+    ],
+    "estado": "borrador",
+    "fuentesCoinciden": false
+  },
+  {
+    "id": "limpiaparabrisas",
+    "titulo": "Moveos juntos: el «limpiaparabrisas»",
+    "nivel": "iniciación",
+    "situacion": "Uno de la pareja está adelantado y el otro atrás: hay huecos.",
+    "pasos": [
+      "Los dos se mueven a la vez, hacia delante o hacia atrás.",
+      "Nada de uno atrás y otro adelante.",
+      "Como en el fútbol sala: todos alineados, así se cierran ángulos."
+    ],
+    "cuandoNo": "No lo uses como regla ciega: si el compañero queda fuera de posición hay que cubrirle.",
+    "escena": "La pareja se desplaza a la vez de un lado a otro, alineada.",
+    "fuentes": [
+      "PadelStar Guía 1, «Cubre espacios correctamente» (pp. 4-5)"
+    ],
+    "estado": "borrador",
+    "fuentesCoinciden": false
+  },
+  {
+    "id": "globo-central-en-la-red",
+    "titulo": "Globo al centro cuando estás en la red",
+    "nivel": "intermedio",
+    "situacion": "Estás en la red y te juegan un globo al centro.",
+    "pasos": [
+      "El jugador en diagonal toma la iniciativa.",
+      "Ejecuta una víbora al rincón para forzar la respuesta, preferiblemente en paralelo.",
+      "El compañero se asegura de estar cerca de la red, listo para un golpe ofensivo."
+    ],
+    "cuandoNo": "Necesita validación de un entrenador: la fuente solo lo resume en pocas líneas.",
+    "escena": "Pareja en la red; globo al centro; el de la diagonal ejecuta, el otro cubre.",
+    "fuentes": [
+      "PadelStar Guía 3, «Aplicación táctica de golpes y en situación de ataque», jugada 1 (p. 71)"
+    ],
+    "estado": "borrador",
+    "fuentesCoinciden": false
+  },
+  {
+    "id": "bandeja-que-rebota",
+    "titulo": "Si su bandeja rebota mucho: bola por abajo",
+    "nivel": "intermedio",
+    "situacion": "La bandeja del rival rebota demasiado en la pared.",
+    "pasos": [
+      "Evalúa: la bola viene alta tras el rebote.",
+      "Juega la bola por abajo, lenta, en paralelo o por el centro.",
+      "Gana la red y pon al rival en una posición incómoda."
+    ],
+    "cuandoNo": "Necesita validación: la fuente lo resume en pocas líneas.",
+    "escena": "El rival bandeja; nosotros jugamos abajo y ganamos la red.",
+    "fuentes": [
+      "PadelStar Guía 3, jugada 3 (p. 72)"
+    ],
+    "estado": "borrador",
+    "fuentesCoinciden": false
+  },
+  {
+    "id": "saque-variado-a-la-t",
+    "titulo": "Saque: varía y busca la T",
+    "nivel": "iniciación",
+    "situacion": "Sacas y quieres que el rival no se acostumbre.",
+    "pasos": [
+      "Alterna el saque pegado al cristal y al medio, cerca de la línea (la T).",
+      "Estudia al rival: varía dirección, profundidad e impacto.",
+      "En la australiana, el saque a la T reduce las opciones del restador y te facilita llegar a la red."
+    ],
+    "cuandoNo": "No arriesgues el primer saque: mejor profundo y con efecto, pero seguro (los saques cortos o nerviosos te dificultan el acceso a la red).",
+    "escena": "Dos saques seguidos: al cristal y a la T.",
+    "fuentes": [
+      "PadelStar Guía 3, «Consejos para realizar un buen saque» (pp. 22-23)",
+      "Manu Martín, ebook, cap. 4 (p. 27 y ss.)",
+      "PadelStar Guía 1, «Jugarás con tu primer servicio» (p. 3)"
+    ],
+    "estado": "borrador",
+    "fuentesCoinciden": true
+  }
+]

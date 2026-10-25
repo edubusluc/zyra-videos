@@ -8,3 +8,4 @@ referencias/.cache
 .env
 capturas-app/
 salidas/
+src/tacticas.json
