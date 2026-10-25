@@ -477,5 +477,16 @@
       "Manu Martín, ebook, cap. 4 (p. 27 y ss.)",
       "PadelStar Guía 1, «Jugarás con tu primer servicio» (p. 3)"
     ]
-  }
+  },
+  "audios": [
+    "voz/saque-varia-y-busca-la-t-zgfmk/0.mp3",
+    "voz/saque-varia-y-busca-la-t-zgfmk/1.mp3",
+    "voz/saque-varia-y-busca-la-t-zgfmk/2.mp3",
+    "voz/saque-varia-y-busca-la-t-zgfmk/3.mp3",
+    "voz/saque-varia-y-busca-la-t-zgfmk/4.mp3",
+    "voz/saque-varia-y-busca-la-t-zgfmk/5.mp3",
+    "voz/saque-varia-y-busca-la-t-zgfmk/6.mp3",
+    "voz/saque-varia-y-busca-la-t-zgfmk/7.mp3"
+  ],
+  "voz": true
 }
