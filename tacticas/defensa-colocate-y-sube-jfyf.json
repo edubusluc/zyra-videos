@@ -612,5 +612,16 @@
       "Manu Martín, ebook, cap. 7 (p. 50)",
       "PadelStar Guía 1, consejos de oro (p. 4)"
     ]
-  }
+  },
+  "audios": [
+    "voz/defensa-colocate-y-sube-rkqki/0.mp3",
+    "voz/defensa-colocate-y-sube-rkqki/1.mp3",
+    "voz/defensa-colocate-y-sube-rkqki/2.mp3",
+    "voz/defensa-colocate-y-sube-rkqki/3.mp3",
+    "voz/defensa-colocate-y-sube-rkqki/4.mp3",
+    "voz/defensa-colocate-y-sube-rkqki/5.mp3",
+    "voz/defensa-colocate-y-sube-rkqki/6.mp3",
+    "voz/defensa-colocate-y-sube-rkqki/7.mp3"
+  ],
+  "voz": true
 }
