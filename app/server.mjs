@@ -409,7 +409,7 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       g.cta = String(g.cta || 'Pruébalo gratis en zyrapadel.com');
       g.revision = {estado: idea.estado, ficha: idea.id, fuentes: idea.fuentes, ...(idea.fuentesCoinciden ? {} : {aviso: 'una sola fuente: no publicar sin segunda fuente o revisión de un entrenador'})};
       if (idea.estado !== 'validada') log(`Aviso: la idea está en estado «${idea.estado}»${idea.fuentesCoinciden ? '' : ' y con una sola fuente'}. Revísala antes de publicar.`);
-      if (voz) { log('Las tácticas aún no llevan voz sintética: se genera el guion de voz (.voz.txt) con los tiempos para que grabes tú.'); voz = false; }
+      voz = false; // las tácticas solo llevan tu voz grabada
       job.guion = g;
       guardar('tacticas', g.titulo, g, 'tactica-', 'mp4');
       job.videoId = items.at(-1).id.replace(/^tactica-/, '');
@@ -433,6 +433,14 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       }
       job.guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(estilo === 'base' ? {estilo} : {}), ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin, ...(audios ? {audios, voz: true} : {})};
       guardar('guiones', g.title, job.guion, '', 'mp4');
+    }
+    if (tipo === 'tactica') {
+      // Primero el guion, luego tu voz: el vídeo se renderiza una sola vez, con los audios (botón «Añadir mi voz» del listado).
+      job.progreso = {pct: 100, fase: 'Guion listo'};
+      job.resultado = `${items[0].archivo} (guion listo: añade tu voz para renderizar el vídeo, o pulsa «Vista previa sin voz»)`;
+      log(`Guardado: ${items[0].archivo}. Aún no se ha renderizado: graba tus audios y se renderiza con ellos.`);
+      job.estado = 'hecho';
+      return;
     }
     log(tipo === 'regenerar' ? `Regenerando: ${items[0].archivo}` : `Guardado: ${items.map((i) => i.archivo).join(', ')}`);
     if (tipo === 'regenerar' && modo !== 'local') throw new Error('Regenerar se hace en local: elige «Render: En local».');

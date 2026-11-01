@@ -188,10 +188,11 @@ async function cargarIdeas(abrirVoz){try{
     d.appendChild(t);
     for(const v of i.videos){
       const caja=document.createElement('div');caja.style.cssText='border:1px solid var(--b);border-radius:10px;padding:10px;margin-top:10px';
-      const f=fila('Vídeo generado · '+v.titulo+(v.con_voz?' · con voz':v.voz?' · con tu voz (sin renderizar)':v.renderizado?' · renderizado, sin voz':' · sin renderizar')+' · '+v.id,[]);
+      const f=fila('Vídeo generado · '+v.titulo+(v.con_voz?' · con voz':v.voz?' · con tu voz (sin renderizar)':v.renderizado?' · renderizado, sin voz':' · guion listo, falta tu voz')+' · '+v.id,[]);
       const bv=document.createElement('button');bv.className='sec';bv.textContent=v.voz?'Cambiar mi voz':'Añadir mi voz';
       bv.onclick=()=>{bv.disabled=true;panelVoz({tipo:'tactica-voz',id:v.id,title:v.titulo},caja,bv)};
-      f.appendChild(bv);caja.appendChild(f);d.appendChild(caja);
+      f.appendChild(bv);
+      if(!v.renderizado&&!v.voz){const bp=document.createElement('button');bp.className='sec';bp.textContent='Vista previa sin voz';bp.onclick=()=>crear({tipo:'regenerar',de:'tactica',id:v.id},bp);f.appendChild(bp)}caja.appendChild(f);d.appendChild(caja);
       if(abrirVoz===v.id)setTimeout(()=>{bv.click();caja.scrollIntoView({behavior:'smooth',block:'nearest'})},0)}
     const bt=document.createElement('button');bt.className='go';bt.textContent=n?'Generar otra versión':'Crear vídeo de esta táctica';bt.onclick=()=>crear({tipo:'tactica',idea:i.id},bt);d.appendChild(bt);
     c.appendChild(d)}
