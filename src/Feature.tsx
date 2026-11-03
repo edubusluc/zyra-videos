@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
-import {BlurBg, KeywordCard, LiveBg, MediaBg, Motivo, Ping, Wipe, cabe} from './components/Fx';
+import {BlurBg, KeywordCard, LiveBg, MediaBg, Motivo, Ping, Wipe, cabeTitular} from './components/Fx';
 import {Logo} from './components/Logo';
 import {Phone3D, Screen} from './components/Phone';
 import {Line, prog} from './components/Reveal';
@@ -61,9 +61,10 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   // 1.ª línea del gancho en dos renglones de largo parecido (p. ej. «GESTIONA / TU EQUIPO») para poder ponerla muy grande.
   const hookW = hook[0].split(/\s+/).filter(Boolean);
   const corte = hookW.length < 2 ? 0 : Array.from({length: hookW.length - 1}, (_, i) => i + 1).reduce((m, i) => (Math.max(hookW.slice(0, i).join(' ').length, hookW.slice(i).join(' ').length) < Math.max(hookW.slice(0, m).join(' ').length, hookW.slice(m).join(' ').length) ? i : m), 1);
-  const hookL1 = corte ? [hookW.slice(0, corte).join(' '), hookW.slice(corte).join(' ')] : [hook[0]];
-  const hookSize = Math.min(...hookL1.map((h) => cabe(h, 112, 1080 - 2 * SAFE.side - 90)));
-  const titleSize = cabe(title, 44, 920);
+  const anchoHook = 1080 - 2 * SAFE.side - 90;
+  const hookL1 = corte && cabeTitular(hook[0], 200, anchoHook) < 130 ? [hookW.slice(0, corte).join(' '), hookW.slice(corte).join(' ')] : [hook[0]];
+  const hookSize = Math.min(...hookL1.map((h) => cabeTitular(h, 200, anchoHook)));
+  const titleSize = cabeTitular(title, 96, 920);
   const subLen = limpio(subs[subIdx]).length;
   const subSize = Math.max(46, Math.min(76, Math.floor(1700 / Math.max(1, subLen * 0.56))));
   const subSizeBase = Math.max(34, Math.min(46, Math.floor(1500 / Math.max(1, subLen * 0.56))));
@@ -88,9 +89,9 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
         </div>
         <div style={{position: 'absolute', left: SAFE.side - 30, right: SAFE.side - 30, top: 170, textAlign: hookCentro ? 'center' : 'left'}}>
           {hookL1.map((t, i) => (
-            <Line key={i} text={t} at={1 + i * 3} out={HOOK_END} size={hookSize} align={hookCentro ? 'center' : 'left'} from={hookCentro ? 'up' : 'left'} extra={{...TYPE.title, ...HERO_FILL, letterSpacing: '.03em', lineHeight: 1.02, paddingLeft: 30, paddingRight: 30, textShadow: '0 6px 30px rgba(0,0,0,.7)'}} />
+            <Line key={i} text={t} at={1 + i * 3} out={HOOK_END} size={hookSize} align={hookCentro ? 'center' : 'left'} from={hookCentro ? 'up' : 'left'} extra={{...TYPE.titular, ...HERO_FILL, lineHeight: 1, paddingLeft: 30, paddingRight: 30, textShadow: '0 6px 30px rgba(0,0,0,.7)'}} />
           ))}
-          <div style={{display: 'inline-block', marginTop: 26, marginLeft: 30, padding: '10px 28px', background: C.lime, color: C.ink, borderRadius: 14, boxShadow: `8px 8px 0 ${C.ink}, ${GLOW}`, transform: `rotate(-2deg) scale(${0.6 + 0.4 * prog(f, HOOK_B, 14)})`, transformOrigin: '0 50%', opacity: prog(f, HOOK_B, 6), fontSize: cabe(hook[1], 62, 880), whiteSpace: 'nowrap', ...TYPE.title}}>
+          <div style={{display: 'inline-block', marginTop: 26, marginLeft: 30, padding: '10px 28px', background: C.lime, color: C.ink, borderRadius: 14, boxShadow: `8px 8px 0 ${C.ink}, ${GLOW}`, transform: `rotate(-2deg) scale(${0.6 + 0.4 * prog(f, HOOK_B, 14)})`, transformOrigin: '0 50%', opacity: prog(f, HOOK_B, 6), fontSize: cabeTitular(hook[1], 120, 880), whiteSpace: 'nowrap', ...TYPE.titular}}>
             {hook[1]}
           </div>
         </div>
@@ -98,7 +99,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
       {/* Cuerpo */}
       <div style={{position: 'absolute', inset: 0, opacity: f < CTA_FROM ? main : 1 - ctaIn}}>
         <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: SAFE.top}}>
-          <Line text={title} at={HOOK_END + 4} size={titleSize} extra={TYPE.title} />
+          <Line text={title} at={HOOK_END + 4} size={titleSize} extra={TYPE.titular} />
           <div style={{height: 8, width: `${prog(f, HOOK_END + 12, 20) * 38}%`, background: C.lime, borderRadius: 4, marginTop: 14, boxShadow: GLOW}} />
         </div>
         <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 400 + (1 - main) * 120 + float}}>
@@ -118,7 +119,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
                 const esClave = w.replace(/[^\p{L}\p{N}%]/gu, '').toLowerCase() === palabraClave;
                 const t = prog(f, subAt + i * 4, 8);
                 return (
-                  <span key={i} style={{fontFamily: esClave ? FONT.display : FONT.body, fontStyle: esClave ? 'italic' : 'normal', fontWeight: esClave ? 700 : 800, fontSize: esClave ? Math.round(subSize * 0.82) : subSize, textTransform: esClave ? 'uppercase' : 'none', letterSpacing: esClave ? '.02em' : 'normal', lineHeight: 1.12, color: esClave ? C.lime : C.text, textShadow: '0 6px 30px rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.9)', display: 'inline-block', opacity: t, transform: `${animSub === 'lado' ? `translateX(${(1 - t) * -40}px)` : `translateY(${(1 - t) * (animSub === 'pop' ? 0 : 30)}px)`} scale(${(esClave ? 0.8 + 0.2 * t + (desde < 14 ? 0.12 : 0) : 1) * (animSub === 'pop' ? 0.6 + 0.4 * t : 1)})`}}>
+                  <span key={i} style={{...(esClave ? TYPE.titular : {fontFamily: FONT.body, fontWeight: 800}), fontSize: esClave ? Math.round(subSize * 1.12) : subSize, lineHeight: 1.12, color: esClave ? C.lime : C.text, textShadow: '0 6px 30px rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.9)', display: 'inline-block', opacity: t, transform: `${animSub === 'lado' ? `translateX(${(1 - t) * -40}px)` : `translateY(${(1 - t) * (animSub === 'pop' ? 0 : 30)}px)`} scale(${(esClave ? 0.8 + 0.2 * t + (desde < 14 ? 0.12 : 0) : 1) * (animSub === 'pop' ? 0.6 + 0.4 * t : 1)})`}}>
                     {w}
                   </span>
                 );

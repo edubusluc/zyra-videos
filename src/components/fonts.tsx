@@ -10,6 +10,8 @@ const FACES: [string, string, FontFaceDescriptors][] = [
   ['Archivo', 'fonts/Archivo-Regular.ttf', {weight: '400'}],
   ['Archivo', 'fonts/Archivo-Bold.ttf', {weight: '700'}],
   ['Archivo', 'fonts/Archivo-ExtraBold.ttf', {weight: '800'}],
+  // Anton: titulares de la web (--z-display); solo tiene un peso, y el rango evita la negrita sintética.
+  ['Anton', 'fonts/Anton-Regular.ttf', {weight: '400 900'}],
   ['Syncopate', 'fonts/Syncopate-Bold.ttf', {weight: '700', unicodeRange: SIN_TILDES}],
   ['Syncopate', 'fonts/Syncopate-BoldItalic.ttf', {weight: '700', style: 'italic', unicodeRange: SIN_TILDES}],
   ['Syncopate', 'fonts/Archivo-ExtraBold.ttf', {weight: '700', unicodeRange: TILDES, sizeAdjust: '112%'} as FontFaceDescriptors],

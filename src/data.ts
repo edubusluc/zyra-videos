@@ -24,6 +24,10 @@ export type VideoData = {
   estilo?: 'base' | 'creador';
   /** Variante visual y sonora (cámara, transiciones, animación de subtítulos, gancho, efectos, música). La pone render.mjs a partir del id si no viene. */
   variante?: number;
+  /** Tipo de la línea 2 del gancho (pregunta, resultado o problema), anotado para comparar en TikTok Analytics. */
+  gancho?: string;
+  /** Publicación de TikTok (busqueda, descripcion, hashtags, comentario); no se pinta en el vídeo: va a out/<id>.tiktok.txt. */
+  tiktok?: {busqueda: string; descripcion: string; hashtags: string[]; comentario: string};
   /** Fondo propio de public/ (p. ej. fondos/pista-noche.mp4); por defecto render.mjs reparte los de public/fondos/. null = el de la captura. */
   fondo?: string | null;
   /** Música concreta de public/ (p. ej. musica/otra.mp3); por defecto una de public/musica/ según la variante. */

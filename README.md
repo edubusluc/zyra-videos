@@ -17,7 +17,7 @@ Tras subir el guion, la app lanza ella misma el workflow (workflow_dispatch con 
 ## Formato del guion (`guiones/<id>.json`)
 | Campo | Qué es |
 | --- | --- |
-| `hook` | El gancho: una sola frase repartida en dos líneas (máx. ~16 caracteres cada una; si llega en una línea o en tres, se reparte sola). La voz la dice de una vez, sin cortarla; la letra se reduce si no cabe. En los guiones que genera la app la primera línea es siempre «GESTIONA TU EQUIPO» (así se entiende al instante que Zyra es una web para gestionar equipos de pádel) y la segunda la escribe el guionista según el vídeo, p. ej. «SIN LÍOS DE WHATSAPP». En pantalla: la web ya visible desde el primer fotograma (inclinada, con zoom), título grande en dos renglones y la segunda línea en una tarjeta lima; abajo, solo «zyrapadel.com» |
+| `hook` | El gancho: una sola frase repartida en dos líneas (máx. ~16 caracteres cada una; si llega en una línea o en tres, se reparte sola). La voz la dice de una vez, sin cortarla; la letra se reduce si no cabe. La app permite elegir el tipo de gancho (ver «Ganchos y publicación en TikTok»). En pantalla: la web ya visible desde el primer fotograma (inclinada, con zoom), título grande en dos renglones y la segunda línea en una tarjeta lima; abajo, solo «zyrapadel.com» |
 | `title` | Título sobre el móvil (máx. ~23 caracteres) |
 | `src`, `imgW` | Captura de `public/ui/` y su ancho en px |
 | `scroll` | Desplazamiento inicial y final de la captura (px) |
@@ -146,6 +146,8 @@ Para el chat basta con reiniciar `npm run app`.
 
 ### Capturar todas las pantallas automáticamente
 
+> Las 19 pantallas automáticas se recapturaron con la web nueva (rama `feature/espacios-competiciones` de Zyra). `alineacion`, `primeros-pasos` y `partidos-sets` tienen recuadros marcados a mano y siguen con la web anterior hasta que se rehagan.
+
 `scripts/capturar-app.py` recorre la app de Zyra con datos de demostración y añade cada pantalla al catálogo. Se ejecuta con el Python del proyecto Zyra (el que tiene Django y Playwright; si falta el navegador: `playwright install chromium`):
 
 ```
@@ -218,12 +220,17 @@ Con `"voz": true`, `render.mjs` pide **antes de renderizar** todo el guion habla
 
 El vídeo usa esos tiempos (`tiempos` en `src/data.ts`) para el fin del gancho, la entrada de cada subtítulo y el cierre, y los efectos de sonido caen en esos mismos cortes. Sin credenciales o si algo falla, vuelve al sistema anterior (tiempos fijos y una voz por frase). El CI pasa ahora las variables de voz también al paso de renderizado.
 
+## Ganchos y publicación en TikTok
+
+- **Gancho de la línea 2:** en la app, el selector «Gancho» pide `pregunta`, `resultado` o `problema` (o deja elegir a Claude). El tipo queda anotado en el guion (`"gancho"`) para el experimento: un vídeo por semana cambiando solo eso y comparando en TikTok Analytics el porcentaje que se va en los 2 primeros segundos y el tiempo medio.
+- **Descripción, hashtags y comentario fijado:** cada guion lleva un bloque `"tiktok": {busqueda, descripcion, hashtags, comentario}`. La descripción empieza por la frase de búsqueda (la que alguien escribiría en TikTok), lleva 2 hashtags específicos (sin #fyp ni #viral) y el comentario invita a probar la web e incluye zyrapadel.com. `render.mjs` lo deja en `out/<id>.tiktok.txt` (y en `salidas/…/<id>.tiktok.txt`) para copiarlo al subir el vídeo. Un borrador del chat que no lo traiga lo pide la app aparte.
+
 ## Tipografía y efectos: los de la web de Zyra
 
 Los vídeos usan el sistema de diseño de la web (`static/style.css` del repo Zyra), resumido en `src/styles/brand.ts`:
 
-- **Títulos** (gancho, título sobre el móvil, palabra clave): Syncopate Bold **cursiva en mayúsculas**, como los `h1` y la portada. La primera línea del gancho y el ZYRA del cierre llevan el degradado blanco → gris de `.z-hero-title`.
-- **Tildes:** Syncopate pinta mal las mayúsculas con tilde y la Ñ (el acento sale despegado). Igual que la web, esas letras se dibujan con Archivo ExtraBold al 112 % (`src/components/fonts.tsx`).
+- **Títulos** (gancho, título sobre el móvil, palabra clave de los subtítulos y tarjetas) de la plantilla de función: **Anton en mayúsculas**, como los `h1` de la web desde la rama `feature/espacios-competiciones` de Zyra (`--z-display`; `TYPE.titular` en `brand.ts`). Anton es condensada y tiene tildes y Ñ propias. La primera línea del gancho lleva el degradado blanco → gris de `.z-hero-title`. Syncopate cursiva (`--z-brand`) se queda para el ZYRA del cierre, y las tácticas, memes y reacciones siguen con el estilo anterior.
+- **Tildes en Syncopate:** Syncopate pinta mal las mayúsculas con tilde y la Ñ (el acento sale despegado). Igual que la web, esas letras se dibujan con Archivo ExtraBold al 112 % (`src/components/fonts.tsx`).
 - **Antetítulos y botón:** Archivo en mayúsculas espaciadas (`.z-eyebrow`, `.btn`). El cierre reproduce la portada: «Sube el nivel de tu equipo», ZYRA, «Gestión de equipos de pádel», botón lima y la URL.
 - **Colores y brillos:** solo los de la web (fondos `--z-bg`/`--z-surface`, lima, `--z-danger`) y el resplandor contenido `--z-glow`; sin verdes de otra paleta ni neón a pantalla completa. Curva de animación `--z-ease`.
 - La palabra clave de las tarjetas se ajusta sola al ancho de pantalla y se le quitan comillas y signos.

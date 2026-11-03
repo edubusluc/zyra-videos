@@ -20,6 +20,9 @@ export const C = {
 export const limeA = (a: number) => `rgba(180, 241, 0, ${a})`;
 
 export const FONT = {
+  /** Titulares de la web (--z-display): Anton, mayúsculas, compacta y sin cursiva. */
+  titular: "'Anton', 'Archivo Narrow', Impact, 'Archivo', sans-serif",
+  /** Logotipo y portada (--z-brand): Syncopate en cursiva. */
   display: "'Syncopate', 'Archivo', sans-serif",
   body: "'Archivo', sans-serif",
 };
@@ -32,6 +35,8 @@ export const FONT = {
  * - button: .btn (Archivo 800, mayúsculas, .05em, píldora).
  */
 export const TYPE = {
+  /** Titulares de la web con la identidad nueva (h1 / .z-title: Anton, mayúsculas, .015em). Los usa la plantilla Feature. */
+  titular: {fontFamily: FONT.titular, fontWeight: 400, textTransform: 'uppercase', letterSpacing: '.015em'},
   title: {fontFamily: FONT.display, fontStyle: 'italic', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.02em'},
   wordmark: {fontFamily: FONT.display, fontStyle: 'italic', fontWeight: 700, letterSpacing: '.06em'},
   eyebrow: {fontFamily: FONT.body, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.14em', color: C.lime},
