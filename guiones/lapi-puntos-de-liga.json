@@ -1,0 +1,34 @@
+{
+  "hook": [
+    "¿CUÁNTOS PUNTOS",
+    "DE LIGA LLEVAS?"
+  ],
+  "title": "PUNTOS DE LIGA LAPI",
+  "src": "ui/estadisticas-equipo-lapi.png",
+  "imgW": 780,
+  "scroll": [
+    1500,
+    1700
+  ],
+  "subs": [
+    "Cada jornada suma *puntos de liga*",
+    "4 por ganar 3-0, 3 por 2-1, 1 por perder",
+    "Tu *media* por jornada, de un vistazo"
+  ],
+  "locucion": [
+    "cada jornada suma *puntos*",
+    "cuatro por ganar tres a cero",
+    "tu *media*, de un vistazo"
+  ],
+  "cta": "Pruébalo gratis",
+  "gancho": "pregunta",
+  "tiktok": {
+    "busqueda": "puntos de liga LAPI pádel",
+    "descripcion": "Puntos de liga LAPI pádel: Zyra suma los de cada jornada (4, 3 o 1) y te enseña el total y la media de tu equipo.",
+    "hashtags": [
+      "#LAPIpadel",
+      "#ZyraPadel"
+    ],
+    "comentario": "Mira los puntos de liga de tu equipo LAPI gratis en zyrapadel.com"
+  }
+}

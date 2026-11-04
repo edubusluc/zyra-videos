@@ -1,0 +1,36 @@
+{
+  "hook": [
+    "¿LIGA LAPI?",
+    "ORGANÍZALA"
+  ],
+  "title": "CREA TU JORNADA LAPI",
+  "src": "ui/nuevo-enfrentamiento-lapi.png",
+  "imgW": 780,
+  "scroll": [
+    80,
+    300
+  ],
+  "subs": [
+    "Crea el enfrentamiento de tu *liga* LAPI",
+    "Elige *Liga*, Playoffs o Fase final",
+    "Apunta la *jornada*, si quieres",
+    "Zyra te propone la *siguiente*"
+  ],
+  "locucion": [
+    "crea tu enfrentamiento de la *LAPI*",
+    "elige *liga*, playoffs o fase final",
+    "apunta la *jornada*, si quieres",
+    "te proponemos la *siguiente*"
+  ],
+  "cta": "Pruébalo gratis",
+  "gancho": "pregunta",
+  "tiktok": {
+    "busqueda": "organizar equipo liga LAPI pádel",
+    "descripcion": "Organizar equipo liga LAPI pádel: crea cada enfrentamiento como Liga, Playoffs o Fase final y apunta la jornada.",
+    "hashtags": [
+      "#LAPIpadel",
+      "#ZyraPadel"
+    ],
+    "comentario": "Prueba Zyra gratis para organizar tu equipo de la LAPI en zyrapadel.com"
+  }
+}
