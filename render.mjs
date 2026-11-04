@@ -1,6 +1,7 @@
 // Une guiones/*.json (vídeos) memes/*.json (memes) y reacciones/*.json (reacciones) y renderiza out/<id>.mp4, out/meme-<id>.png y out/reaccion-<id>.mp4.
 // Uso: npm run render [id…]   (los memes se llaman meme-<nombre>)
 // Localmente puedes fijar CHROME=/ruta/a/chrome; en CI Remotion descarga su navegador.
+import {textoTiktok} from './scripts/tiktok.mjs';
 import {execFileSync, spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync} from 'node:fs';
@@ -70,6 +71,7 @@ const textoGancho = (hook) => hook.reduce((acc, h) => (!acc ? h : /[.!?…,:;]$/
 videos.forEach(normalizar);
 writeFileSync('src/scripts.json', JSON.stringify(videos, null, 2));
 for (const v of videos) if (quiere(v.id)) {
+  if (v.tiktok) writeFileSync(`out/${v.id}.tiktok.txt`, textoTiktok(v.id, v.tiktok, v.gancho)); // descripción, hashtags y comentario fijado para publicar
   const conVoz = v.subtitulos === false || v.voz;
   if (conVoz) {
     // Mismo reparto que src/Feature.tsx (sin locución única): los subtítulos van de 104 a 450 fotogramas a partes iguales.

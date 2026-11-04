@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {Img, OffthreadVideo, staticFile} from 'remotion';
-import {C, FONT, limeA, PAGE_BG} from '../styles/brand';
+import {C, FONT, TYPE, limeA, PAGE_BG} from '../styles/brand';
 
 /** Fondo vivo: degradado, rejilla de pista en movimiento, luces que flotan y partículas que suben. */
 export const LiveBg: React.FC = () => {
@@ -81,6 +81,9 @@ export const BlurBg: React.FC<{src: string}> = ({src}) => {
   );
 };
 
+/** Como `cabe`, pero para Anton (condensada: cada letra ocupa la mitad que en Syncopate). */
+export const cabeTitular = (word: string, max: number, ancho = 900) => Math.min(max, Math.floor(ancho / Math.max(1, word.length * 0.5)));
+
 /** Ajusta el cuerpo de una palabra en Syncopate (muy ancha) para que quepa en `ancho` px. */
 export const cabe = (word: string, max: number, ancho = 900) => Math.min(max, Math.floor(ancho / Math.max(1, word.length * 0.98)));
 
@@ -92,7 +95,7 @@ export const KeywordCard: React.FC<{at: number; word: string; variant: number; d
   const close = interpolate(f, [dur - 8, dur], [1, 0], {easing: Easing.in(Easing.cubic), extrapolateLeft: 'clamp'});
   const r = Math.min(open, close) * 1500;
   const lime = variant % 2 === 0;
-  const size = cabe(word, 190);
+  const size = cabeTitular(word, 330, 980);
   const pop = interpolate(f, [4, 14], [0.7, 1], {easing: Easing.out(Easing.back(1.6)), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   // Lima: el botón principal de la web (hover → lima → pulsado). Oscura: el fondo de página de la web con su halo lima.
   const fondo = lime
@@ -103,7 +106,7 @@ export const KeywordCard: React.FC<{at: number; word: string; variant: number; d
       <div style={{position: 'absolute', inset: 0, opacity: lime ? 0.16 : 0.22}}>
         <svg width="1080" height="1920" viewBox="-540 -960 1080 1920"><g transform={`rotate(${f * 0.6 - 8}) scale(1.35)`} fill="none" stroke={lime ? C.ink : C.lime} strokeWidth={6}><rect x={-300} y={-600} width={600} height={1200} /><line x1={-300} y1={0} x2={300} y2={0} /><line x1={-300} y1={-370} x2={300} y2={-370} /><line x1={-300} y1={370} x2={300} y2={370} /><line x1={0} y1={-370} x2={0} y2={370} /></g></svg>
       </div>
-      <div style={{fontFamily: FONT.display, fontWeight: 700, fontStyle: 'italic', fontSize: size, lineHeight: 1, letterSpacing: '.02em', color: lime ? C.ink : C.lime, textTransform: 'uppercase', textAlign: 'center', whiteSpace: 'nowrap', transform: `scale(${pop}) rotate(${(variant % 2 ? 1 : -1) * 3}deg)`, textShadow: lime ? 'none' : `0 10px 40px ${limeA(0.35)}`}}>{word}</div>
+      <div style={{...TYPE.titular, fontSize: size, lineHeight: 1, color: lime ? C.ink : C.lime, textAlign: 'center', whiteSpace: 'nowrap', transform: `scale(${pop}) rotate(${(variant % 2 ? 1 : -1) * 3}deg)`, textShadow: lime ? 'none' : `0 10px 40px ${limeA(0.35)}`}}>{word}</div>
     </AbsoluteFill>
   );
 };

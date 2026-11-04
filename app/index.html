@@ -90,6 +90,7 @@ progress{width:100%;height:14px;margin-top:8px;accent-color:var(--lime)}
  <div class="row"><label title="Local: genera la voz con ElevenLabs, la ajusta a los tiempos y mezcla música de fondo (out/&lt;id&gt;.final.mp4)"><input type="checkbox" id="voz">Con voz y música</label>
  <label title="Creador: fondo desenfocado, tarjetas con la palabra clave, blanco y negro → color, subtítulos sin caja"><input type="checkbox" id="creador" checked>Estilo creador</label>
  <label title="Sin subtítulos se crea out/&lt;id&gt;.voz.txt con el texto y los segundos para la voz en off"><input type="checkbox" id="subt" checked>Con subtítulos</label>
+ <label title="Tipo de la línea 2 del gancho: prueba uno por vídeo y compara en TikTok Analytics (queda anotado en el guion)">Gancho <select id="gan"><option value="auto">a elección de Claude</option><option value="pregunta">pregunta</option><option value="resultado">resultado</option><option value="problema">problema</option></select></label>
  <label>Render <select id="m"><option value="ci">CI de GitHub</option><option value="local">En local</option></select></label></div>
 </details>
 <progress id="barra" max="100" value="0" style="display:none"></progress>
@@ -104,14 +105,14 @@ function bloque(t){const m=t.match(/```json\s*([\s\S]*?)```/);if(!m)return null;
 async function enviar(texto){
   if(!texto.trim())return;add('user',texto);hist.push({role:'user',content:texto});$('p').value='';$('p').style.height='';$('send').disabled=true;$('send').textContent='Pensando…';estado('Claude está pensando…','busy');
   try{
-    const r=await fetch('/api/chat',{method:'POST',body:JSON.stringify({mensajes:hist,web:$('web').checked})});const j=await r.json();if(!r.ok)throw new Error(j.error);
+    const r=await fetch('/api/chat',{method:'POST',body:JSON.stringify({mensajes:hist,web:$('web').checked,gancho:$('gan').value})});const j=await r.json();if(!r.ok)throw new Error(j.error);
     hist.push({role:'assistant',content:j.respuesta});const d=add('a',j.respuesta);const b=bloque(j.respuesta);
     if(b&&(['video','meme','reaccion','lote','tactica'].includes(b.tipo))){const bt=document.createElement('button');bt.className='go';bt.textContent=b.tipo==='tactica'?'Crear esta táctica':b.tipo==='meme'?'Crear este meme':b.tipo==='reaccion'?'Crear esta reacción':b.tipo==='lote'?'Crear los '+(b.captions||[]).length+' memes':'Crear este vídeo';bt.onclick=()=>crear(b,bt);d.appendChild(document.createElement('br'));d.appendChild(bt);if(b.tipo==='video'){const gb=document.createElement('button');gb.className='go sec';gb.style.marginLeft='8px';gb.textContent='Grabar yo la voz';gb.onclick=()=>panelVoz(b,d,gb);d.appendChild(gb)}}
     estado('');
   }catch(e){estado('No se pudo obtener respuesta: '+e.message,'err')}$('send').disabled=false;$('send').textContent='Enviar';$('p').focus()}
 async function crear(b,bt){
   bt.disabled=true;estado('Preparando la creación…','busy');
-  const r=await fetch('/api/generar',{method:'POST',body:JSON.stringify({borrador:b,modo:$('m').value,subtitulos:$('subt').checked,voz:$('voz').checked,estilo:$('creador').checked?'creador':'base'})});const j=await r.json();if(!r.ok){estado(j.error,'err');bt.disabled=false;return}
+  const r=await fetch('/api/generar',{method:'POST',body:JSON.stringify({borrador:b,modo:$('m').value,subtitulos:$('subt').checked,voz:$('voz').checked,estilo:$('creador').checked?'creador':'base',gancho:$('gan').value})});const j=await r.json();if(!r.ok){estado(j.error,'err');bt.disabled=false;return}
   const t=setInterval(async()=>{const s=await (await fetch('/api/job/'+j.id)).json();$('log').textContent=s.log.join('\n');const pr=s.progreso;$('barra').style.display=pr?'block':'none';if(pr){$('barra').value=pr.pct;$('fase').textContent=pr.pct+' % · '+pr.fase}
     if(s.estado==='hecho'){clearInterval(t);cargar();cargarIdeas(s.videoId&&b.tipo==='tactica'?s.videoId:null);$('fase').textContent='';$('barra').style.display='none';$('log').className='log ok';$('log').textContent+='\n✔ Listo: '+s.resultado;bt.disabled=false}
     if(s.estado==='error'){clearInterval(t);$('barra').style.display='none';$('log').className='log err';$('log').textContent+='\n✖ '+s.error;bt.disabled=false}},1500)}
