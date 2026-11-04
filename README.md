@@ -156,6 +156,10 @@ python scripts/capturar-app.py --zyra C:\ruta\a\Zyra
 
 Sin tocar tu base de datos ni el repo de Zyra: crea una SQLite temporal, carga `populate_db.py`, la **anonimiza** (club «ZYRA CLUB», jugadores «JUGADOR n», rivales «EQUIPO RIVAL n», sin escudos ni lugares), arranca el servidor en local, entra como capitán y hace una captura de móvil (390 px ×2) de unas 19 pantallas: inicio, jugadores, ficha, plantilla, equipos, enfrentamientos (borrador y cerrado), las cuatro estadísticas, miembros y perfil. Deja los PNG en `capturas-app/` (ignorado por git) y en `public/ui/`, con su descripción en `capturas.json`. Cuando cambie la interfaz, vuelve a ejecutarlo. Si añades una pantalla nueva a la app, añádela a la lista `PAGINAS` y a `DESCRIPCIONES` del script. En pantallas largas solo se recorre el principio para que el vídeo no vaya a toda velocidad.
 
+### Capturas de un equipo LAPI
+
+Un equipo LAPI se ve distinto al SNP (sin puntos SNP, 3 partidos de 1 punto, tipos Liga, Playoffs y Fase final, jornada y puntos de liga). `scripts/capturar-lapi.py` crea un club LAPI de demostración (ZYRA CLUB, JUGADOR n, EQUIPO RIVAL n) y añade 10 pantallas al catálogo con el sufijo `-lapi`: `/ruta/a/Zyra/.venv/bin/python scripts/capturar-lapi.py --zyra /ruta/a/Zyra`. Los vídeos que hablan de la LAPI deben usar esas capturas, no las de SNP. Ejemplos: `guiones/lapi-crea-jornada.json` y `guiones/lapi-puntos-de-liga.json` (sin voz: grábala desde la app).
+
 ### Error 402 de ElevenLabs y progreso del render
 
 **Error 402 «paid_plan_required»:** el plan gratuito de ElevenLabs no puede usar por API las voces de la biblioteca. Lista las de tu cuenta con `node scripts/voz.mjs --voces` y copia el ID de una marcada como `★ premade` en `ELEVENLABS_VOICE_ID` (o pasa a un plan de pago para usar cualquier voz). Comprueba también que la licencia de la voz permita el uso que le des.

@@ -62,7 +62,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   const hookW = hook[0].split(/\s+/).filter(Boolean);
   const corte = hookW.length < 2 ? 0 : Array.from({length: hookW.length - 1}, (_, i) => i + 1).reduce((m, i) => (Math.max(hookW.slice(0, i).join(' ').length, hookW.slice(i).join(' ').length) < Math.max(hookW.slice(0, m).join(' ').length, hookW.slice(m).join(' ').length) ? i : m), 1);
   const anchoHook = 1080 - 2 * SAFE.side - 90;
-  const hookL1 = corte && cabeTitular(hook[0], 200, anchoHook) < 130 ? [hookW.slice(0, corte).join(' '), hookW.slice(corte).join(' ')] : [hook[0]];
+  const hookL1 = corte && cabeTitular(hook[0], 200, anchoHook) < 100 ? [hookW.slice(0, corte).join(' '), hookW.slice(corte).join(' ')] : [hook[0]];
   const hookSize = Math.min(...hookL1.map((h) => cabeTitular(h, 200, anchoHook)));
   const titleSize = cabeTitular(title, 96, 920);
   const subLen = limpio(subs[subIdx]).length;
