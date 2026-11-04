@@ -1,0 +1,42 @@
+{
+  "hook": [
+    "DOS LIGAS,",
+    "UN SOLO CAPITÁN"
+  ],
+  "title": "SNP Y LAPI, TODO EN UNO",
+  "src": "ui/enfrentamientos.png",
+  "imgW": 780,
+  "scroll": [
+    124,
+    1238
+  ],
+  "subs": [
+    "SNP y LAPI en la misma lista",
+    "Elige el tipo al crearlo",
+    "Filtra y mira cada resultado"
+  ],
+  "gancho": "problema",
+  "tiktok": {
+    "busqueda": "cómo gestionar equipo de pádel SNP y LAPI",
+    "descripcion": "Cómo gestionar equipo de pádel SNP y LAPI. Todos tus enfrentamientos en una sola lista, con tipo, rival y resultado.",
+    "hashtags": [
+      "#padelSNP",
+      "#ligaLAPI"
+    ],
+    "comentario": "¿Capitaneas en SNP y LAPI? Organiza las dos ligas gratis en zyrapadel.com y cuéntanos cuál se te da mejor 👇"
+  },
+  "locucion": [
+    "*snp* y lapi, en una lista",
+    "eliges el *tipo* al crearlo",
+    "filtra y revisa *resultados*"
+  ],
+  "cta": "Gratis en zyrapadel.com",
+  "voz": true,
+  "audios": [
+    "voz/snp-y-lapi-todo-en-uno-66p8x/0.mp3",
+    "voz/snp-y-lapi-todo-en-uno-66p8x/1.mp3",
+    "voz/snp-y-lapi-todo-en-uno-66p8x/2.mp3",
+    "voz/snp-y-lapi-todo-en-uno-66p8x/3.mp3",
+    "voz/snp-y-lapi-todo-en-uno-66p8x/4.mp3"
+  ]
+}
