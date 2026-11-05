@@ -81,13 +81,13 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
       <div style={{position: 'absolute', left: 0, top: 0, height: 8, width: `${(f / (tiempos?.frames ?? DURATION)) * 100}%`, background: C.lime, boxShadow: GLOW, zIndex: 5}} />
       {/* Gancho: la web ya en pantalla desde el fotograma 0 (inclinada y con zoom), título grande y la 2.ª línea en una tarjeta lima */}
       <div style={{position: 'absolute', inset: 0, opacity: 1 - hookOut}}>
-        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 470 + (1 - hookPop) * 80}}>
+        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 560 + (1 - hookPop) * 80}}>
           <div style={{position: 'absolute', left: -40, right: -40, top: -40, bottom: -40, borderRadius: 90, background: `radial-gradient(${limeA(0.45)}, transparent 70%)`}} />
-          <Phone3D width={PH_W} height={PH_H} yaw={-14 + (1 - hookPop) * 18} pitch={10} roll={-3} scale={0.98 + 0.2 * (1 - prog(f, 0, 34))} sheen={prog(f, 0, 60)}>
+          <Phone3D width={PH_W} height={PH_H} yaw={-14 + (1 - hookPop) * 18} pitch={10} roll={-3} scale={0.98 + 0.1 * (1 - prog(f, 0, 34))} sheen={prog(f, 0, 60)}>
             <Screen src={src} imgW={imgW} width={PH_W} scroll={scroll[0]} reveal={1} />
           </Phone3D>
         </div>
-        <div style={{position: 'absolute', left: SAFE.side - 30, right: SAFE.side - 30, top: 170, textAlign: hookCentro ? 'center' : 'left'}}>
+        <div style={{position: 'absolute', left: SAFE.side - 30, right: SAFE.side - 30, top: SAFE.top, textAlign: hookCentro ? 'center' : 'left'}}>
           {hookL1.map((t, i) => (
             <Line key={i} text={t} at={1 + i * 3} out={HOOK_END} size={hookSize} align={hookCentro ? 'center' : 'left'} from={hookCentro ? 'up' : 'left'} extra={{...TYPE.titular, ...HERO_FILL, lineHeight: 1, paddingLeft: 30, paddingRight: 30, textShadow: '0 6px 30px rgba(0,0,0,.7)'}} />
           ))}
@@ -119,7 +119,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
                 const esClave = w.replace(/[^\p{L}\p{N}%]/gu, '').toLowerCase() === palabraClave;
                 const t = prog(f, subAt + i * 4, 8);
                 return (
-                  <span key={i} style={{...(esClave ? TYPE.titular : {fontFamily: FONT.body, fontWeight: 800}), fontSize: esClave ? Math.round(subSize * 1.12) : subSize, lineHeight: 1.12, color: esClave ? C.lime : C.text, textShadow: '0 6px 30px rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.9)', display: 'inline-block', opacity: t, transform: `${animSub === 'lado' ? `translateX(${(1 - t) * -40}px)` : `translateY(${(1 - t) * (animSub === 'pop' ? 0 : 30)}px)`} scale(${(esClave ? 0.8 + 0.2 * t + (desde < 14 ? 0.12 : 0) : 1) * (animSub === 'pop' ? 0.6 + 0.4 * t : 1)})`}}>
+                  <span key={i} style={{...(esClave ? TYPE.titular : {fontFamily: FONT.body, fontWeight: 800}), fontSize: esClave ? Math.round(subSize * 1.12) : subSize, lineHeight: 1.12, color: esClave ? C.lime : '#FFFFFF', textShadow: '0 6px 30px rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.9)', display: 'inline-block', opacity: t, transform: `${animSub === 'lado' ? `translateX(${(1 - t) * -40}px)` : `translateY(${(1 - t) * (animSub === 'pop' ? 0 : 30)}px)`} scale(${(esClave ? 0.8 + 0.2 * t + (desde < 14 ? 0.12 : 0) : 1) * (animSub === 'pop' ? 0.6 + 0.4 * t : 1)})`}}>
                     {w}
                   </span>
                 );
