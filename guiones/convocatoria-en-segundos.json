@@ -1,0 +1,40 @@
+{
+  "hook": [
+    "¿CONVOCAS A 10",
+    "EN SEGUNDOS?"
+  ],
+  "title": "CONVOCATORIA EN SEGUNDOS",
+  "src": "medios/grabacion-convocatoria-3d.mp4",
+  "imgW": 486,
+  "imgH": 1054,
+  "ritmo": 0.65,
+  "scroll": [
+    0,
+    0
+  ],
+  "subs": [
+    "Abre tu enfrentamiento",
+    "Mira cuánto *falta* para jugar",
+    "Convocatoria, parejas, resultados y *acta*",
+    "Cada paso, *guiado*"
+  ],
+  "locucion": [
+    "abre tu *enfrentamiento*",
+    "mira cuánto *falta* para jugar",
+    "convocatoria, parejas, resultados y *acta*",
+    "cada paso, *guiado*"
+  ],
+  "cta": "Gratis en zyrapadel.com",
+  "voz": true,
+  "gancho": "pregunta",
+  "tiktok": {
+    "busqueda": "Cómo crear una convocatoria de pádel",
+    "descripcion": "Cómo crear una convocatoria de pádel en segundos con Zyra, paso a paso hasta el acta.",
+    "hashtags": [
+      "#capitandepadel",
+      "#equipodepadel"
+    ],
+    "comentario": "Convocatoria, parejas, resultados y acta en un solo sitio. Pruébalo gratis en zyrapadel.com"
+  },
+  "promo": "convocatoria"
+}

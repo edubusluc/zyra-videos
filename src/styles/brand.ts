@@ -43,8 +43,9 @@ export const TYPE = {
   button: {fontFamily: FONT.body, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em'},
 } as const;
 
-/** Relleno degradado de .z-hero-title: blanco que cae a gris piedra. */
-export const HERO_FILL = {background: 'linear-gradient(180deg, #FFFFFF 35%, #8E9286 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent'} as const;
+/** Blanco puro para los títulos (#FFFFFF). Antes era el degradado de .z-hero-title, que caía a gris piedra y en vídeo se veía apagado. */
+export const WHITE = '#FFFFFF';
+export const HERO_FILL = {color: WHITE, WebkitTextFillColor: WHITE} as const;
 
 /** Sombras de la web: --z-glow (resplandor lima contenido) y --z-shadow-pop. */
 export const GLOW = `0 10px 30px -12px ${limeA(0.55)}`;

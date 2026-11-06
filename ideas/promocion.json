@@ -1,0 +1,64 @@
+[
+  {
+    "id": "capitan",
+    "n": 1,
+    "titulo": "Si eres capitán de pádel, esto te interesa",
+    "gancho": "pregunta",
+    "peticion": "Vídeo «Si eres capitán de pádel, esto te interesa»: gancho que interpela al capitán y muestra de un vistazo para qué sirve Zyra (plantilla, convocatoria, rivales, estadísticas). Usa la captura del inicio del club o de la plantilla."
+  },
+  {
+    "id": "whatsapp",
+    "n": 2,
+    "titulo": "¿Todavía organizas tus equipos por WhatsApp?",
+    "gancho": "problema",
+    "peticion": "Vídeo «¿Todavía organizas tus equipos por WhatsApp?»: gancho de problema reconocible del capitán (mensajes sin contestar) y la solución que se ve en la captura de la convocatoria. Producto, no humor; sin inventar funciones que no se vean en la captura.",
+    "nota": "Mejor con tu grabación «crear la convocatoria paso a paso»."
+  },
+  {
+    "id": "gestion-equipo",
+    "n": 3,
+    "titulo": "Así gestiono un equipo de pádel con Zyra",
+    "gancho": "resultado",
+    "peticion": "Vídeo «Así gestiono un equipo de pádel con Zyra»: recorrido en primera persona por plantilla, enfrentamientos y estadísticas, con las capturas disponibles.",
+    "nota": "Mejor con el recorrido en vídeo (scripts/grabar-app.py, recorrido-equipo)."
+  },
+  {
+    "id": "no-confirma",
+    "n": 4,
+    "titulo": "El jugador que nunca confirma la convocatoria",
+    "gancho": "problema",
+    "peticion": "Vídeo «El jugador que nunca confirma la convocatoria»: usa solo lo que muestran las capturas (p. ej. el % «se apunta» de las estadísticas de jugadores); no inventes avisos ni recordatorios que la app no tenga.",
+    "nota": "Falta confirmar si la app muestra quién confirma la convocatoria."
+  },
+  {
+    "id": "mas-regular",
+    "n": 5,
+    "titulo": "¿Sabes quién es el jugador más regular de tu equipo?",
+    "gancho": "pregunta",
+    "peticion": "Vídeo «¿Sabes quién es el jugador más regular de tu equipo?»: se responde con las mejores estadísticas de la plantilla (tabla de jugadores y ficha con porcentaje de victorias y racha). Sin cifras inventadas."
+  },
+  {
+    "id": "convocatoria",
+    "n": 6,
+    "titulo": "Cómo crear una convocatoria en segundos",
+    "gancho": "pregunta",
+    "guion": "convocatoria-en-segundos",
+    "peticion": "Vídeo «Cómo crear una convocatoria en segundos» con la captura de la convocatoria."
+  },
+  {
+    "id": "varios-equipos",
+    "n": 7,
+    "titulo": "El problema de gestionar varios equipos",
+    "gancho": "problema",
+    "peticion": "Vídeo «El problema de gestionar varios equipos»: usa solo lo que muestren las capturas (equipos y rivales, enfrentamientos); no digas que se puede cambiar entre equipos si no se ve.",
+    "nota": "Falta confirmar si la app permite cambiar entre equipos o clubes."
+  },
+  {
+    "id": "informe-estadisticas",
+    "n": 8,
+    "titulo": "Así funciona el informe de estadísticas de Zyra",
+    "gancho": "resultado",
+    "guion": "informe-estadisticas-equipo",
+    "peticion": "Vídeo «Así funciona el informe de estadísticas de Zyra» con las estadísticas del equipo."
+  }
+]

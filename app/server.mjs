@@ -170,7 +170,7 @@ const instruccionGancho = (gancho) => (gancho && GANCHOS[gancho]
 
 async function pedirGuion(peticion, log, gancho = 'auto') {
   const cat = catalogo();
-  const sistema = `Eres el guionista de vídeos de TikTok de Zyra, una app web para que capitanes de equipos de pádel organicen convocatorias, parejas, alineaciones y estadísticas. Escribes en español de España, directo y sin exagerar. Devuelve SOLO un objeto JSON (sin texto alrededor) con: hook (array de 2 textos EN MAYÚSCULAS, máx. ${LIMITES.hook} caracteres cada uno, que formen una pregunta o frase gancho), title (MAYÚSCULAS, máx. ${LIMITES.title}), src (una de las capturas), subs (array de 3 a 5 subtítulos; en cada uno envuelve entre asteriscos la palabra clave que más importa, p. ej. «Convoca en *10 segundos*»; máx. ${LIMITES.sub} caracteres, que cuenten la función en orden), cta (máx. ${LIMITES.cta}, p. ej. «Pruébalo gratis»), gancho (pregunta, resultado o problema) y tiktok (la publicación: busqueda = frase corta que alguien escribiría en el buscador de TikTok para encontrar este vídeo, p. ej. «organizar convocatoria de equipo de pádel», máx. ${LIMITES_TIKTOK.busqueda} caracteres; descripcion = texto de la descripción, máx. ${LIMITES_TIKTOK.descripcion} caracteres, que EMPIEZA por esa frase de búsqueda, sigue en una o dos frases naturales sobre lo que se ve y no lleva hashtags; hashtags = exactamente 2, específicos de pádel o de equipos, sin #fyp ni #viral; comentario = texto para fijar como comentario, máx. ${LIMITES_TIKTOK.comentario} caracteres, que invita a probar la web e incluye zyrapadel.com). ${instruccionGancho(gancho)} Ritmo pausado, sin prisas: el vídeo se lee con calma, así que cuenta UNA sola idea por subtítulo, con frases cortas (6 a 8 palabras) y como mucho 3 subtítulos salvo que la función exija más; si dudas entre añadir contenido o dejar aire, deja aire. No inventes funciones que no aparezcan en la descripción de la captura. Capturas disponibles:\n${cat.map((c) => `- ${c.src}: ${c.descripcion}`).join('\n')}`;
+  const sistema = `Eres el guionista de vídeos de TikTok de Zyra, una app web para que capitanes de equipos de pádel organicen convocatorias, parejas, alineaciones y estadísticas. Escribes en español de España, directo y sin exagerar. Devuelve SOLO un objeto JSON (sin texto alrededor) con: hook (array de 2 textos EN MAYÚSCULAS, máx. ${LIMITES.hook} caracteres cada uno, que formen una pregunta o frase gancho), title (MAYÚSCULAS, máx. ${LIMITES.title}), src (una de las capturas), subs (array de 3 a 5 subtítulos; en cada uno envuelve entre asteriscos la palabra clave que más importa, p. ej. «Convoca en *10 segundos*»; máx. ${LIMITES.sub} caracteres, que cuenten la función en orden), cta (máx. ${LIMITES.cta}, p. ej. «Pruébalo gratis»), gancho (pregunta, resultado o problema) y tiktok (la publicación: busqueda = frase corta que alguien escribiría en el buscador de TikTok para encontrar este vídeo, p. ej. «organizar convocatoria de equipo de pádel», máx. ${LIMITES_TIKTOK.busqueda} caracteres; descripcion = texto de la descripción, máx. ${LIMITES_TIKTOK.descripcion} caracteres, que EMPIEZA por esa frase de búsqueda, sigue en una o dos frases naturales sobre lo que se ve y no lleva hashtags; hashtags = exactamente 2, específicos de pádel o de equipos, sin #fyp ni #viral; comentario = texto para fijar como comentario, máx. ${LIMITES_TIKTOK.comentario} caracteres, que invita a probar la web e incluye zyrapadel.com). ${instruccionGancho(gancho)} Ritmo pausado, sin prisas: el vídeo se lee con calma, así que cuenta UNA sola idea por subtítulo, con frases cortas (6 a 8 palabras) y como mucho 3 subtítulos salvo que la función exija más; si dudas entre añadir contenido o dejar aire, deja aire. No inventes funciones que no aparezcan en la descripción de la captura. Prefiere SIEMPRE las que son GRABACIÓN en movimiento (vídeo de la app usándose) a las capturas fijas: dan más ritmo y retienen más; cada subtítulo debe corresponder a lo que ocurre en ese momento de la grabación (en orden). Capturas disponibles:\n${cat.map((c) => `- ${c.src}${c.video ? ` [GRABACIÓN en movimiento, ${c.seg} s]` : ''}: ${c.descripcion}`).join('\n')}`;
   let mensajes = [{role: 'user', content: peticion}];
   for (let intento = 1; intento <= 2; intento++) {
     log(`Pidiendo el guion a Claude (intento ${intento})…`);
@@ -368,9 +368,17 @@ async function borrar({de, id, repo = false, archivos = true, medios = false}) {
   }
   return hechos;
 }
+/** «Promoción Zyra»: lista fija de vídeos (ideas/promocion.json) y, para cada uno, los guiones ya generados (guiones/*.json con `promo` = su id). */
+export function promocion() {
+  const lista = existsSync(join(ROOT, 'ideas/promocion.json')) ? JSON.parse(readFileSync(join(ROOT, 'ideas/promocion.json'), 'utf8')) : [];
+  const dir = join(ROOT, 'guiones');
+  const guiones = (existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.json')).sort() : []).map((f) => ({id: f.replace(/\.json$/, ''), ...JSON.parse(readFileSync(join(dir, f), 'utf8'))}));
+  return lista.map((i) => ({...i, videos: guiones.filter((g) => g.promo === i.id).map((g) => ({id: g.id, titulo: g.title, voz: Boolean(g.voz && g.audios), renderizado: existsSync(join(ROOT, 'out', `${g.id}.mp4`)), con_voz: existsSync(join(ROOT, 'out', `${g.id}.final.mp4`))}))}));
+}
+
 const listarJson = (dir) => (existsSync(join(ROOT, dir)) ? readdirSync(join(ROOT, dir)).filter((f) => f.endsWith('.json')) : []).map((f) => JSON.parse(readFileSync(join(ROOT, dir, f), 'utf8')));
 
-async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = false, estilo = 'creador', gancho = 'auto'}) {
+async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = false, estilo = 'creador', gancho = 'auto', promo = null}) {
   const log = (m) => job.log.push(m);
   try {
     const cat = catalogo();
@@ -457,7 +465,7 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
         for (const a of audios) if (!/^voz\/[a-z0-9-]+\/\d\.mp3$/.test(a) || !existsSync(join(ROOT, 'public', a))) throw new Error(`No encuentro el audio ${a}; vuelve a subirlo.`);
         voz = true;
       }
-      job.guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(g.gancho ? {gancho: g.gancho} : {}), ...(g.tiktok ? {tiktok: g.tiktok} : {}), ...(estilo === 'base' ? {estilo} : {}), ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin, ...(audios ? {audios, voz: true} : {})};
+      job.guion = {...(promo ? {promo} : {}), hook: g.hook, title: g.title, src: g.src, imgW: c.imgW ?? pngWidth(g.src), ...(c.video ? {imgH: c.imgH, imgS: c.seg, ritmo: Math.round(Math.min(1, Math.max(0.6, c.seg / 11)) * 100) / 100} : {}), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(g.gancho ? {gancho: g.gancho} : {}), ...(g.tiktok ? {tiktok: g.tiktok} : {}), ...(estilo === 'base' ? {estilo} : {}), ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin, ...(audios ? {audios, voz: true} : {})};
       guardar('guiones', g.title, job.guion, '', 'mp4');
     }
     if (tipo === 'tactica') {
@@ -558,6 +566,7 @@ async function subirArchivos(archivos, mensaje) {
 export const server = createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/') { res.writeHead(200, {'content-type': 'text/html; charset=utf-8'}); return res.end(PAGINA); }
   if (req.method === 'GET' && req.url.startsWith('/api/job/')) { const j = jobs.get(req.url.split('/').pop()); return j ? json(res, 200, j) : json(res, 404, {error: 'no existe'}); }
+  if (req.method === 'GET' && req.url === '/api/promocion') return json(res, 200, {promocion: promocion()});
   if (req.method === 'GET' && req.url === '/api/ideas-tacticas') return json(res, 200, {ideas: ideasConVideos()});
   if (req.method === 'GET' && req.url === '/api/contenido') return json(res, 200, {contenido: contenido(), plantillas: plantillas().map((p) => ({id: p.id, descripcion: p.descripcion, fondo: p.fondo, recorte: p.recorte}))});
   if (req.method === 'POST' && req.url === '/api/borrar') {
@@ -639,12 +648,13 @@ export const server = createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/api/generar') {
     let body = '';
     for await (const c of req) body += c;
-    const {peticion, modo = 'ci', borrador, subtitulos, voz, estilo, gancho} = JSON.parse(body || '{}');
+    const {peticion, modo = 'ci', borrador, subtitulos, voz, estilo, gancho, promo} = JSON.parse(body || '{}');
+    if (promo && !promocion().some((x) => x.id === promo)) return json(res, 400, {error: 'Ese vídeo no está en el listado de promoción.'});
     if (!borrador && !String(peticion || '').trim()) return json(res, 400, {error: 'Escribe qué vídeo quieres.'});
     const id = Math.random().toString(36).slice(2, 10);
     const job = {estado: 'en curso', log: []};
     jobs.set(id, job);
-    trabajo(job, {peticion, modo, borrador, subtitulos, voz, estilo, gancho: TIPOS_GANCHO.includes(gancho) ? gancho : 'auto'});
+    trabajo(job, {peticion, modo, borrador, subtitulos, voz, estilo, gancho: TIPOS_GANCHO.includes(gancho) ? gancho : 'auto', promo: promo || null});
     return json(res, 200, {id});
   }
   json(res, 404, {error: 'no encontrado'});
