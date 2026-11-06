@@ -102,15 +102,22 @@ print(f"   {Player.objects.count()} jugadores, {Team.objects.count()} equipos, {
 
 
 
-# Recorridos: nombre -> (URL, pasos). Un paso es ("esperar", ms), ("scroll", px) o ("tocar", selector).
+FPS = 30
+# Recorridos: nombre -> (URL de partida, pasos). Pasos: ("esperar", ms), ("scroll", px[, segundos]), ("ir", ruta) o ("tocar", selector).
+# Cada fotograma se hace con el tiempo parado: el desplazamiento avanza exactamente 1/30 s por imagen, así que el vídeo sale a 30 fps
+# parejos aunque cada captura tarde lo que tarde (grabar «en directo» daba 10-15 fps y tirones).
 RECORRIDOS = {
-    "convocatoria-3d": (f"/match/call_for_match/{borrador.public_id}/", [("esperar", 1500), ("scroll", 900), ("esperar", 800), ("scroll", 900), ("esperar", 800)]),
-    "enfrentamiento-cerrado-3d": (f"/match/call_for_match/{cerrado.public_id}/", [("esperar", 1500), ("scroll", 1100), ("esperar", 800), ("scroll", 1100), ("esperar", 800)]),
-    "estadisticas-equipo": ("/data_analyse/team_statistics" + TEMP, [("esperar", 1200), ("scroll", 1000), ("esperar", 800), ("scroll", 1000), ("esperar", 800)]),
-    "estadisticas-jugadores": ("/data_analyse/player_statistics" + TEMP, [("esperar", 1200), ("scroll", 900), ("esperar", 800)]),
-    "estadisticas-pareja": (f"/data_analyse/pair_statistics{TEMP}&p1={pareja[0].public_id}&p2={pareja[1].public_id}", [("esperar", 1200), ("scroll", 900), ("esperar", 800)]),
-    "plantilla": ("/players/roster/", [("esperar", 1200), ("scroll", 700), ("esperar", 800)]),
-    "inicio-club": ("/core/club/", [("esperar", 1200), ("scroll", 900), ("esperar", 800)]),
+    "convocatoria-3d": (f"/match/call_for_match/{borrador.public_id}/", [("esperar", 1000), ("scroll", 900, 1.6), ("esperar", 600), ("scroll", 900, 1.6), ("esperar", 600)]),
+    "enfrentamiento-cerrado-3d": (f"/match/call_for_match/{cerrado.public_id}/", [("esperar", 1000), ("scroll", 1100, 1.8), ("esperar", 600), ("scroll", 1100, 1.8), ("esperar", 600)]),
+    "estadisticas-equipo": ("/data_analyse/team_statistics" + TEMP, [("esperar", 1000), ("scroll", 1000, 1.8), ("esperar", 600), ("scroll", 1000, 1.8), ("esperar", 600)]),
+    "estadisticas-jugadores": ("/data_analyse/player_statistics" + TEMP, [("esperar", 1000), ("scroll", 900, 1.8), ("esperar", 600)]),
+    "estadisticas-jugador-ficha": (f"/data_analyse/player_statistics{TEMP}&player={jugador.public_id}", [("esperar", 1000), ("scroll", 900, 1.8), ("esperar", 600)]),
+    "estadisticas-pareja": (f"/data_analyse/pair_statistics{TEMP}&p1={pareja[0].public_id}&p2={pareja[1].public_id}", [("esperar", 1000), ("scroll", 900, 1.8), ("esperar", 600)]),
+    "plantilla": ("/players/roster/", [("esperar", 1000), ("scroll", 700, 1.6), ("esperar", 600)]),
+    "inicio-club": ("/core/club/", [("esperar", 1000), ("scroll", 900, 1.8), ("esperar", 600)]),
+    "recorrido-equipo": ("/core/club/", [("esperar", 900), ("scroll", 500, 1.2), ("ir", "/players/roster/"), ("esperar", 700), ("scroll", 500, 1.2),
+                                         ("ir", "/match/list_match" + TEMP), ("esperar", 700), ("scroll", 500, 1.2),
+                                         ("ir", "/data_analyse/team_statistics" + TEMP), ("esperar", 700), ("scroll", 700, 1.4), ("esperar", 500)]),
 }
 if args.solo:
     RECORRIDOS = {k: v for k, v in RECORRIDOS.items() if k in args.solo}
@@ -124,6 +131,7 @@ base = f"http://127.0.0.1:{puerto}"
 servidor = subprocess.Popen([sys.executable, "manage.py", "runserver", f"127.0.0.1:{puerto}", "--noreload"], cwd=ZYRA, env=os.environ, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 SALIDA.mkdir(parents=True, exist_ok=True)
 hechas = []
+CSS = ".z-bottom-nav{position:fixed!important}"
 try:
     for _ in range(60):
         try:
@@ -138,56 +146,54 @@ try:
     with sync_playwright() as pw:
         navegador = pw.chromium.launch(executable_path=os.environ.get("CHROME") or None)
         for nombre, (ruta, pasos) in RECORRIDOS.items():
-            # El Chromium de este entorno no siempre trae el grabador de vídeo de Playwright: se hacen capturas
-            # seguidas (con su marca de tiempo) y ffmpeg las une respetando el ritmo real.
             cuadros = tmp / "cuadros" / nombre
             cuadros.mkdir(parents=True, exist_ok=True)
-            marcas = []
+            n = [0]
             ctx = navegador.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True, has_touch=True, locale="es-ES")
             ctx.add_cookies([{"name": "sessionid", "value": cookie, "url": base}])
             pagina = ctx.new_page()
-            r = pagina.goto(base + ruta, wait_until="networkidle")
-            if not r or r.status >= 400:
-                print(f"   ✖ {nombre}: HTTP {r.status if r else '?'}")
-                ctx.close()
-                continue
-            pagina.add_style_tag(content=".z-bottom-nav{display:none!important}")
-            t0 = time.time()
+
+            def abrir(r_):
+                r = pagina.goto(base + r_, wait_until="networkidle")
+                if not r or r.status >= 400:
+                    return False
+                pagina.add_style_tag(content=CSS)
+                return True
 
             def cuadro():
-                f = cuadros / f"{len(marcas):05d}.jpg"
-                pagina.screenshot(path=str(f), type="jpeg", quality=92)
-                marcas.append(time.time() - t0)
+                pagina.screenshot(path=str(cuadros / f"{n[0]:05d}.jpg"), type="jpeg", quality=93)
+                n[0] += 1
 
-            def esperar(ms):
-                fin = time.time() + ms / 1000
-                while time.time() < fin:
-                    cuadro()
-
-            for paso, valor in pasos:
-                if paso == "esperar":
-                    esperar(valor)
-                elif paso == "scroll":
-                    # Desplazamiento suave en pasos pequeños, como un dedo despacio.
-                    for _ in range(30):
-                        pagina.mouse.wheel(0, valor / 30)
+            if not abrir(ruta):
+                print(f"   ✖ {nombre}: no carga")
+                ctx.close()
+                continue
+            for paso in pasos:
+                tipo = paso[0]
+                if tipo == "esperar":
+                    for _ in range(round(paso[1] * FPS / 1000)):
                         cuadro()
-                elif paso == "tocar":
-                    pagina.tap(valor)
-                    esperar(400)
+                elif tipo == "scroll":
+                    px = paso[1]
+                    total = max(1, round((paso[2] if len(paso) > 2 else 1.5) * FPS))
+                    y0 = pagina.evaluate("window.scrollY")
+                    for k in range(1, total + 1):
+                        t = k / total
+                        e = t * t * (3 - 2 * t)  # arranca y frena suave
+                        pagina.evaluate(f"window.scrollTo(0, {y0 + px * e})")
+                        cuadro()
+                elif tipo == "ir":
+                    abrir(paso[1])
+                elif tipo == "tocar":
+                    pagina.tap(paso[1])
+                    for _ in range(round(0.4 * FPS)):
+                        cuadro()
             cuadro()
             ctx.close()
-            lista = tmp / f"{nombre}.txt"
-            lineas = []
-            for i, m in enumerate(marcas):
-                dur = (marcas[i + 1] - m) if i + 1 < len(marcas) else 0.5
-                lineas.append(f"file '{(cuadros / f'{i:05d}.jpg').as_posix()}'\nduration {dur:.4f}")
-            lineas.append(f"file '{(cuadros / f'{len(marcas) - 1:05d}.jpg').as_posix()}'")
-            lista.write_text("\n".join(lineas), encoding="utf-8")
             destino = SALIDA / f"{nombre}.mp4"
-            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(lista), "-vf", "fps=30,format=yuv420p", "-c:v", "libx264", "-crf", "16", "-movflags", "+faststart", str(destino)], check=True)
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", str(cuadros / "%05d.jpg"), "-vf", "format=yuv420p", "-c:v", "libx264", "-crf", "15", "-movflags", "+faststart", str(destino)], check=True)
             hechas.append(destino)
-            print(f"   ✓ {nombre} ({len(marcas)} cuadros, {marcas[-1]:.1f} s)")
+            print(f"   ✓ {nombre} ({n[0]} cuadros, {n[0] / FPS:.1f} s a {FPS} fps)")
         navegador.close()
 finally:
     servidor.terminate()
