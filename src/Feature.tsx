@@ -98,10 +98,12 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, imgS
       <div style={{position: 'absolute', left: 0, top: 0, height: 8, width: `${(f / (tiempos?.frames ?? DURATION)) * 100}%`, background: C.lime, boxShadow: GLOW, zIndex: 5}} />
       {/* Gancho: la web ya en pantalla desde el fotograma 0 (inclinada y con zoom), título grande y la 2.ª línea en una tarjeta lima */}
       <div style={{position: 'absolute', inset: 0, opacity: 1 - hookOut}}>
-        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: (enVideo ? 640 : 560) + (1 - hookPop) * 80}}>
+        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: (enVideo ? 590 : 560) + (1 - hookPop) * 80}}>
           <div style={{position: 'absolute', left: -40, right: -40, top: -40, bottom: -40, borderRadius: 90, background: `radial-gradient(${limeA(0.45)}, transparent 70%)`}} />
-          <Phone3D width={PH_W} height={PH_H} yaw={-14 + (1 - hookPop) * 18} pitch={10} roll={-3} scale={(enVideo ? 0.8 : 1) * (0.98 + 0.1 * (1 - prog(f, 0, 34)))} sheen={prog(f, 0, 60)}>
-            <Screen src={src} imgW={imgW} width={PH_W} scroll={scroll[0]} reveal={1} video={{rate: ritmo, freeze: false, from: 0, seg: imgS}} />
+          <Phone3D width={PH_W} height={PH_H} yaw={-14 + (1 - hookPop) * 18} pitch={10} roll={-3} scale={(enVideo ? 0.94 : 1) * (0.98 + 0.1 * (1 - prog(f, 0, 34)))} sheen={prog(f, 0, 60)}>
+            <div style={{position: 'absolute', inset: 0, transform: `scale(${enVideo ? 1.12 : 1})`, transformOrigin: '50% 35%'}}>
+              <Screen src={src} imgW={imgW} width={PH_W} scroll={scroll[0]} reveal={1} video={{rate: ritmo, freeze: false, from: 0, seg: imgS}} />
+            </div>
           </Phone3D>
         </div>
         <div style={{position: 'absolute', left: SAFE.side - 30, right: SAFE.side - 30, top: SAFE.top, textAlign: hookCentro ? 'center' : 'left'}}>
@@ -158,11 +160,11 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, imgS
           </div>
         ) : null}
         {/* Puntos de avance */}
-        <div style={{position: 'absolute', left: 0, right: 0, top: 1530, display: 'flex', justifyContent: 'center', gap: 16}}>
+        {subtitulos ? null : <div style={{position: 'absolute', left: 0, right: 0, top: 1530, display: 'flex', justifyContent: 'center', gap: 16}}>
           {subStart.map((_, i) => (
             <div key={i} style={{width: i === subIdx ? 56 : 16, height: 16, borderRadius: 8, background: i === subIdx ? C.lime : C.border, boxShadow: i === subIdx ? GLOW : 'none'}} />
           ))}
-        </div>
+        </div>}
       </div>
       {/* Transiciones entre escenas y beats */}
       <Wipe at={HOOK_END + 2} dur={42} dir={dirWipe} />
