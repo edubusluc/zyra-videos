@@ -1,0 +1,34 @@
+{
+  "promo": "capitan",
+  "hook": [
+    "CAPITÁN DE PÁDEL",
+    "¿TODO A MANO?"
+  ],
+  "title": "TU EQUIPO EN UN SITIO",
+  "src": "medios/app-inicio-club.mp4",
+  "imgW": 780,
+  "imgH": 1688,
+  "imgS": 3.4,
+  "ritmo": 0.6,
+  "scroll": [
+    0,
+    0
+  ],
+  "subs": [
+    "Tu club entero en *una pantalla*",
+    "Añade *jugadores* y rivales al momento",
+    "Crea tu próximo *enfrentamiento*"
+  ],
+  "gancho": "pregunta",
+  "tiktok": {
+    "busqueda": "app para capitanes de equipo de pádel",
+    "descripcion": "app para capitanes de equipo de pádel. Desde el inicio del club invitas, añades jugadores, creas rivales y montas enfrentamientos.",
+    "hashtags": [
+      "#padel",
+      "#ligapadel"
+    ],
+    "comentario": "¿Eres capitán de un equipo de pádel? Pruébalo gratis en zyrapadel.com y cuéntanos qué te parece."
+  },
+  "cta": "Pruébalo gratis en Zyra",
+  "voz": true
+}
