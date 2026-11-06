@@ -26,6 +26,7 @@ AQUI = Path(__file__).resolve().parent.parent
 ap = argparse.ArgumentParser()
 ap.add_argument("--zyra", required=True, help="carpeta del proyecto Zyra (donde está manage.py)")
 ap.add_argument("--salida", default=str(AQUI / "grabaciones-app"))
+ap.add_argument("--catalogo", action="store_true", help="copiar los vídeos a public/medios/ y añadirlos a capturas.json para que la app los use al generar")
 ap.add_argument("--solo", nargs="*", help="grabar solo estos recorridos (por nombre)")
 args = ap.parse_args()
 ZYRA = Path(args.zyra).resolve()
@@ -103,6 +104,31 @@ print(f"   {Player.objects.count()} jugadores, {Team.objects.count()} equipos, {
 
 
 FPS = 30
+DESCRIPCIONES = {
+    "convocatoria-3d": "Ficha de un enfrentamiento por convocar con el VS en 3D, los escudos de los dos equipos, la cuenta atrás y los pasos Convocatoria, Parejas, Resultados y Acta, y la previa del rival",
+    "enfrentamiento-cerrado-3d": "Ficha de un enfrentamiento ya cerrado con el marcador en 3D y el resultado, los botones Compartir resultado y Ver estadísticas, y la convocatoria de jugadores",
+    "estadisticas-equipo": "Estadísticas del equipo en una temporada: balance de victorias, empates y derrotas, porcentaje, forma reciente y racha, ganados como local y visitante y puntos por enfrentamiento",
+    "estadisticas-jugadores": "Estadísticas de jugadores: buscador y tabla de la plantilla con partidos, porcentaje de victorias y porcentaje de «se apunta»",
+    "estadisticas-jugador-ficha": "Estadísticas de un jugador en la temporada: puntos, puesto en el equipo, pareja habitual, porcentaje de victorias, balance, partidos jugados y racha actual",
+    "estadisticas-pareja": "Estadísticas por parejas: dos buscadores de jugador y la lista de todas las parejas con partidos, V-D y porcentaje de victorias",
+    "plantilla": "Gestionar plantilla: buscador, filtros Todos/En el equipo/Fuera, botones Activar visibles y Desactivar visibles y un interruptor por jugador",
+    "inicio-club": "Inicio del club: botones Invitar, Crear rival, Nuevo jugador y Crear enfrentamiento, y las tarjetas de Miembros e invitaciones y Datos del equipo",
+    "recorrido-equipo": "Recorrido por la app: inicio del club, gestionar plantilla, lista de enfrentamientos con sus resultados y estadísticas del equipo, pasando de una pantalla a otra",
+}
+
+
+def registrar(nombre, destino, seg):
+    """Copia el vídeo a public/medios/ y lo añade (o actualiza) en capturas.json, con el formato de una entrada por línea."""
+    import shutil
+    rel = f"medios/app-{nombre}.mp4"
+    (AQUI / "public" / "medios").mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(destino, AQUI / "public" / rel)
+    ruta = AQUI / "capturas.json"
+    cat = json.loads(ruta.read_text(encoding="utf-8"))
+    entrada = {"src": rel, "descripcion": DESCRIPCIONES.get(nombre, nombre), "video": True, "imgW": 780, "imgH": 1688, "seg": round(seg, 1), "scroll": [0, 0]}
+    cat = [c for c in cat if c["src"] != rel] + [entrada]
+    ruta.write_text("[\n" + ",\n".join("  " + json.dumps(c, ensure_ascii=False) for c in cat) + "\n]\n", encoding="utf-8")
+
 # Recorridos: nombre -> (URL de partida, pasos). Pasos: ("esperar", ms), ("scroll", px[, segundos]), ("ir", ruta) o ("tocar", selector).
 # Cada fotograma se hace con el tiempo parado: el desplazamiento avanza exactamente 1/30 s por imagen, así que el vídeo sale a 30 fps
 # parejos aunque cada captura tarde lo que tarde (grabar «en directo» daba 10-15 fps y tirones).
@@ -193,6 +219,8 @@ try:
             destino = SALIDA / f"{nombre}.mp4"
             subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", str(cuadros / "%05d.jpg"), "-vf", "format=yuv420p", "-c:v", "libx264", "-crf", "15", "-movflags", "+faststart", str(destino)], check=True)
             hechas.append(destino)
+            if args.catalogo:
+                registrar(nombre, destino, n[0] / FPS)
             print(f"   ✓ {nombre} ({n[0]} cuadros, {n[0] / FPS:.1f} s a {FPS} fps)")
         navegador.close()
 finally:

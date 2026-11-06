@@ -17,7 +17,7 @@ const PH_H_IMG = 900;
 const PH_H_VIDEO = 960; // una grabación es un móvil entero (alta y estrecha): se ajusta el marco a su proporción
 
 /** Plantilla «función en 15 s»: gancho → móvil con captura real y subtítulos → cierre con logo y URL. */
-export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, ritmo = 1, scroll, box, subs, cta, subtitulos = true, estilo = 'creador', tiempos, variante = 0, fondo}) => {
+export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, imgS, ritmo = 1, scroll, box, subs, cta, subtitulos = true, estilo = 'creador', tiempos, variante = 0, fondo}) => {
   const enVideo = esVideo(src) && !!imgH;
   const PH_H = enVideo ? PH_H_VIDEO : PH_H_IMG;
   const PH_W = enVideo ? Math.round((PH_H_VIDEO * imgW) / imgH!) : PH_W_IMG;
@@ -109,7 +109,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, ritm
         <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 400 + (1 - main) * 120 + float}}>
           <div style={{position: 'absolute', left: 60, right: 60, bottom: -70, height: 70, borderRadius: '50%', background: 'radial-gradient(rgba(0,0,0,.55), transparent 70%)', filter: 'blur(14px)'}} />
           <Phone3D width={PH_W} height={PH_H} yaw={yaw} pitch={pitch} roll={(1 - main) * 3} scale={drift * golpe} sheen={prog(f, HOOK_END + 10, 150)}>
-            <Screen src={src} imgW={imgW} width={PH_W} scroll={enVideo ? 0 : sc} reveal={prog(f, HOOK_END + 4, 24)} video={{rate: ritmo, freeze: false, from: HOOK_END - 10}}>
+            <Screen src={src} imgW={imgW} width={PH_W} scroll={enVideo ? 0 : sc} reveal={prog(f, HOOK_END + 4, 24)} video={{rate: ritmo, freeze: false, from: HOOK_END - 10, seg: imgS}}>
               {box ? (
                 <div style={{position: 'absolute', left: box[0], top: box[1], width: box[2], height: box[3], border: `5px solid ${C.lime}`, borderRadius: 16, background: limeA(0.08), boxShadow: `0 0 ${10 + 26 * pulse}px ${limeA(0.6)}`, opacity: prog(f, HOOK_END + 30, 12)}} />
               ) : null}

@@ -1,0 +1,41 @@
+{
+  "promo": "gestion-equipo",
+  "hook": [
+    "ASÍ GESTIONO",
+    "MI EQUIPO"
+  ],
+  "title": "GESTIONA TU EQUIPO DE PÁDEL",
+  "src": "medios/app-recorrido-equipo.mp4",
+  "imgW": 780,
+  "imgH": 1688,
+  "imgS": 8.5,
+  "ritmo": 0.77,
+  "scroll": [
+    0,
+    0
+  ],
+  "subs": [
+    "Todo tu club en *un sitio*",
+    "Elige quién está en la *plantilla*",
+    "Cada *enfrentamiento*, con su resultado",
+    "Y las *estadísticas* de todo el equipo"
+  ],
+  "locucion": [
+    "todo tu club en *un sitio*",
+    "elige quién está en la *plantilla*",
+    "cada *enfrentamiento* con su resultado",
+    "y las *estadísticas* del equipo"
+  ],
+  "cta": "Gratis en zyrapadel.com",
+  "voz": true,
+  "gancho": "resultado",
+  "tiktok": {
+    "busqueda": "Cómo gestionar un equipo de pádel",
+    "descripcion": "Cómo gestionar un equipo de pádel con Zyra: plantilla, enfrentamientos y estadísticas en un solo sitio.",
+    "hashtags": [
+      "#capitandepadel",
+      "#equipodepadel"
+    ],
+    "comentario": "Plantilla, enfrentamientos y estadísticas en un solo sitio. Pruébalo gratis en zyrapadel.com"
+  }
+}
