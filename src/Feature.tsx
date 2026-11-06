@@ -2,7 +2,7 @@ import React from 'react';
 import {AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BlurBg, KeywordCard, LiveBg, MediaBg, Motivo, Ping, Wipe, cabeTitular} from './components/Fx';
 import {Logo} from './components/Logo';
-import {Phone3D, Screen} from './components/Phone';
+import {Phone3D, Screen, esVideo} from './components/Phone';
 import {Line, prog} from './components/Reveal';
 import {useBrandFonts} from './components/fonts';
 import type {VideoData} from './data';
@@ -12,11 +12,15 @@ export const FPS = 30;
 export const DURATION = 540; // 18 s: cada escena con su tiempo
 const HOOK_END_FIJO = 84;
 const CTA_FROM_FIJO = 450;
-const PH_W = 680;
-const PH_H = 900;
+const PH_W_IMG = 680;
+const PH_H_IMG = 900;
+const PH_H_VIDEO = 960; // una grabación es un móvil entero (alta y estrecha): se ajusta el marco a su proporción
 
 /** Plantilla «función en 15 s»: gancho → móvil con captura real y subtítulos → cierre con logo y URL. */
-export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, box, subs, cta, subtitulos = true, estilo = 'creador', tiempos, variante = 0, fondo}) => {
+export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, ritmo = 1, scroll, box, subs, cta, subtitulos = true, estilo = 'creador', tiempos, variante = 0, fondo}) => {
+  const enVideo = esVideo(src) && !!imgH;
+  const PH_H = enVideo ? PH_H_VIDEO : PH_H_IMG;
+  const PH_W = enVideo ? Math.round((PH_H_VIDEO * imgW) / imgH!) : PH_W_IMG;
   const HOOK_END = tiempos?.hookEnd ?? HOOK_END_FIJO;
   const HOOK_B = 9; // el gancho es UNA frase: su 2.ª línea entra casi a la vez que la 1.ª y se leen juntas, no como dos golpes
   const CTA_FROM = tiempos?.cta ?? CTA_FROM_FIJO;
@@ -75,7 +79,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
   const logoPop = spring({frame: f - CTA_FROM - 4, fps, config: {damping: 8, stiffness: 120, mass: 0.8}, durationInFrames: 30});
   return (
     <AbsoluteFill>
-      {fondo ? <MediaBg src={fondo} /> : creador ? <BlurBg src={src} /> : <LiveBg />}
+      {fondo ? <MediaBg src={fondo} /> : enVideo ? <MediaBg src={src} /> : creador ? <BlurBg src={src} /> : <LiveBg />}
       {creador ? <Motivo tipo={motivo} /> : null}
       {/* Barra de progreso */}
       <div style={{position: 'absolute', left: 0, top: 0, height: 8, width: `${(f / (tiempos?.frames ?? DURATION)) * 100}%`, background: C.lime, boxShadow: GLOW, zIndex: 5}} />
@@ -84,7 +88,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
         <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 560 + (1 - hookPop) * 80}}>
           <div style={{position: 'absolute', left: -40, right: -40, top: -40, bottom: -40, borderRadius: 90, background: `radial-gradient(${limeA(0.45)}, transparent 70%)`}} />
           <Phone3D width={PH_W} height={PH_H} yaw={-14 + (1 - hookPop) * 18} pitch={10} roll={-3} scale={0.98 + 0.1 * (1 - prog(f, 0, 34))} sheen={prog(f, 0, 60)}>
-            <Screen src={src} imgW={imgW} width={PH_W} scroll={scroll[0]} reveal={1} />
+            <Screen src={src} imgW={imgW} width={PH_W} scroll={scroll[0]} reveal={1} video={{rate: ritmo, freeze: true, from: 0}} />
           </Phone3D>
         </div>
         <div style={{position: 'absolute', left: SAFE.side - 30, right: SAFE.side - 30, top: SAFE.top, textAlign: hookCentro ? 'center' : 'left'}}>
@@ -105,7 +109,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, scroll, bo
         <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 400 + (1 - main) * 120 + float}}>
           <div style={{position: 'absolute', left: 60, right: 60, bottom: -70, height: 70, borderRadius: '50%', background: 'radial-gradient(rgba(0,0,0,.55), transparent 70%)', filter: 'blur(14px)'}} />
           <Phone3D width={PH_W} height={PH_H} yaw={yaw} pitch={pitch} roll={(1 - main) * 3} scale={drift * golpe} sheen={prog(f, HOOK_END + 10, 150)}>
-            <Screen src={src} imgW={imgW} width={PH_W} scroll={sc} reveal={prog(f, HOOK_END + 4, 24)}>
+            <Screen src={src} imgW={imgW} width={PH_W} scroll={enVideo ? 0 : sc} reveal={prog(f, HOOK_END + 4, 24)} video={{rate: ritmo, freeze: false, from: HOOK_END - 10}}>
               {box ? (
                 <div style={{position: 'absolute', left: box[0], top: box[1], width: box[2], height: box[3], border: `5px solid ${C.lime}`, borderRadius: 16, background: limeA(0.08), boxShadow: `0 0 ${10 + 26 * pulse}px ${limeA(0.6)}`, opacity: prog(f, HOOK_END + 30, 12)}} />
               ) : null}

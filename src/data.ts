@@ -11,6 +11,9 @@ export type VideoData = {
   title: string;
   src: string;
   imgW: number;
+  /** Solo si `src` es una grabación (mp4/webm): alto en píxeles y velocidad de reproducción (0.8 = 25 % más lenta). */
+  imgH?: number;
+  ritmo?: number;
   scroll: [number, number];
   box?: [number, number, number, number];
   /** De 3 a 5 subtítulos, repartidos a partes iguales durante el vídeo. */

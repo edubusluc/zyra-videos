@@ -1,0 +1,39 @@
+{
+  "hook": [
+    "ASÍ VA TU EQUIPO",
+    "TODO A LA VISTA"
+  ],
+  "title": "ESTADÍSTICAS DE EQUIPO",
+  "src": "medios/grabacion-estadisticas-equipo.mp4",
+  "imgW": 378,
+  "imgH": 822,
+  "ritmo": 0.75,
+  "scroll": [
+    0,
+    0
+  ],
+  "subs": [
+    "Tu balance de un *vistazo*",
+    "Forma reciente y *racha*",
+    "Puntos por *enfrentamiento*",
+    "Las estadísticas de todo el *equipo*"
+  ],
+  "locucion": [
+    "tu balance de un *vistazo*",
+    "forma reciente y *racha*",
+    "puntos por *enfrentamiento*",
+    "las estadísticas de todo el *equipo*"
+  ],
+  "cta": "Gratis en zyrapadel.com",
+  "voz": true,
+  "gancho": "resultado",
+  "tiktok": {
+    "busqueda": "Estadísticas de un equipo de pádel",
+    "descripcion": "Estadísticas de un equipo de pádel: victorias, racha y puntos por enfrentamiento con Zyra.",
+    "hashtags": [
+      "#capitandepadel",
+      "#estadisticaspadel"
+    ],
+    "comentario": "Balance, forma reciente y puntos por enfrentamiento de tu equipo. Pruébalo gratis en zyrapadel.com"
+  }
+}
