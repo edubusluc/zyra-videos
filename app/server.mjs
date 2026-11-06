@@ -368,9 +368,17 @@ async function borrar({de, id, repo = false, archivos = true, medios = false}) {
   }
   return hechos;
 }
+/** «Promoción Zyra»: lista fija de vídeos (ideas/promocion.json) y, para cada uno, los guiones ya generados (guiones/*.json con `promo` = su id). */
+export function promocion() {
+  const lista = existsSync(join(ROOT, 'ideas/promocion.json')) ? JSON.parse(readFileSync(join(ROOT, 'ideas/promocion.json'), 'utf8')) : [];
+  const dir = join(ROOT, 'guiones');
+  const guiones = (existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.json')).sort() : []).map((f) => ({id: f.replace(/\.json$/, ''), ...JSON.parse(readFileSync(join(dir, f), 'utf8'))}));
+  return lista.map((i) => ({...i, videos: guiones.filter((g) => g.promo === i.id).map((g) => ({id: g.id, titulo: g.title, voz: Boolean(g.voz && g.audios), renderizado: existsSync(join(ROOT, 'out', `${g.id}.mp4`)), con_voz: existsSync(join(ROOT, 'out', `${g.id}.final.mp4`))}))}));
+}
+
 const listarJson = (dir) => (existsSync(join(ROOT, dir)) ? readdirSync(join(ROOT, dir)).filter((f) => f.endsWith('.json')) : []).map((f) => JSON.parse(readFileSync(join(ROOT, dir, f), 'utf8')));
 
-async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = false, estilo = 'creador', gancho = 'auto'}) {
+async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = false, estilo = 'creador', gancho = 'auto', promo = null}) {
   const log = (m) => job.log.push(m);
   try {
     const cat = catalogo();
@@ -457,7 +465,7 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
         for (const a of audios) if (!/^voz\/[a-z0-9-]+\/\d\.mp3$/.test(a) || !existsSync(join(ROOT, 'public', a))) throw new Error(`No encuentro el audio ${a}; vuelve a subirlo.`);
         voz = true;
       }
-      job.guion = {hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(g.gancho ? {gancho: g.gancho} : {}), ...(g.tiktok ? {tiktok: g.tiktok} : {}), ...(estilo === 'base' ? {estilo} : {}), ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin, ...(audios ? {audios, voz: true} : {})};
+      job.guion = {...(promo ? {promo} : {}), hook: g.hook, title: g.title, src: g.src, imgW: pngWidth(g.src), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(g.gancho ? {gancho: g.gancho} : {}), ...(g.tiktok ? {tiktok: g.tiktok} : {}), ...(estilo === 'base' ? {estilo} : {}), ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin, ...(audios ? {audios, voz: true} : {})};
       guardar('guiones', g.title, job.guion, '', 'mp4');
     }
     if (tipo === 'tactica') {
@@ -558,6 +566,7 @@ async function subirArchivos(archivos, mensaje) {
 export const server = createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/') { res.writeHead(200, {'content-type': 'text/html; charset=utf-8'}); return res.end(PAGINA); }
   if (req.method === 'GET' && req.url.startsWith('/api/job/')) { const j = jobs.get(req.url.split('/').pop()); return j ? json(res, 200, j) : json(res, 404, {error: 'no existe'}); }
+  if (req.method === 'GET' && req.url === '/api/promocion') return json(res, 200, {promocion: promocion()});
   if (req.method === 'GET' && req.url === '/api/ideas-tacticas') return json(res, 200, {ideas: ideasConVideos()});
   if (req.method === 'GET' && req.url === '/api/contenido') return json(res, 200, {contenido: contenido(), plantillas: plantillas().map((p) => ({id: p.id, descripcion: p.descripcion, fondo: p.fondo, recorte: p.recorte}))});
   if (req.method === 'POST' && req.url === '/api/borrar') {
@@ -639,12 +648,13 @@ export const server = createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/api/generar') {
     let body = '';
     for await (const c of req) body += c;
-    const {peticion, modo = 'ci', borrador, subtitulos, voz, estilo, gancho} = JSON.parse(body || '{}');
+    const {peticion, modo = 'ci', borrador, subtitulos, voz, estilo, gancho, promo} = JSON.parse(body || '{}');
+    if (promo && !promocion().some((x) => x.id === promo)) return json(res, 400, {error: 'Ese vídeo no está en el listado de promoción.'});
     if (!borrador && !String(peticion || '').trim()) return json(res, 400, {error: 'Escribe qué vídeo quieres.'});
     const id = Math.random().toString(36).slice(2, 10);
     const job = {estado: 'en curso', log: []};
     jobs.set(id, job);
-    trabajo(job, {peticion, modo, borrador, subtitulos, voz, estilo, gancho: TIPOS_GANCHO.includes(gancho) ? gancho : 'auto'});
+    trabajo(job, {peticion, modo, borrador, subtitulos, voz, estilo, gancho: TIPOS_GANCHO.includes(gancho) ? gancho : 'auto', promo: promo || null});
     return json(res, 200, {id});
   }
   json(res, 404, {error: 'no encontrado'});
