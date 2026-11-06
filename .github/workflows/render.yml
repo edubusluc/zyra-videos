@@ -50,7 +50,22 @@ jobs:
         run: npm ci
       - name: ffmpeg completo (ecualizador y compresor de la voz de anuncio; el de Remotion no los trae)
         if: steps.que.outputs.skip != 'true'
-        run: command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+        # Sin esperas infinitas: apt a veces se queda colgado (espejo lento o bloqueo del sistema) y el job entero esperaba hasta el límite.
+        # Cada intento tiene su tiempo máximo, apt no pregunta nada y, si no hay manera, falla en minutos en vez de quedarse pillado.
+        timeout-minutes: 8
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          NEEDRESTART_MODE: a
+        run: |
+          if command -v ffmpeg >/dev/null; then ffmpeg -version | head -1; exit 0; fi
+          for i in 1 2 3; do
+            if timeout 90 sudo -E apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 -o Dpkg::Lock::Timeout=30 update -qq \
+              && timeout 150 sudo -E apt-get -o Acquire::http::Timeout=15 -o Dpkg::Lock::Timeout=30 install -y -qq --no-install-recommends ffmpeg; then
+              ffmpeg -version | head -1; exit 0
+            fi
+            echo "ffmpeg: el intento $i no terminó; reintento"; sleep 5
+          done
+          echo "No se pudo instalar ffmpeg tras 3 intentos"; exit 1
       - if: steps.que.outputs.skip != 'true'
         run: npx remotion browser ensure
       - name: Fondos automáticos (Pexels con etalonaje Zyra; solo si existe el secreto PEXELS_API_KEY)
