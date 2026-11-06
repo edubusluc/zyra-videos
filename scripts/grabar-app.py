@@ -103,7 +103,8 @@ print(f"   {Player.objects.count()} jugadores, {Team.objects.count()} equipos, {
 
 
 
-FPS = 30
+FPS = 60  # mínimo que se pide para los vídeos
+LENTO = 2.2  # los desplazamientos van despacio (da tiempo a leer y a hacer zoom); las pausas también respiran
 DESCRIPCIONES = {
     "convocatoria-3d": "Ficha de un enfrentamiento por convocar con el VS en 3D, los escudos de los dos equipos, la cuenta atrás y los pasos Convocatoria, Parejas, Resultados y Acta, y la previa del rival",
     "enfrentamiento-cerrado-3d": "Ficha de un enfrentamiento ya cerrado con el marcador en 3D y el resultado, los botones Compartir resultado y Ver estadísticas, y la convocatoria de jugadores",
@@ -197,11 +198,11 @@ try:
             for paso in pasos:
                 tipo = paso[0]
                 if tipo == "esperar":
-                    for _ in range(round(paso[1] * FPS / 1000)):
+                    for _ in range(round(paso[1] * 1.4 * FPS / 1000)):
                         cuadro()
                 elif tipo == "scroll":
                     px = paso[1]
-                    total = max(1, round((paso[2] if len(paso) > 2 else 1.5) * FPS))
+                    total = max(1, round((paso[2] if len(paso) > 2 else 1.5) * LENTO * FPS))
                     y0 = pagina.evaluate("window.scrollY")
                     for k in range(1, total + 1):
                         t = k / total

@@ -1,11 +1,12 @@
 import React from 'react';
-import {AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Easing, interpolate, spring} from 'remotion';
+import {T, useT} from '../time';
 import {Img, OffthreadVideo, staticFile} from 'remotion';
 import {C, FONT, TYPE, limeA, PAGE_BG} from '../styles/brand';
 
 /** Fondo vivo: degradado, rejilla de pista en movimiento, luces que flotan y partículas que suben. */
 export const LiveBg: React.FC = () => {
-  const f = useCurrentFrame();
+  const f = useT();
   const dots = Array.from({length: 16}, (_, i) => {
     const seed = (i * 97) % 100;
     const x = (seed * 10.8 + i * 61) % 1080;
@@ -35,7 +36,7 @@ export const LiveBg: React.FC = () => {
 
 /** Cortinilla elegante: panel oscuro que cruza la pantalla con un filo de color. `at` = fotograma en que cubre el centro. */
 export const Wipe: React.FC<{at: number; dur?: number; dir?: 1 | -1}> = ({at, dur = 26, dir = 1}) => {
-  const f = useCurrentFrame();
+  const f = useT();
   const p = interpolate(f, [at - dur / 2, at + dur / 2], [0, 1], {easing: Easing.inOut(Easing.cubic), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   if (p <= 0 || p >= 1) return null;
   const x = interpolate(p, [0, 1], [-1700, 1500]);
@@ -50,15 +51,15 @@ export const Wipe: React.FC<{at: number; dur?: number; dir?: 1 | -1}> = ({at, du
 
 /** Pulso de escala (1.0x→`amp` y vuelta) con muelle al inicio de cada beat. */
 export const usePunch = (at: number, amp = 0.05) => {
-  const f = useCurrentFrame();
-  const {fps} = useVideoConfig();
+  const f = useT();
+  const fps = T;
   const s = spring({frame: f - at, fps, config: {damping: 9, stiffness: 160, mass: 0.6}, durationInFrames: 22});
   return f < at ? 1 : 1 + amp * (1 - s);
 };
 
 /** Anillos que se expanden desde un punto (ping). */
 export const Ping: React.FC<{x: number; y: number; at: number; color?: string}> = ({x, y, at, color = C.lime}) => {
-  const f = useCurrentFrame();
+  const f = useT();
   return (
     <>
       {[0, 8, 16].map((d) => {
@@ -72,7 +73,7 @@ export const Ping: React.FC<{x: number; y: number; at: number; color?: string}> 
 
 /** Fondo del estilo «creador»: la propia captura ampliada, desenfocada y oscurecida, con viñeta y un respiro lento. */
 export const BlurBg: React.FC<{src: string}> = ({src}) => {
-  const f = useCurrentFrame();
+  const f = useT();
   return (
     <AbsoluteFill style={{background: C.bg, overflow: 'hidden'}}>
       <Img src={staticFile(src)} style={{position: 'absolute', left: -300, top: -200 - f * 0.4, width: 1680, filter: 'blur(46px) brightness(.42) saturate(1.3)', transform: `scale(${1.05 + f / 2400})`}} />
@@ -89,7 +90,7 @@ export const cabe = (word: string, max: number, ancho = 900) => Math.min(max, Ma
 
 /** Tarjeta a pantalla completa con una palabra clave enorme: entra y sale con un círculo que se abre y se cierra. `dur` en fotogramas. */
 export const KeywordCard: React.FC<{at: number; word: string; variant: number; dur?: number}> = ({at, word, variant, dur = 28}) => {
-  const f = useCurrentFrame() - at;
+  const f = useT() - at;
   if (f < 0 || f > dur) return null;
   const open = interpolate(f, [0, 8], [0, 1], {easing: Easing.out(Easing.cubic), extrapolateRight: 'clamp'});
   const close = interpolate(f, [dur - 8, dur], [1, 0], {easing: Easing.in(Easing.cubic), extrapolateLeft: 'clamp'});
@@ -113,7 +114,7 @@ export const KeywordCard: React.FC<{at: number; word: string; variant: number; d
 
 /** Fondo propio (public/fondos/: vídeo o imagen de pista, material propio o con licencia), oscurecido para que el móvil y el texto manden. */
 export const MediaBg: React.FC<{src: string}> = ({src}) => {
-  const f = useCurrentFrame();
+  const f = useT();
   const estilo: React.CSSProperties = {position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(10px) brightness(.38) saturate(1.15)', transform: `scale(${1.08 + f / 3000})`};
   return (
     <AbsoluteFill style={{background: C.bg, overflow: 'hidden'}}>
@@ -128,7 +129,7 @@ export const MediaBg: React.FC<{src: string}> = ({src}) => {
  * 0 = nada, 1 = líneas de pista que derivan, 2 = partículas lima que suben, 3 = haces de luz diagonales.
  */
 export const Motivo: React.FC<{tipo: number}> = ({tipo}) => {
-  const f = useCurrentFrame();
+  const f = useT();
   if (tipo === 1) {
     return (
       <AbsoluteFill style={{opacity: 0.14, pointerEvents: 'none'}}>

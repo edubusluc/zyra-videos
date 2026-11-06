@@ -1,5 +1,6 @@
 import React from 'react';
-import {Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
+import {Easing, interpolate, spring} from 'remotion';
+import {T, useT} from '../time';
 import {C, FONT} from '../styles/brand';
 
 /** --z-ease de la web. */
@@ -27,8 +28,8 @@ type Props = {
 
 /** Línea tipográfica con máscara: sube (o entra de lado) desde detrás de un recorte. */
 export const Line: React.FC<Props> = ({text, at, out, size, color = C.text, italic, align = 'left', from = 'up', font = 'display', weight = 700, letterSpacing = 0, extra}) => {
-  const f = useCurrentFrame();
-  const {fps} = useVideoConfig();
+  const f = useT();
+  const fps = T;
   const inP = spring({frame: f - at, fps, config: {damping: 200, mass: 0.7}, durationInFrames: 26});
   const outP = out === undefined ? 0 : prog(f, out, 12);
   const dist = 115;
