@@ -378,7 +378,7 @@ export function promocion() {
 
 const listarJson = (dir) => (existsSync(join(ROOT, dir)) ? readdirSync(join(ROOT, dir)).filter((f) => f.endsWith('.json')) : []).map((f) => JSON.parse(readFileSync(join(ROOT, dir, f), 'utf8')));
 
-async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = false, estilo = 'creador', gancho = 'auto', promo = null}) {
+async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = false, estilo = 'creador', gancho = 'auto', promo = null, sinRender = false}) {
   const log = (m) => job.log.push(m);
   try {
     const cat = catalogo();
@@ -420,6 +420,20 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       if (errores.length) throw new Error(`Reacción no válida: ${errores.join('; ')}`);
       job.guion = {...resolverReaccion(borrador), ...sin};
       guardar('reacciones', borrador.caption, job.guion, 'reaccion-', 'mp4');
+    } else if (tipo === 'guion-voz') {
+      // Añade tus audios (gancho, una frase por subtítulo y cierre) a un vídeo ya guardado y lo renderiza con ellos.
+      if (!ID_OK.test(borrador.id || '')) throw new Error('Qué vídeo: falta el id.');
+      const archivo = `guiones/${borrador.id}.json`;
+      if (!existsSync(join(ROOT, archivo))) throw new Error(`No existe ${archivo}.`);
+      const obj = JSON.parse(readFileSync(join(ROOT, archivo), 'utf8'));
+      const audios = Array.isArray(borrador.audios) ? borrador.audios : [];
+      if (audios.length !== obj.subs.length + 2) throw new Error(`Faltan audios: hacen falta ${obj.subs.length + 2} (gancho, ${obj.subs.length} frases y cierre) y hay ${audios.length}.`);
+      for (const a of audios) if (!/^voz\/[a-z0-9-]+\/\d\.mp3$/.test(a) || !existsSync(join(ROOT, 'public', a))) throw new Error(`No encuentro el audio ${a}; vuelve a subirlo.`);
+      obj.audios = audios; obj.voz = true; voz = true;
+      writeFileSync(join(ROOT, archivo), JSON.stringify(obj, null, 2) + '\n');
+      job.guion = obj; job.videoId = borrador.id;
+      items.push({archivo, id: borrador.id, resultado: `out/${borrador.id}.mp4, out/${borrador.id}.final.mp4`});
+      peticion = `voz ${borrador.id}`;
     } else if (tipo === 'tactica-voz') {
       // Añade tus audios (uno por frase: gancho, cada paso y cierre) a una táctica ya generada y la vuelve a renderizar con la voz.
       if (!ID_OK.test(borrador.id || '')) throw new Error('Qué táctica: falta el id.');
@@ -467,8 +481,9 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
       }
       job.guion = {...(promo ? {promo} : {}), hook: g.hook, title: g.title, src: g.src, imgW: c.imgW ?? pngWidth(g.src), ...(c.video ? {imgH: c.imgH, imgS: c.seg, ritmo: Math.round(Math.min(1, Math.max(0.6, c.seg / 11)) * 100) / 100} : {}), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(g.gancho ? {gancho: g.gancho} : {}), ...(g.tiktok ? {tiktok: g.tiktok} : {}), ...(estilo === 'base' ? {estilo} : {}), ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin, ...(audios ? {audios, voz: true} : {})};
       guardar('guiones', g.title, job.guion, '', 'mp4');
+      job.videoId = items.at(-1).id;
     }
-    if (tipo === 'tactica') {
+    if (tipo === 'tactica' || (sinRender && promo && !borrador?.tipo)) {
       // Primero el guion, luego tu voz: el vídeo se renderiza una sola vez, con los audios (botón «Añadir mi voz» del listado).
       job.progreso = {pct: 100, fase: 'Guion listo'};
       job.resultado = `${items[0].archivo} (guion listo: añade tu voz para renderizar el vídeo, o pulsa «Vista previa sin voz»)`;
@@ -631,6 +646,11 @@ export const server = createServer(async (req, res) => {
         const t = JSON.parse(readFileSync(join(ROOT, 'tacticas', `${g.id}.json`), 'utf8'));
         g = {hook: t.hook, subs: t.pasos.map((p) => p.texto), locucion: t.pasos.map((p) => p.locucion || String(p.texto).replace(/\*/g, '')), cta: t.cta};
       }
+      if (g.tipo === 'guion-voz') { // las frases de un vídeo ya guardado (guiones/<id>.json): gancho, locución o subtítulo de cada uno y cierre
+        if (!ID_OK.test(g.id || '') || !existsSync(join(ROOT, 'guiones', `${g.id}.json`))) return json(res, 400, {error: 'Ese vídeo no existe.'});
+        const t = JSON.parse(readFileSync(join(ROOT, 'guiones', `${g.id}.json`), 'utf8'));
+        g = {hook: t.hook, subs: t.subs, locucion: t.locucion, cta: t.cta};
+      }
       if (!Array.isArray(g.hook) || !Array.isArray(g.subs)) return json(res, 400, {error: 'Guion sin gancho o sin subtítulos.'});
       const gancho = g.hook.reduce((acc, h) => (!acc ? h : /[.!?…,:;]$/.test(acc) || !/^[¿¡]/.test(h) ? `${acc} ${h}` : `${acc}, ${h}`), '');
       return json(res, 200, {frases: [gancho, ...g.subs.map((x, i) => String(g.locucion?.[i] || x).replace(/\*/g, '')), g.cta]});
@@ -648,13 +668,13 @@ export const server = createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/api/generar') {
     let body = '';
     for await (const c of req) body += c;
-    const {peticion, modo = 'ci', borrador, subtitulos, voz, estilo, gancho, promo} = JSON.parse(body || '{}');
+    const {peticion, modo = 'ci', borrador, subtitulos, voz, estilo, gancho, promo, sinRender} = JSON.parse(body || '{}');
     if (promo && !promocion().some((x) => x.id === promo)) return json(res, 400, {error: 'Ese vídeo no está en el listado de promoción.'});
     if (!borrador && !String(peticion || '').trim()) return json(res, 400, {error: 'Escribe qué vídeo quieres.'});
     const id = Math.random().toString(36).slice(2, 10);
     const job = {estado: 'en curso', log: []};
     jobs.set(id, job);
-    trabajo(job, {peticion, modo, borrador, subtitulos, voz, estilo, gancho: TIPOS_GANCHO.includes(gancho) ? gancho : 'auto', promo: promo || null});
+    trabajo(job, {peticion, modo, borrador, subtitulos, voz, estilo, gancho: TIPOS_GANCHO.includes(gancho) ? gancho : 'auto', promo: promo || null, sinRender: Boolean(sinRender)});
     return json(res, 200, {id});
   }
   json(res, 404, {error: 'no encontrado'});
