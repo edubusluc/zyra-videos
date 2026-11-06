@@ -49,7 +49,7 @@ progress{width:100%;height:14px;margin-top:8px;accent-color:var(--lime)}
 </style></head><body><main>
 <header><div><h1>Zyra Vídeos</h1><p class="sub">Pide ideas a Claude y conviértelas en vídeo o meme con un clic.</p></div></header>
 <details class="panel" id="promo" open><summary>Promoción Zyra <small id="promoN"></small></summary><div class="in">
- <p class="hint">Los 8 vídeos de la lista. Cada vídeo se crea primero como guion (sin renderizar). Después eliges: «Añadir mi voz» (subes un audio por frase, con el texto y la etiqueta de tono para ElevenLabs) o «Generar voz con ElevenLabs y crear el vídeo» (en local). El check se marca en cuanto existe el guion.</p>
+ <p class="hint">Los 8 vídeos de la lista. Cada vídeo se crea primero como guion (sin renderizar). Después, «Generar voz con ElevenLabs» te da el texto de cada frase con su etiqueta de tono para copiarlo en ElevenLabs y subir un mp3 por frase; si prefieres no subir nada, ahí mismo hay un botón para que la app la genere (local). El check se marca en cuanto existe el guion.</p>
  <div id="promol" class="log"></div>
 </div></details>
 <h2>Prueba con una idea</h2>
@@ -144,7 +144,14 @@ async function panelVoz(b,d,gb){
     go.disabled=true;
     try{const audios=[];for(const [i,x] of ins.entries()){estado('Subiendo audio '+(i+1)+' de '+ins.length+'…','busy');const f=x.files[0];const r=await fetch('/api/subir-voz?grupo='+grupo+'&n='+i+'&nombre='+encodeURIComponent(f.name),{method:'POST',body:f});const k=await r.json();if(!r.ok)throw new Error(k.error);audios.push(k.ruta)}
       await crear({...b,audios},go)}catch(e){estado(e.message,'err');go.disabled=false}};
-  p.append(ol,go);d.appendChild(p)}
+  p.append(ol,go);
+  if(b.tipo==='guion-voz'){
+    // Alternativa sin subir nada: la app genera la voz con ElevenLabs (clave en local) y renderiza.
+    const auto=document.createElement('button');auto.className='sec';auto.style.marginLeft='8px';auto.textContent='Sin audios: que la app genere la voz (local)';
+    auto.title='Local: genera la voz con ElevenLabs, la ajusta a los tiempos, mezcla la música y renderiza';
+    auto.onclick=()=>crear({tipo:'regenerar',de:'guion',id:b.id},auto,{voz:true,modo:'local'},()=>cargarPromo());
+    p.appendChild(auto)}
+  d.appendChild(p)}
 $('send').onclick=()=>enviar($('p').value);$('p').onkeydown=(e)=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))enviar($('p').value)};
 $('p').oninput=()=>{$('p').style.height='auto';$('p').style.height=Math.min($('p').scrollHeight,220)+'px'};
 document.querySelectorAll('[data-q]').forEach((b)=>b.onclick=()=>enviar(b.dataset.q));
@@ -217,15 +224,11 @@ async function cargarPromo(abrirVoz){try{
       b.onclick=()=>crear(undefined,b,{peticion:i.peticion,promo:i.id,gancho:i.gancho,sinRender:true,voz:false},(s)=>cargarPromo(s.videoId));
       f.appendChild(b);
     }else{
-      const bv=document.createElement('button');bv.className=v.voz?'sec':'go';bv.textContent=v.voz?'Cambiar mi voz':'Añadir mi voz';
+      const bv=document.createElement('button');bv.className=v.voz?'sec':'go';bv.textContent=v.voz?'Cambiar la voz (ElevenLabs)':'Generar voz con ElevenLabs';
       bv.onclick=()=>{bv.disabled=true;panelVoz({tipo:'guion-voz',id:v.id,title:v.titulo},caja,bv)};
       f.appendChild(bv);
-      const ba=document.createElement('button');ba.className='sec';ba.textContent='Generar voz con ElevenLabs y crear el vídeo';
-      ba.title='Local: la app genera la voz con ElevenLabs, la ajusta a los tiempos, mezcla la música y renderiza';
-      ba.onclick=()=>crear({tipo:'regenerar',de:'guion',id:v.id},ba,{voz:true,modo:'local'},()=>cargarPromo());
-      f.appendChild(ba);
       if(!v.renderizado&&!v.voz){const bp=document.createElement('button');bp.className='sec';bp.textContent='Vista previa sin voz';bp.onclick=()=>crear({tipo:'regenerar',de:'guion',id:v.id},bp,undefined,()=>cargarPromo());f.appendChild(bp)}
-      if(abrirVoz===v.id){const q=document.createElement('p');q.className='hint';q.style.cssText='color:var(--lime);margin:6px 0';q.textContent='Guion creado. ¿Cómo quieres la voz? «Añadir mi voz»: subes un audio por frase (con tu voz o la de ElevenLabs que ya hayas generado). «Generar voz con ElevenLabs»: la app la genera, la ajusta y crea el vídeo en local.';caja.appendChild(q);setTimeout(()=>caja.scrollIntoView({behavior:'smooth',block:'nearest'}),0)}
+      if(abrirVoz===v.id){const q=document.createElement('p');q.className='hint';q.style.cssText='color:var(--lime);margin:6px 0';q.textContent='Guion creado. Pulsa «Generar voz con ElevenLabs»: copia cada frase en ElevenLabs y sube el mp3 de cada una (o deja que la app la genere en local).';caja.appendChild(q);setTimeout(()=>caja.scrollIntoView({behavior:'smooth',block:'nearest'}),0)}
     }
     c.appendChild(f);c.appendChild(caja)}
 }catch{}}
