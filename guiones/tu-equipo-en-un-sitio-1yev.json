@@ -30,5 +30,12 @@
     "comentario": "¿Eres capitán de un equipo de pádel? Pruébalo gratis en zyrapadel.com y cuéntanos qué te parece."
   },
   "cta": "Pruébalo gratis en Zyra",
-  "voz": true
+  "voz": true,
+  "audios": [
+    "voz/tu-equipo-en-un-sitio-uaovk/0.mp3",
+    "voz/tu-equipo-en-un-sitio-uaovk/1.mp3",
+    "voz/tu-equipo-en-un-sitio-uaovk/2.mp3",
+    "voz/tu-equipo-en-un-sitio-uaovk/3.mp3",
+    "voz/tu-equipo-en-un-sitio-uaovk/4.mp3"
+  ]
 }
