@@ -479,7 +479,7 @@ async function trabajo(job, {peticion, modo, borrador, subtitulos = true, voz = 
         for (const a of audios) if (!/^voz\/[a-z0-9-]+\/\d\.mp3$/.test(a) || !existsSync(join(ROOT, 'public', a))) throw new Error(`No encuentro el audio ${a}; vuelve a subirlo.`);
         voz = true;
       }
-      job.guion = {...(promo ? {promo} : {}), hook: g.hook, title: g.title, src: g.src, imgW: c.imgW ?? pngWidth(g.src), ...(c.video ? {imgH: c.imgH, imgS: c.seg, ritmo: Math.round(Math.min(1, Math.max(0.6, c.seg / 11)) * 100) / 100} : {}), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(g.gancho ? {gancho: g.gancho} : {}), ...(g.tiktok ? {tiktok: g.tiktok} : {}), ...(estilo === 'base' ? {estilo} : {}), ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin, ...(audios ? {audios, voz: true} : {})};
+      job.guion = {...(promo ? {promo} : {}), hook: g.hook, title: g.title, src: g.src, imgW: c.imgW ?? pngWidth(g.src), ...(c.video ? {imgH: c.imgH, imgS: c.seg} : {}), scroll: c.scroll, ...(c.box ? {box: c.box} : {}), subs: g.subs, ...(g.gancho ? {gancho: g.gancho} : {}), ...(g.tiktok ? {tiktok: g.tiktok} : {}), ...(estilo === 'base' ? {estilo} : {}), ...(g.locucion ? {locucion: g.locucion} : {}), cta: g.cta, ...sin, ...(audios ? {audios, voz: true} : {})};
       guardar('guiones', g.title, job.guion, '', 'mp4');
       job.videoId = items.at(-1).id;
     }

@@ -1,5 +1,6 @@
 import React from 'react';
-import {AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Easing, interpolate, spring} from 'remotion';
+import {T, useT} from './time';
 import {BlurBg, KeywordCard, LiveBg, MediaBg, Motivo, Ping, Wipe, cabeTitular} from './components/Fx';
 import {Logo} from './components/Logo';
 import {Phone3D, Screen, esVideo} from './components/Phone';
@@ -9,15 +10,17 @@ import type {VideoData} from './data';
 import {C, FONT, GLOW, HERO_FILL, PAGE_BG, SAFE, TYPE, limeA} from './styles/brand';
 
 export const FPS = 30;
+/** Los vídeos de la plantilla se renderizan a 60 fps (la animación sigue en unidades de 30 por segundo, ver time.ts). */
+export const FEATURE_FPS = 60;
 export const DURATION = 540; // 18 s: cada escena con su tiempo
 const HOOK_END_FIJO = 84;
 const CTA_FROM_FIJO = 450;
 const PH_W_IMG = 680;
 const PH_H_IMG = 900;
-const PH_H_VIDEO = 960; // una grabación es un móvil entero (alta y estrecha): se ajusta el marco a su proporción
+const PH_H_VIDEO = 1100; // una grabación es un móvil entero (alta y estrecha): se ajusta el marco a su proporción
 
 /** Plantilla «función en 15 s»: gancho → móvil con captura real y subtítulos → cierre con logo y URL. */
-export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, imgS, ritmo = 1, scroll, box, subs, cta, subtitulos = true, estilo = 'creador', tiempos, variante = 0, fondo}) => {
+export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, imgS, ritmo = 1, zoom, scroll, box, subs, cta, subtitulos = true, estilo = 'creador', tiempos, variante = 0, fondo}) => {
   const enVideo = esVideo(src) && !!imgH;
   const PH_H = enVideo ? PH_H_VIDEO : PH_H_IMG;
   const PH_W = enVideo ? Math.round((PH_H_VIDEO * imgW) / imgH!) : PH_W_IMG;
@@ -39,8 +42,8 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, imgS
   const tarjeta0 = V(2, 5);
   const motivo = V(4, 6);
   useBrandFonts();
-  const f = useCurrentFrame();
-  const {fps} = useVideoConfig();
+  const f = useT();
+  const fps = T;
   const limpio = (t: string) => t.replace(/\*/g, '');
   const clave = (t: string) => (t.match(/\*([^*]+)\*/)?.[1] ?? limpio(t).split(' ').pop() ?? '').replace(/[^\p{L}\p{N}%]/gu, '');
   const hookOut = prog(f, HOOK_END, 14);
@@ -57,7 +60,17 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, imgS
   const {yaws, pitches} = cam;
   const yaw = interpolate(f, camT, [cam.entra, ...subStart.map((_, i) => yaws[i % 5]), 8], {easing: Easing.inOut(Easing.quad), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const pitch = interpolate(f, camT, [20, ...subStart.map((_, i) => pitches[i % 5]), 4], {easing: Easing.inOut(Easing.cubic), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}) + Math.sin(f / 34) * 1.5;
-  const drift = interpolate(f, [HOOK_END, CTA_FROM], [0.96, 1.08], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const drift = interpolate(f, [HOOK_END, CTA_FROM], enVideo ? [0.98, 1.03] : [0.96, 1.08], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  // Zoom sobre lo que se enseña: en cada subtítulo la pantalla se acerca a una zona (escala, x, y en fracciones de la pantalla) y se mueve sin saltos.
+  // Nunca más cerca de lo que da de sí la resolución de la grabación, para que no se vea borroso. Se puede fijar por guion con `zoom`.
+  const ZOOM_BASE: [number, number, number][] = [[1.16, 0.5, 0.3], [1.2, 0.5, 0.58], [1.16, 0.5, 0.42], [1.22, 0.5, 0.62], [1.16, 0.5, 0.34]];
+  const zooms = zoom && zoom.length ? zoom : ZOOM_BASE;
+  const zMax = Math.min(1.3, Math.max(1.15, imgW / PH_W)); // a más zoom se recortan los lados de la pantalla (los márgenes de la app son del 4 %)
+  const zT = [HOOK_END, ...subStart, CTA_FROM];
+  const zEase = {easing: Easing.inOut(Easing.cubic), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'} as const;
+  const zs = interpolate(f, zT, [1, ...subStart.map((_, i) => Math.min(zMax, zooms[i % zooms.length][0])), 1.08], zEase);
+  const zx = interpolate(f, zT, [0.5, ...subStart.map((_, i) => zooms[i % zooms.length][1]), 0.5], zEase);
+  const zy = interpolate(f, zT, [0.4, ...subStart.map((_, i) => zooms[i % zooms.length][2]), 0.45], zEase);
   const float = Math.sin(f / 26) * 12;
   const hookPop = spring({frame: f, fps, config: {damping: 11, stiffness: 140, mass: 0.7}, durationInFrames: 24});
   const words = limpio(subs[subIdx]).split(' ');
@@ -85,10 +98,10 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, imgS
       <div style={{position: 'absolute', left: 0, top: 0, height: 8, width: `${(f / (tiempos?.frames ?? DURATION)) * 100}%`, background: C.lime, boxShadow: GLOW, zIndex: 5}} />
       {/* Gancho: la web ya en pantalla desde el fotograma 0 (inclinada y con zoom), título grande y la 2.ª línea en una tarjeta lima */}
       <div style={{position: 'absolute', inset: 0, opacity: 1 - hookOut}}>
-        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 560 + (1 - hookPop) * 80}}>
+        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: (enVideo ? 640 : 560) + (1 - hookPop) * 80}}>
           <div style={{position: 'absolute', left: -40, right: -40, top: -40, bottom: -40, borderRadius: 90, background: `radial-gradient(${limeA(0.45)}, transparent 70%)`}} />
-          <Phone3D width={PH_W} height={PH_H} yaw={-14 + (1 - hookPop) * 18} pitch={10} roll={-3} scale={0.98 + 0.1 * (1 - prog(f, 0, 34))} sheen={prog(f, 0, 60)}>
-            <Screen src={src} imgW={imgW} width={PH_W} scroll={scroll[0]} reveal={1} video={{rate: ritmo, freeze: true, from: 0}} />
+          <Phone3D width={PH_W} height={PH_H} yaw={-14 + (1 - hookPop) * 18} pitch={10} roll={-3} scale={(enVideo ? 0.8 : 1) * (0.98 + 0.1 * (1 - prog(f, 0, 34)))} sheen={prog(f, 0, 60)}>
+            <Screen src={src} imgW={imgW} width={PH_W} scroll={scroll[0]} reveal={1} video={{rate: ritmo, freeze: false, from: 0, seg: imgS}} />
           </Phone3D>
         </div>
         <div style={{position: 'absolute', left: SAFE.side - 30, right: SAFE.side - 30, top: SAFE.top, textAlign: hookCentro ? 'center' : 'left'}}>
@@ -106,18 +119,20 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, imgS
           <Line text={title} at={HOOK_END + 4} size={titleSize} extra={TYPE.titular} />
           <div style={{height: 8, width: `${prog(f, HOOK_END + 12, 20) * 38}%`, background: C.lime, borderRadius: 4, marginTop: 14, boxShadow: GLOW}} />
         </div>
-        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: 400 + (1 - main) * 120 + float}}>
+        <div style={{position: 'absolute', left: (1080 - PH_W - 28) / 2, top: (enVideo ? 380 : 400) + (1 - main) * 120 + float}}>
           <div style={{position: 'absolute', left: 60, right: 60, bottom: -70, height: 70, borderRadius: '50%', background: 'radial-gradient(rgba(0,0,0,.55), transparent 70%)', filter: 'blur(14px)'}} />
           <Phone3D width={PH_W} height={PH_H} yaw={yaw} pitch={pitch} roll={(1 - main) * 3} scale={drift * golpe} sheen={prog(f, HOOK_END + 10, 150)}>
-            <Screen src={src} imgW={imgW} width={PH_W} scroll={enVideo ? 0 : sc} reveal={prog(f, HOOK_END + 4, 24)} video={{rate: ritmo, freeze: false, from: HOOK_END - 10, seg: imgS}}>
+            <div style={{position: 'absolute', inset: 0, transform: `scale(${zs})`, transformOrigin: `${zx * 100}% ${zy * 100}%`}}>
+            <Screen src={src} imgW={imgW} width={PH_W} scroll={enVideo ? 0 : sc} reveal={prog(f, HOOK_END + 4, 24)} video={{rate: ritmo, freeze: false, from: 0, seg: imgS}}>
               {box ? (
                 <div style={{position: 'absolute', left: box[0], top: box[1], width: box[2], height: box[3], border: `5px solid ${C.lime}`, borderRadius: 16, background: limeA(0.08), boxShadow: `0 0 ${10 + 26 * pulse}px ${limeA(0.6)}`, opacity: prog(f, HOOK_END + 30, 12)}} />
               ) : null}
             </Screen>
+            </div>
           </Phone3D>
         </div>
         {subtitulos && creador ? (
-          <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: 1340, height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+          <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: enVideo ? 1390 : 1340, height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
             <div key={subIdx} style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'baseline', gap: '0 18px', opacity: prog(f, subAt, 4)}}>
               {words.map((w, i) => {
                 const esClave = w.replace(/[^\p{L}\p{N}%]/gu, '').toLowerCase() === palabraClave;

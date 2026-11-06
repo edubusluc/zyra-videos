@@ -1,5 +1,5 @@
 import React from 'react';
-import {Freeze, Img, OffthreadVideo, Sequence, staticFile} from 'remotion';
+import {Freeze, Img, OffthreadVideo, Sequence, staticFile, useVideoConfig} from 'remotion';
 import {C} from '../styles/brand';
 
 /** Marco de móvil con sombra y resplandor sutil. */
@@ -32,16 +32,19 @@ export const esVideo = (src: string) => /\.(mp4|webm|mov)$/i.test(src);
  * (p. ej. 0.8 la alarga un 25 %, para que dure lo que la escena).
  */
 const Clip: React.FC<{src: string; w: number; rate: number; freeze: boolean; from: number; seg?: number}> = ({src, w, rate, freeze, from, seg}) => {
+  const {fps} = useVideoConfig();
+  const k = fps / 30; // `from` viene en unidades de 30 por segundo (ver time.ts); Sequence y startFrom van en fotogramas reales
   const v = <OffthreadVideo src={staticFile(src)} muted playbackRate={rate} style={{width: w, display: 'block'}} />;
   if (freeze) return <Freeze frame={0}>{v}</Freeze>;
+  const desde = Math.round(from * k);
   // Con la duración de la grabación se sabe cuándo acaba: el último fotograma se queda en pantalla en vez de desaparecer.
-  const fin = seg ? Math.max(1, Math.floor((seg / rate) * 30) - 2) : 0;
-  if (!fin) return <Sequence from={from} layout="none">{v}</Sequence>;
+  const fin = seg ? Math.max(1, Math.floor((seg / rate) * fps) - 2) : 0;
+  if (!fin) return <Sequence from={desde} layout="none">{v}</Sequence>;
   return (
     <>
-      <Sequence from={from} durationInFrames={fin} layout="none">{v}</Sequence>
-      <Sequence from={from + fin} layout="none">
-        <Freeze frame={0}><OffthreadVideo src={staticFile(src)} muted startFrom={Math.max(0, Math.floor((seg ?? 0) * 30) - 3)} style={{width: w, display: 'block'}} /></Freeze>
+      <Sequence from={desde} durationInFrames={fin} layout="none">{v}</Sequence>
+      <Sequence from={desde + fin} layout="none">
+        <Freeze frame={0}><OffthreadVideo src={staticFile(src)} muted startFrom={Math.max(0, Math.floor(seg! * fps) - 3)} style={{width: w, display: 'block'}} /></Freeze>
       </Sequence>
     </>
   );

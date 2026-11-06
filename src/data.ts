@@ -16,6 +16,8 @@ export type VideoData = {
   ritmo?: number;
   /** Duración de la grabación en segundos: al acabar se queda el último fotograma en vez de quedarse en negro. */
   imgS?: number;
+  /** Zoom por subtítulo: [escala, x, y] con x e y en fracciones de la pantalla (0–1). Por defecto, un recorrido de zooms que se acerca a zonas distintas. */
+  zoom?: [number, number, number][];
   scroll: [number, number];
   box?: [number, number, number, number];
   /** De 3 a 5 subtítulos, repartidos a partes iguales durante el vídeo. */
