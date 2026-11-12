@@ -1,0 +1,418 @@
+{
+  "eyebrow": "TÁCTICA · LA BANDEJA",
+  "titulo": "Su bandeja rebota: abajo",
+  "hook": [
+    "¿SU BANDEJA",
+    "REBOTA MUCHO?"
+  ],
+  "cta": "Pruébalo gratis en zyrapadel.com",
+  "fichas": [
+    {
+      "id": "b",
+      "equipo": "r",
+      "etq": "B",
+      "pos": [
+        6.8,
+        6.8
+      ],
+      "mov": [
+        {
+          "t0": 9,
+          "t1": 9.8,
+          "a": [
+            7.1,
+            7.8
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rp",
+      "equipo": "r",
+      "etq": "2",
+      "pos": [
+        3,
+        7.2
+      ]
+    },
+    {
+      "id": "n1",
+      "equipo": "n",
+      "etq": "1",
+      "pos": [
+        3,
+        17.6
+      ],
+      "mov": [
+        {
+          "t0": 10.9,
+          "t1": 12.4,
+          "a": [
+            3,
+            12.8
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n2",
+      "equipo": "n",
+      "etq": "2",
+      "pos": [
+        7.2,
+        17.6
+      ],
+      "mov": [
+        {
+          "t0": 5.4,
+          "t1": 6.6,
+          "a": [
+            6.8,
+            16.2
+          ]
+        },
+        {
+          "t0": 10.9,
+          "t1": 12.4,
+          "a": [
+            7,
+            12.8
+          ]
+        }
+      ]
+    }
+  ],
+  "pelota": {
+    "pos": [
+      6.8,
+      6.8
+    ],
+    "tramos": [
+      {
+        "t0": 2.6,
+        "t1": 3.6,
+        "a": [
+          7.4,
+          16.4
+        ],
+        "altura": 0.35
+      },
+      {
+        "t0": 3.6,
+        "t1": 4.4,
+        "a": [
+          7.8,
+          19.8
+        ],
+        "altura": 0.3
+      },
+      {
+        "t0": 5.4,
+        "t1": 6.6,
+        "a": [
+          6.8,
+          15.8
+        ],
+        "altura": 0.7
+      },
+      {
+        "t0": 8.2,
+        "t1": 9.6,
+        "a": [
+          7.2,
+          8
+        ],
+        "altura": 0.12
+      },
+      {
+        "t0": 11.4,
+        "t1": 12.6,
+        "a": [
+          6.6,
+          12.4
+        ],
+        "altura": 0.3
+      }
+    ]
+  },
+  "flechas": [
+    {
+      "de": [
+        6.8,
+        7.2
+      ],
+      "a": [
+        7.4,
+        16
+      ],
+      "t0": 2.7,
+      "hasta": 4.6,
+      "tipo": "bola"
+    },
+    {
+      "de": [
+        7.4,
+        16.6
+      ],
+      "a": [
+        7.8,
+        19.4
+      ],
+      "t0": 3.6,
+      "hasta": 5,
+      "tipo": "bola"
+    },
+    {
+      "de": [
+        7.7,
+        19.2
+      ],
+      "a": [
+        6.9,
+        16.2
+      ],
+      "t0": 5.4,
+      "hasta": 7.6,
+      "tipo": "bola",
+      "curva": 0.8
+    },
+    {
+      "de": [
+        6.8,
+        15.4
+      ],
+      "a": [
+        7.2,
+        8.4
+      ],
+      "t0": 8.2,
+      "hasta": 10.4,
+      "tipo": "bola"
+    },
+    {
+      "de": [
+        3,
+        17
+      ],
+      "a": [
+        3,
+        13.4
+      ],
+      "t0": 10.9,
+      "hasta": 12.8,
+      "tipo": "mov"
+    },
+    {
+      "de": [
+        6.8,
+        15.6
+      ],
+      "a": [
+        7,
+        13.4
+      ],
+      "t0": 10.9,
+      "hasta": 12.8,
+      "tipo": "mov"
+    },
+    {
+      "de": [
+        7.1,
+        8.2
+      ],
+      "a": [
+        6.7,
+        12
+      ],
+      "t0": 11.4,
+      "hasta": 13,
+      "tipo": "bola"
+    }
+  ],
+  "zonas": [
+    {
+      "rect": [
+        5.6,
+        8,
+        9.4,
+        15.6
+      ],
+      "etq": "PARALELO",
+      "t0": 8,
+      "t1": 10.4
+    }
+  ],
+  "etiquetas": [
+    {
+      "pos": [
+        7.8,
+        19
+      ],
+      "texto": "PARED",
+      "t0": 4.2,
+      "t1": 5.4
+    },
+    {
+      "pos": [
+        6.8,
+        15
+      ],
+      "texto": "ALTA",
+      "t0": 5.8,
+      "t1": 7.8
+    },
+    {
+      "pos": [
+        7.6,
+        12
+      ],
+      "texto": "LENTA",
+      "t0": 8.4,
+      "t1": 9.8
+    },
+    {
+      "pos": [
+        7,
+        5.8
+      ],
+      "texto": "INCÓMODO",
+      "t0": 11,
+      "t1": 13
+    }
+  ],
+  "resalta": [
+    {
+      "id": "b",
+      "t0": 2.4,
+      "t1": 3.6
+    },
+    {
+      "id": "n2",
+      "t0": 5.4,
+      "t1": 7.8
+    },
+    {
+      "id": "b",
+      "t0": 9.4,
+      "t1": 12.6
+    }
+  ],
+  "foco": [
+    {
+      "t": 0,
+      "p": [
+        5,
+        10
+      ],
+      "z": 1
+    },
+    {
+      "t": 2.4,
+      "p": [
+        5,
+        10
+      ],
+      "z": 1
+    },
+    {
+      "t": 4.4,
+      "p": [
+        6.5,
+        14
+      ],
+      "z": 1.15
+    },
+    {
+      "t": 7,
+      "p": [
+        6.5,
+        14.5
+      ],
+      "z": 1.2
+    },
+    {
+      "t": 9.6,
+      "p": [
+        6,
+        11
+      ],
+      "z": 1.1
+    },
+    {
+      "t": 12.6,
+      "p": [
+        5,
+        11
+      ],
+      "z": 1.1
+    },
+    {
+      "t": 14,
+      "p": [
+        5,
+        10
+      ],
+      "z": 1
+    },
+    {
+      "t": 19.2,
+      "p": [
+        5,
+        10
+      ],
+      "z": 1
+    }
+  ],
+  "pasos": [
+    {
+      "t": 2.4,
+      "texto": "Su bandeja *rebota* mucho en la pared"
+    },
+    {
+      "t": 5.2,
+      "texto": "Evalúa: viene *alta* tras el rebote"
+    },
+    {
+      "t": 8,
+      "texto": "Juega *por abajo*, lenta: paralelo o centro"
+    },
+    {
+      "t": 10.8,
+      "texto": "Gana *la red*: rival en posición incómoda"
+    },
+    {
+      "t": 13.6,
+      "texto": "Bandeja que rebota: *abajo* y a la red",
+      "clave": true
+    }
+  ],
+  "ctaDesde": 16.6,
+  "seg": 19.2,
+  "juntos": {
+    "t0": 11.6,
+    "t1": 13.2,
+    "y": 12.8,
+    "x": [
+      3,
+      7
+    ]
+  },
+  "revision": {
+    "estado": "borrador",
+    "ficha": "bandeja-que-rebota",
+    "fuentes": [
+      "PadelStar Guía 3, jugada 3 (p. 72)"
+    ],
+    "aviso": "una sola fuente: no publicar sin segunda fuente o revisión de un entrenador"
+  },
+  "audios": [
+    "voz/su-bandeja-rebota-abajo-0wv1j/0.mp3",
+    "voz/su-bandeja-rebota-abajo-0wv1j/1.mp3",
+    "voz/su-bandeja-rebota-abajo-0wv1j/2.mp3",
+    "voz/su-bandeja-rebota-abajo-0wv1j/3.mp3",
+    "voz/su-bandeja-rebota-abajo-0wv1j/4.mp3",
+    "voz/su-bandeja-rebota-abajo-0wv1j/5.mp3",
+    "voz/su-bandeja-rebota-abajo-0wv1j/6.mp3"
+  ],
+  "voz": true
+}
