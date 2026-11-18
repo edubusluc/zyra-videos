@@ -1,0 +1,40 @@
+{
+  "promo": "mas-regular",
+  "hook": [
+    "¿QUIÉN ES TU",
+    "MÁS REGULAR?"
+  ],
+  "title": "ESTADÍSTICAS DE JUGADOR",
+  "src": "medios/app-estadisticas-jugador-ficha.mp4",
+  "imgW": 780,
+  "imgH": 1688,
+  "imgS": 6.2,
+  "scroll": [
+    0,
+    0
+  ],
+  "subs": [
+    "Sus *puntos* y su puesto en el equipo",
+    "Su *porcentaje de victorias* y su balance",
+    "Y la *racha actual* de la temporada"
+  ],
+  "gancho": "pregunta",
+  "tiktok": {
+    "busqueda": "estadísticas de jugadores de pádel",
+    "descripcion": "Estadísticas de jugadores de pádel. Así ves el porcentaje de victorias, el balance y la racha de cada uno.",
+    "hashtags": [
+      "#padel",
+      "#equipodepadel"
+    ],
+    "comentario": "¿Quién es el más regular de tu equipo? Compruébalo con tus propios datos en zyrapadel.com"
+  },
+  "cta": "Pruébalo gratis",
+  "audios": [
+    "voz/estadisticas-de-jugador-3ppxr/0.mp3",
+    "voz/estadisticas-de-jugador-3ppxr/1.mp3",
+    "voz/estadisticas-de-jugador-3ppxr/2.mp3",
+    "voz/estadisticas-de-jugador-3ppxr/3.mp3",
+    "voz/estadisticas-de-jugador-3ppxr/4.mp3"
+  ],
+  "voz": true
+}
