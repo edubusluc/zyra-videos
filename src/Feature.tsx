@@ -45,7 +45,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, imgS
   const f = useT();
   const fps = T;
   const limpio = (t: string) => t.replace(/\*/g, '');
-  const clave = (t: string) => (t.match(/\*([^*]+)\*/)?.[1] ?? limpio(t).split(' ').pop() ?? '').replace(/[^\p{L}\p{N}%]/gu, '');
+  const clave = (t: string) => (t.match(/\*([^*]+)\*/)?.[1] ?? limpio(t).split(' ').pop() ?? '').replace(/[^\p{L}\p{N}%\s]/gu, '').trim().replace(/\s+/g, ' ');
   const hookOut = prog(f, HOOK_END, 14);
   const main = prog(f, HOOK_END - 8, 40);
   const ctaIn = prog(f, CTA_FROM, 26);
@@ -85,7 +85,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, imgS
   const subLen = limpio(subs[subIdx]).length;
   const subSize = Math.max(46, Math.min(76, Math.floor(1700 / Math.max(1, subLen * 0.56))));
   const subSizeBase = Math.max(34, Math.min(46, Math.floor(1500 / Math.max(1, subLen * 0.56))));
-  const palabraClave = clave(subs[subIdx]).toLowerCase();
+  const palabrasClave = clave(subs[subIdx]).toLowerCase().split(' ');
   const desde = f - subAt;
   const golpe = creador ? 1 + 0.06 * Math.max(0, 1 - desde / 12) ** 2 : 1; // cada corte entra con un golpe de zoom
   const ctaTxt = cta.replace(/(https?:\/\/)?(www\.)?zyrapadel\.com\/?/gi, '').replace(/(\s+(en|y|a|en la web|en nuestra web))?[\s·:–-]*$/i, '').trim() || 'Pruébalo gratis';
@@ -137,7 +137,7 @@ export const Feature: React.FC<VideoData> = ({hook, title, src, imgW, imgH, imgS
           <div style={{position: 'absolute', left: SAFE.side, right: SAFE.side, top: enVideo ? 1390 : 1340, height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
             <div key={subIdx} style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'baseline', gap: '0 18px', opacity: prog(f, subAt, 4)}}>
               {words.map((w, i) => {
-                const esClave = w.replace(/[^\p{L}\p{N}%]/gu, '').toLowerCase() === palabraClave;
+                const esClave = palabrasClave.includes(w.replace(/[^\p{L}\p{N}%]/gu, '').toLowerCase());
                 const t = prog(f, subAt + i * 4, 8);
                 return (
                   <span key={i} style={{...(esClave ? TYPE.titular : {fontFamily: FONT.body, fontWeight: 800}), fontSize: esClave ? Math.round(subSize * 1.12) : subSize, lineHeight: 1.12, color: esClave ? C.lime : '#FFFFFF', textShadow: '0 6px 30px rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.9)', display: 'inline-block', opacity: t, transform: `${animSub === 'lado' ? `translateX(${(1 - t) * -40}px)` : `translateY(${(1 - t) * (animSub === 'pop' ? 0 : 30)}px)`} scale(${(esClave ? 0.8 + 0.2 * t + (desde < 14 ? 0.12 : 0) : 1) * (animSub === 'pop' ? 0.6 + 0.4 * t : 1)})`}}>
