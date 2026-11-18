@@ -96,7 +96,8 @@ export const KeywordCard: React.FC<{at: number; word: string; variant: number; d
   const close = interpolate(f, [dur - 8, dur], [1, 0], {easing: Easing.in(Easing.cubic), extrapolateLeft: 'clamp'});
   const r = Math.min(open, close) * 1500;
   const lime = variant % 2 === 0;
-  const size = cabeTitular(word, 330, 980);
+  const lineas = word.split(' ');
+  const size = cabeTitular(lineas.reduce((a, b) => (b.length > a.length ? b : a), ''), lineas.length > 1 ? 260 : 330, 980);
   const pop = interpolate(f, [4, 14], [0.7, 1], {easing: Easing.out(Easing.back(1.6)), extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   // Lima: el botón principal de la web (hover → lima → pulsado). Oscura: el fondo de página de la web con su halo lima.
   const fondo = lime
@@ -107,7 +108,7 @@ export const KeywordCard: React.FC<{at: number; word: string; variant: number; d
       <div style={{position: 'absolute', inset: 0, opacity: lime ? 0.16 : 0.22}}>
         <svg width="1080" height="1920" viewBox="-540 -960 1080 1920"><g transform={`rotate(${f * 0.6 - 8}) scale(1.35)`} fill="none" stroke={lime ? C.ink : C.lime} strokeWidth={6}><rect x={-300} y={-600} width={600} height={1200} /><line x1={-300} y1={0} x2={300} y2={0} /><line x1={-300} y1={-370} x2={300} y2={-370} /><line x1={-300} y1={370} x2={300} y2={370} /><line x1={0} y1={-370} x2={0} y2={370} /></g></svg>
       </div>
-      <div style={{...TYPE.titular, fontSize: size, lineHeight: 1, color: lime ? C.ink : C.lime, textAlign: 'center', whiteSpace: 'nowrap', transform: `scale(${pop}) rotate(${(variant % 2 ? 1 : -1) * 3}deg)`, textShadow: lime ? 'none' : `0 10px 40px ${limeA(0.35)}`}}>{word}</div>
+      <div style={{...TYPE.titular, fontSize: size, lineHeight: 1, color: lime ? C.ink : C.lime, textAlign: 'center', whiteSpace: 'nowrap', transform: `scale(${pop}) rotate(${(variant % 2 ? 1 : -1) * 3}deg)`, textShadow: lime ? 'none' : `0 10px 40px ${limeA(0.35)}`}}>{lineas.map((l, i) => <div key={i}>{l}</div>)}</div>
     </AbsoluteFill>
   );
 };
